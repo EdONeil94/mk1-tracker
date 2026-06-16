@@ -254,6 +254,92 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .lb-row .lb-label{color:var(--mute);font-size:10.5px;font-weight:800;text-transform:uppercase;
   letter-spacing:.06em;text-align:center}
 .lb-loading{color:var(--mute);text-align:center;padding:60px 20px;font-size:14px}
+
+.settingsbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
+  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between}
+.sess-row{display:flex;align-items:center;justify-content:space-between;background:var(--card);
+  border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:10px}
+.sess-row .sr-info b{display:block;font-size:14px;font-weight:800}
+.sess-row .sr-info span{color:var(--mute);font-size:11px}
+.sess-row .sr-actions{display:flex;gap:6px}
+.addsessbtn{width:100%;background:none;border:1.5px dashed var(--line);color:var(--mute);
+  border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px}
+
+.editor-field{margin-bottom:12px}
+.editor-field label{display:block;color:var(--mute);font-size:11px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.editor-field input{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:10px;padding:12px;font-size:15px;font-weight:600;-webkit-appearance:none;appearance:none}
+.editor-field input:focus{outline:none;border-color:var(--accent)}
+
+.draft-ex{display:flex;align-items:center;gap:8px;background:var(--card);border:1.5px solid var(--line);
+  border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.draft-ex .dx-name{flex:1;font-size:13.5px;font-weight:700}
+.draft-ex input{background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:8px;padding:7px;font-size:13px;font-weight:700;text-align:center;
+  -webkit-appearance:none;appearance:none}
+.draft-ex .dx-sets{width:34px}
+.draft-ex .dx-reps{width:62px}
+.draft-ex .dx-remove{background:none;border:none;color:#5a6070;font-size:17px;cursor:pointer}
+.draft-ex .dx-remove:active{color:#a04030}
+.dx-reorder{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.dx-reorder button{width:20px;height:16px;background:var(--chip);border:1px solid var(--line);
+  color:var(--mute);font-size:9px;line-height:1;border-radius:4px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:0}
+.dx-reorder button:disabled{opacity:.25;cursor:default}
+.dx-reorder button:active:not(:disabled){border-color:var(--accent)}
+
+.add-ex-row{display:flex;gap:8px;margin:12px 0 18px}
+.add-ex-row select{flex:1;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:10px;padding:11px;font-size:14px;font-weight:600}
+.add-ex-row button{background:var(--accent2);border:none;color:#fff;border-radius:10px;
+  padding:0 18px;font-weight:800;font-size:14px;cursor:pointer}
+
+.editor-actions{display:flex;gap:10px;margin-top:6px}
+.editor-actions .save-session-btn{flex:1;background:var(--accent2);border:none;color:#fff;
+  border-radius:14px;padding:15px;font-size:15px;font-weight:800;cursor:pointer}
+.editor-actions .delete-session-btn{background:none;border:1.5px solid #5a3030;color:#c97a6a;
+  border-radius:14px;padding:15px 16px;font-size:13px;font-weight:700;cursor:pointer}
+
+.hiit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.hiit-card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;
+  padding:14px;cursor:pointer;position:relative;overflow:hidden;transition:transform .08s}
+.hiit-card:active{transform:scale(.97)}
+.hiit-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--good)}
+.hiit-card h3{font-size:15px;font-weight:800}
+.hiit-badge{display:inline-block;background:var(--chip);border:1px solid var(--line);color:var(--good);
+  font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border-radius:6px;
+  padding:2px 6px;margin-top:6px}
+.hiit-card .hc-meta{color:var(--mute);font-size:11px;margin-top:8px}
+.hiitbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
+  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between}
+.hiit-ex-row{display:flex;align-items:center;gap:8px;background:var(--card);border:1.5px solid var(--line);
+  border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.hiit-ex-row .hx-name{flex:1;font-size:13.5px;font-weight:700}
+.hiit-ex-row.active{border-color:var(--accent);background:var(--chip)}
+
+.hiit-timer-card{background:var(--card);border:2px solid var(--line);border-radius:20px;
+  padding:30px 20px;text-align:center;margin-bottom:16px;transition:border-color .3s}
+.hiit-timer-card.rest{border-color:var(--good)}
+.hiit-timer-card.work{border-color:var(--accent)}
+.hiit-timer-card.amrap{border-color:var(--accent)}
+.hiit-phase{font-size:13px;font-weight:800;letter-spacing:.1em;color:var(--mute);text-transform:uppercase}
+.hiit-countdown{font-size:56px;font-weight:800;font-variant-numeric:tabular-nums;margin:8px 0;color:var(--text)}
+.hiit-exname{font-size:16px;font-weight:700;color:var(--accent)}
+.hiit-controls{display:flex;gap:10px;margin-bottom:18px}
+.hiit-ctrl-btn{flex:1;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:14px;padding:14px;font-size:14px;font-weight:800;cursor:pointer}
+.hiit-ctrl-btn.primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.round-rest-row{display:flex;align-items:center;justify-content:space-between;background:var(--chip);
+  border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;margin-top:10px}
+.round-rest-row .rr-label{font-size:13px;font-weight:700}
+.round-rest-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent2);flex-shrink:0}
+.round-rest-sec{margin-top:8px}
+.round-rest-sec input{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:10px;padding:11px;font-size:15px;font-weight:700;text-align:center;
+  -webkit-appearance:none;appearance:none}
 </style>
 </head>
 <body>
@@ -293,7 +379,7 @@ function avatarHtml(p, cls){
 let CURRENT_PROFILE = null;
 function profileDocRef(){ return doc(db, "trackers", `${TRACKER_ID}-${CURRENT_PROFILE.id}`); }
 
-const PLAN = [
+const DEFAULT_PLAN = [
   {id:"upperA", name:"Upper A", focus:"Chest-press focus", ex:[
     {n:"Incline chest press machine", s:3, r:"8-10"},
     {n:"Lat pulldown (wide grip)", s:3, r:"10-12"},
@@ -329,6 +415,34 @@ const PLAN = [
     {n:"Seated calf raises", s:4, r:"15-20"}
   ]}
 ];
+let PLAN = [];
+
+// Curated, commonly-available exercises (50 total) for the session builder
+const EXERCISE_LIBRARY = [
+  {cat:"Chest", items:["Flat bench press (barbell)","Flat bench press (machine)","Incline bench press (dumbbell)","Incline chest press (machine)","Cable chest fly","Dips","Smith machine bench press","Pec deck machine"]},
+  {cat:"Back", items:["Lat pulldown (wide grip)","Lat pulldown (close grip)","Seated cable row","Single arm dumbbell row","T-bar row","Back extension","Pull-up","Conventional deadlift","Sumo deadlift","Chest-supported row","Reverse grip lat pulldown"]},
+  {cat:"Shoulders", items:["Overhead shoulder press (dumbbell)","Shoulder press (machine)","Lateral raise (dumbbell)","Lateral raise (machine)","Rear delt fly","Face pull","Arnold press","Cable lateral raise","Barbell shrug"]},
+  {cat:"Biceps", items:["Barbell bicep curl","Dumbbell bicep curl","Seated dumbbell curl","Preacher curl","Hammer curl","EZ bar curl","Cable curl"]},
+  {cat:"Triceps", items:["Tricep pushdown (cable)","Overhead tricep extension (rope)","Skull crusher","Single arm tricep extension","Close-grip bench press","Diamond push-up","Cable kickback"]},
+  {cat:"Legs", items:["Barbell squat","Leg press","Leg extension","Leg curl","Romanian deadlift","Walking lunges","Bulgarian split squat","Hack squat","Standing calf raise","Seated calf raise","Hip thrust","Abductor machine","Goblet squat","Front squat","Step-ups","Glute bridge","Single-leg leg press","Smith machine squat"]},
+  {cat:"Core", items:["Plank","Cable crunch","Hanging leg raise","Russian twist","Ab wheel rollout","Side plank","Mountain climbers","Bicycle crunch"]},
+  {cat:"Cardio", items:["Treadmill","Stairmaster","Rowing machine","Stationary bike","Elliptical","Assault bike","Jump rope"]}
+];
+
+// Separate, bodyweight/kettlebell/dumbbell/core-focused library for HIIT classes
+const HIIT_EXERCISE_LIBRARY = [
+  {cat:"Bodyweight", items:["Burpees","Mountain climbers","Jumping jacks","High knees","Squat jumps","Push-ups","Walking lunges","Star jumps","Bear crawl","Tuck jumps"]},
+  {cat:"Kettlebell", items:["Kettlebell swings","Kettlebell goblet squat","Kettlebell snatch","Kettlebell clean and press","Kettlebell Russian twist","Kettlebell deadlift"]},
+  {cat:"Dumbbell", items:["Dumbbell thrusters","Dumbbell renegade row","Dumbbell man makers","Dumbbell squat to press","Dumbbell snatch"]},
+  {cat:"Core", items:["Plank","Russian twist","Bicycle crunch","V-ups","Flutter kicks","Side plank","Sit-ups"]},
+  {cat:"Cardio Burst", items:["Jump rope","Box jumps","Battle ropes","Sprint on the spot","Skater jumps"]}
+];
+const HIIT_FORMATS = [
+  {id:"interval", label:"Interval", desc:"Work / rest, repeated rounds"},
+  {id:"amrap", label:"AMRAP", desc:"As many rounds as possible in a time cap"},
+  {id:"emom", label:"EMOM", desc:"Every minute, on the minute"}
+];
+let HIIT_CLASSES = [];
 
 let LOG = [];
 let WEIGHTS = [];
@@ -343,17 +457,21 @@ async function loadLog(){
     LOG = snap.exists() ? (snap.data().log || []) : [];
     WEIGHTS = snap.exists() ? (snap.data().weights || []) : [];
     MEASUREMENTS = snap.exists() ? (snap.data().measurements || []) : [];
+    PLAN = snap.exists() && snap.data().plan ? snap.data().plan : JSON.parse(JSON.stringify(DEFAULT_PLAN));
+    HIIT_CLASSES = snap.exists() ? (snap.data().hiitClasses || []) : [];
     STORAGE_AVAILABLE = true;
   }catch(e){
     STORAGE_AVAILABLE = false;
     LOG = [];
     WEIGHTS = [];
     MEASUREMENTS = [];
+    PLAN = JSON.parse(JSON.stringify(DEFAULT_PLAN));
+    HIIT_CLASSES = [];
   }
 }
 async function saveLog(){
   try{
-    await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, measurements: MEASUREMENTS, updatedAt: new Date().toISOString()});
+    await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, measurements: MEASUREMENTS, plan: PLAN, hiitClasses: HIIT_CLASSES, updatedAt: new Date().toISOString()});
     return true;
   }catch(e){ return false; }
 }
@@ -542,6 +660,7 @@ function switchProfile(){
 function home(){
   stopTimer();
   cancelRest();
+  cancelHiit();
   const banner = STORAGE_AVAILABLE
     ? `<div class="sync-ok"><div class="dot"></div>Synced &mdash; same data on every device</div>`
     : `<div class="sync-banner">Couldn't reach the database. Check your internet connection and tap Refresh.</div>`;
@@ -561,6 +680,22 @@ function home(){
   const latestW = [...WEIGHTS].sort((a,b)=>b.date.localeCompare(a.date))[0];
   const weightLabel = latestW ? `${latestW.weight}kg` : "Not logged";
 
+  const hiitCards = HIIT_CLASSES.map(c=>{
+    const fmt = HIIT_FORMATS.find(f=>f.id===c.format);
+    return `<div class="hiit-card" onclick="openHiitRunner('${c.id}')">
+      <h3>${c.name}</h3>
+      <div class="hiit-badge">${fmt?fmt.label:c.format}</div>
+      <div class="hc-meta">${c.ex.length} exercise${c.ex.length!==1?"s":""}</div>
+    </div>`;
+  }).join("");
+  const hiitSection = `
+    <div class="section-label">HIIT Classes</div>
+    ${HIIT_CLASSES.length ? `<div class="hiit-grid">${hiitCards}</div>` : '<div class="chart-empty">No HIIT classes yet &mdash; build one below.</div>'}
+    <button class="hiitbtn" onclick="showHiitSettings()">
+      <span class="cb-label">⚡ Manage HIIT classes</span>
+      <span>&rsaquo;</span>
+    </button>`;
+
   app.innerHTML = `
     ${banner}
     <div class="page-header">
@@ -572,6 +707,7 @@ function home(){
     <div class="section-label">Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
     <div class="grid">${cards}</div>
     <button class="histbtn" onclick="showHistory()">📋 &nbsp;View full history &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>
+    ${hiitSection}
     <button class="weightbtn" onclick="showWeightTracker()">
       <span class="wb-label">⚖️ Body weight</span>
       <span class="wb-current">${weightLabel}</span>
@@ -586,6 +722,10 @@ function home(){
     </button>
     <button class="leaderbtn" onclick="showLeaderboard()">
       <span class="cb-label">🏆 Leaderboard</span>
+      <span>&rsaquo;</span>
+    </button>
+    <button class="settingsbtn" onclick="showSettings()">
+      <span class="cb-label">⚙️ Manage sessions</span>
       <span>&rsaquo;</span>
     </button>
   `;
@@ -1021,6 +1161,508 @@ async function deleteMeasurementEntry(idx){
   showMeasurements();
 }
 
+// ── Manage sessions (custom session builder) ─────────────
+let draftSession = null; // {id, name, focus, ex:[{n,s,r}]}
+
+function slugify(name){
+  return name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"") || "session";
+}
+function uniqueSessionId(name){
+  const base = slugify(name);
+  let id = base, n = 2;
+  while(PLAN.some(p=>p.id===id)){ id = `${base}-${n}`; n++; }
+  return id;
+}
+
+function showSettings(){
+  stopTimer();
+  const rows = PLAN.map(p=>`
+    <div class="sess-row">
+      <div class="sr-info"><b>${p.name}</b><span>${p.focus} &middot; ${p.ex.length} exercise${p.ex.length!==1?"s":""}</span></div>
+      <div class="sr-actions">
+        <button class="icon-btn" onclick="openSessionEditor('${p.id}')" aria-label="Edit">&#9998;</button>
+        <button class="icon-btn" onclick="deleteSessionFromPlan('${p.id}')" aria-label="Delete">&times;</button>
+      </div>
+    </div>`).join("");
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Manage Sessions</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    ${rows || '<div class="chart-empty">No sessions yet.</div>'}
+    <button class="addsessbtn" onclick="openSessionEditor(null)">+ Create new session</button>
+  `;
+  window.scrollTo(0,0);
+}
+
+function exercisePickerOptions(){
+  return EXERCISE_LIBRARY.map(cat=>
+    `<optgroup label="${cat.cat}">${cat.items.map(n=>`<option value="${n.replace(/"/g,"&quot;")}">${n}</option>`).join("")}</optgroup>`
+  ).join("");
+}
+
+function openSessionEditor(id){
+  stopTimer();
+  if(id){
+    const existing = PLAN.find(p=>p.id===id);
+    draftSession = JSON.parse(JSON.stringify(existing));
+  } else {
+    draftSession = {id:null, name:"", focus:"", ex:[]};
+  }
+  renderSessionEditor();
+}
+
+function renderSessionEditor(){
+  const exRows = draftSession.ex.map((e,i)=>`
+    <div class="draft-ex">
+      <div class="dx-reorder">
+        <button onclick="moveDraftExercise(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
+        <button onclick="moveDraftExercise(${i},1)" ${i===draftSession.ex.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
+      </div>
+      <div class="dx-name">${e.n}</div>
+      <input class="dx-sets" type="number" min="1" value="${e.s}" oninput="setDraftExSets(${i},this.value)">
+      <input class="dx-reps" type="text" value="${e.r}" oninput="setDraftExReps(${i},this.value)">
+      <button class="dx-remove" onclick="removeDraftExercise(${i})" aria-label="Remove">&times;</button>
+    </div>`).join("");
+
+  const isNew = !draftSession.id;
+  const deleteBtn = !isNew
+    ? `<button class="delete-session-btn" onclick="deleteSessionFromPlan('${draftSession.id}')">Delete</button>`
+    : "";
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="showSettings()">&#8592; Back</button>
+      <div class="topbar-info"><h2>${isNew?"New Session":"Edit Session"}</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    <div class="editor-field">
+      <label>Session name</label>
+      <input type="text" value="${draftSession.name}" placeholder="e.g. Push Day" oninput="setDraftName(this.value)">
+    </div>
+    <div class="editor-field">
+      <label>Focus tagline</label>
+      <input type="text" value="${draftSession.focus}" placeholder="e.g. Chest &amp; triceps" oninput="setDraftFocus(this.value)">
+    </div>
+    <div class="section-label">Exercises</div>
+    ${exRows || '<div class="chart-empty">No exercises added yet.</div>'}
+    <div class="add-ex-row">
+      <select id="exercisePicker">${exercisePickerOptions()}</select>
+      <button onclick="addDraftExercise()">Add</button>
+    </div>
+    <div class="editor-actions">
+      <button class="save-session-btn" onclick="saveDraftSession()">Save session</button>
+      ${deleteBtn}
+    </div>
+  `;
+  window.scrollTo(0,0);
+}
+
+// Setters routed through real functions rather than direct variable access in
+// inline attributes, since inline handlers run in global scope and can't see
+// this module's "let draftSession" closure variable.
+function setDraftName(v){ draftSession.name = v; }
+function setDraftFocus(v){ draftSession.focus = v; }
+function setDraftExSets(i,v){ draftSession.ex[i].s = parseInt(v)||1; }
+function setDraftExReps(i,v){ draftSession.ex[i].r = v; }
+
+function addDraftExercise(){
+  const sel = $("exercisePicker");
+  if(!sel || !sel.value) return;
+  draftSession.ex.push({n:sel.value, s:3, r:"10-12"});
+  renderSessionEditor();
+}
+function removeDraftExercise(idx){
+  draftSession.ex.splice(idx,1);
+  renderSessionEditor();
+}
+function moveDraftExercise(idx, dir){
+  const newIdx = idx + dir;
+  if(newIdx<0 || newIdx>=draftSession.ex.length) return;
+  const arr = draftSession.ex;
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  renderSessionEditor();
+}
+
+async function saveDraftSession(){
+  const name = (draftSession.name||"").trim();
+  const focus = (draftSession.focus||"").trim();
+  if(!name){ showToast("Give the session a name", false); return; }
+  if(!draftSession.ex.length){ showToast("Add at least one exercise", false); return; }
+  if(!draftSession.id){
+    draftSession.id = uniqueSessionId(name);
+    PLAN.push({id:draftSession.id, name, focus, ex:draftSession.ex});
+  } else {
+    const idx = PLAN.findIndex(p=>p.id===draftSession.id);
+    const updated = {id:draftSession.id, name, focus, ex:draftSession.ex};
+    if(idx>=0) PLAN[idx] = updated; else PLAN.push(updated);
+  }
+  const ok = await saveLog();
+  showToast(ok ? "Session saved & synced \u2713" : "Couldn't save \u2014 check your connection");
+  showSettings();
+}
+
+async function deleteSessionFromPlan(id){
+  if(!confirm("Delete this session? Past history logged under it stays in your records, but it won't appear as an active session anymore.")) return;
+  PLAN = PLAN.filter(p=>p.id!==id);
+  await saveLog();
+  showSettings();
+}
+
+// ── HIIT class manager ─────────────────────────────────────
+let draftHiit = null; // {id, name, format, ex:[{n}], workSec, restSec, rounds, capMin, intervalSec}
+
+function uniqueHiitId(name){
+  const base = slugify(name);
+  let id = base, n = 2;
+  while(HIIT_CLASSES.some(c=>c.id===id)){ id = `${base}-${n}`; n++; }
+  return id;
+}
+
+function showHiitSettings(){
+  stopTimer();
+  const rows = HIIT_CLASSES.map(c=>{
+    const fmt = HIIT_FORMATS.find(f=>f.id===c.format);
+    return `<div class="sess-row">
+      <div class="sr-info"><b>${c.name}</b><span>${fmt?fmt.label:c.format} &middot; ${c.ex.length} exercise${c.ex.length!==1?"s":""}</span></div>
+      <div class="sr-actions">
+        <button class="icon-btn" onclick="openHiitEditor('${c.id}')" aria-label="Edit">&#9998;</button>
+        <button class="icon-btn" onclick="deleteHiitClass('${c.id}')" aria-label="Delete">&times;</button>
+      </div>
+    </div>`;
+  }).join("");
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>HIIT Classes</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    ${rows || '<div class="chart-empty">No HIIT classes yet.</div>'}
+    <button class="addsessbtn" onclick="openHiitEditor(null)">+ Create new HIIT class</button>
+  `;
+  window.scrollTo(0,0);
+}
+
+function hiitPickerOptions(){
+  return HIIT_EXERCISE_LIBRARY.map(cat=>
+    `<optgroup label="${cat.cat}">${cat.items.map(n=>`<option value="${n.replace(/"/g,"&quot;")}">${n}</option>`).join("")}</optgroup>`
+  ).join("");
+}
+
+function openHiitEditor(id){
+  stopTimer();
+  if(id){
+    draftHiit = JSON.parse(JSON.stringify(HIIT_CLASSES.find(c=>c.id===id)));
+  } else {
+    draftHiit = {id:null, name:"", format:"interval", ex:[], workSec:45, restSec:15, rounds:3, capMin:12, intervalSec:60, roundRestEnabled:false, roundRestSec:60};
+  }
+  renderHiitEditor();
+}
+
+function renderHiitEditor(){
+  const fmtButtons = HIIT_FORMATS.map(f=>
+    `<button class="${f.id===draftHiit.format?"active":""}" onclick="setHiitFormat('${f.id}')">${f.label}</button>`
+  ).join("");
+
+  let fieldsHtml = "";
+  const roundRestRow = `<div class="round-rest-row">
+      <span class="rr-label">Rest between rounds</span>
+      <input type="checkbox" ${draftHiit.roundRestEnabled?"checked":""} onchange="setHiitRoundRestEnabled(this.checked)">
+    </div>
+    ${draftHiit.roundRestEnabled ? `<div class="round-rest-sec"><input type="number" min="5" value="${draftHiit.roundRestSec}" oninput="setHiitRoundRestSec(this.value)" placeholder="Rest seconds between rounds"></div>` : ""}`;
+  const roundRestNote = draftHiit.roundRestEnabled ? `, with ${draftHiit.roundRestSec}s rest between rounds` : "";
+
+  if(draftHiit.format==="interval"){
+    fieldsHtml = `<div class="measure-form">
+      <div class="mrow"><label>Work (s)</label><input type="number" min="5" value="${draftHiit.workSec}" oninput="setHiitWork(this.value)"></div>
+      <div class="mrow"><label>Rest (s)</label><input type="number" min="0" value="${draftHiit.restSec}" oninput="setHiitRest(this.value)"></div>
+      <div class="mrow"><label>Rounds</label><input type="number" min="1" value="${draftHiit.rounds}" oninput="setHiitRounds(this.value)"></div>
+    </div>
+    ${roundRestRow}
+    <div class="last-updated" style="text-align:left">Cycles through every exercise below, ${draftHiit.workSec}s work / ${draftHiit.restSec}s rest each, for ${draftHiit.rounds} round${draftHiit.rounds!=1?"s":""}${roundRestNote}.</div>`;
+  } else if(draftHiit.format==="amrap"){
+    fieldsHtml = `<div class="measure-form">
+      <div class="mrow"><label>Time cap (min)</label><input type="number" min="1" value="${draftHiit.capMin}" oninput="setHiitCap(this.value)"></div>
+    </div>
+    <div class="last-updated" style="text-align:left">One continuous ${draftHiit.capMin}-minute countdown. Cycle through the exercises below as many times as you can.</div>`;
+  } else {
+    fieldsHtml = `<div class="measure-form">
+      <div class="mrow"><label>Interval (s)</label><input type="number" min="10" value="${draftHiit.intervalSec}" oninput="setHiitInterval(this.value)"></div>
+      <div class="mrow"><label>Rounds</label><input type="number" min="1" value="${draftHiit.rounds}" oninput="setHiitRounds(this.value)"></div>
+    </div>
+    ${roundRestRow}
+    <div class="last-updated" style="text-align:left">A new exercise starts every ${draftHiit.intervalSec}s, cycling through the list for ${draftHiit.rounds} round${draftHiit.rounds!=1?"s":""}${roundRestNote}.</div>`;
+  }
+
+  const exRows = draftHiit.ex.map((e,i)=>`
+    <div class="hiit-ex-row">
+      <div class="dx-reorder">
+        <button onclick="moveHiitExercise(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
+        <button onclick="moveHiitExercise(${i},1)" ${i===draftHiit.ex.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
+      </div>
+      <div class="hx-name">${e.n}</div>
+      <button class="dx-remove" onclick="removeHiitExercise(${i})" aria-label="Remove">&times;</button>
+    </div>`).join("");
+
+  const isNew = !draftHiit.id;
+  const deleteBtn = !isNew
+    ? `<button class="delete-session-btn" onclick="deleteHiitClass('${draftHiit.id}')">Delete</button>`
+    : "";
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="showHiitSettings()">&#8592; Back</button>
+      <div class="topbar-info"><h2>${isNew?"New HIIT Class":"Edit HIIT Class"}</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    <div class="editor-field">
+      <label>Class name</label>
+      <input type="text" value="${draftHiit.name}" placeholder="e.g. Friday Burner" oninput="setHiitName(this.value)">
+    </div>
+    <div class="editor-field">
+      <label>Format</label>
+      <div class="seg">${fmtButtons}</div>
+      ${fieldsHtml}
+    </div>
+    <div class="section-label">Exercises</div>
+    ${exRows || '<div class="chart-empty">No exercises added yet.</div>'}
+    <div class="add-ex-row">
+      <select id="hiitExercisePicker">${hiitPickerOptions()}</select>
+      <button onclick="addHiitExercise()">Add</button>
+    </div>
+    <div class="editor-actions">
+      <button class="save-session-btn" onclick="saveDraftHiit()">Save class</button>
+      ${deleteBtn}
+    </div>
+  `;
+  window.scrollTo(0,0);
+}
+
+function setHiitName(v){ draftHiit.name = v; }
+function setHiitFormat(f){ draftHiit.format = f; renderHiitEditor(); }
+function setHiitWork(v){ draftHiit.workSec = parseInt(v)||45; }
+function setHiitRest(v){ draftHiit.restSec = parseInt(v)||0; }
+function setHiitRounds(v){ draftHiit.rounds = parseInt(v)||1; }
+function setHiitCap(v){ draftHiit.capMin = parseInt(v)||1; }
+function setHiitInterval(v){ draftHiit.intervalSec = parseInt(v)||60; }
+function setHiitRoundRestEnabled(checked){ draftHiit.roundRestEnabled = checked; renderHiitEditor(); }
+function setHiitRoundRestSec(v){ draftHiit.roundRestSec = parseInt(v)||0; }
+
+function addHiitExercise(){
+  const sel = $("hiitExercisePicker");
+  if(!sel || !sel.value) return;
+  draftHiit.ex.push({n:sel.value});
+  renderHiitEditor();
+}
+function removeHiitExercise(idx){
+  draftHiit.ex.splice(idx,1);
+  renderHiitEditor();
+}
+function moveHiitExercise(idx, dir){
+  const newIdx = idx + dir;
+  if(newIdx<0 || newIdx>=draftHiit.ex.length) return;
+  const arr = draftHiit.ex;
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  renderHiitEditor();
+}
+
+async function saveDraftHiit(){
+  const name = (draftHiit.name||"").trim();
+  if(!name){ showToast("Give the class a name", false); return; }
+  if(!draftHiit.ex.length){ showToast("Add at least one exercise", false); return; }
+  if(!draftHiit.id){
+    draftHiit.id = uniqueHiitId(name);
+    HIIT_CLASSES.push({...draftHiit, name});
+  } else {
+    const idx = HIIT_CLASSES.findIndex(c=>c.id===draftHiit.id);
+    const updated = {...draftHiit, name};
+    if(idx>=0) HIIT_CLASSES[idx] = updated; else HIIT_CLASSES.push(updated);
+  }
+  const ok = await saveLog();
+  showToast(ok ? "HIIT class saved & synced \u2713" : "Couldn't save \u2014 check your connection");
+  showHiitSettings();
+}
+
+async function deleteHiitClass(id){
+  if(!confirm("Delete this HIIT class? Past completions stay in your activity history.")) return;
+  HIIT_CLASSES = HIIT_CLASSES.filter(c=>c.id!==id);
+  await saveLog();
+  showHiitSettings();
+}
+
+// ── HIIT class runner (countdown engine) ──────────────────
+let hiitState = null;
+let hiitInterval = null;
+
+function cancelHiit(){
+  if(hiitInterval){ clearInterval(hiitInterval); hiitInterval=null; }
+  if(hiitState) hiitState.running=false;
+}
+
+function openHiitRunner(id){
+  stopTimer(); cancelRest();
+  const cls = HIIT_CLASSES.find(c=>c.id===id);
+  if(!cls || !cls.ex.length){ showToast("Couldn't open that class", false); return; }
+  hiitState = {
+    cls,
+    phase: "work",
+    exIndex: 0,
+    round: 1,
+    remaining: cls.format==="interval" ? cls.workSec : cls.format==="amrap" ? cls.capMin*60 : cls.intervalSec,
+    elapsedSec: 0,
+    running: false,
+    roundsCompleted: 0,
+    done: false
+  };
+  renderHiitRunner();
+}
+
+function cueBeep(){
+  try{ if(navigator.vibrate) navigator.vibrate(150); }catch(e){}
+  playBeep();
+}
+
+function advanceHiitExercise(){
+  cueBeep();
+  hiitState.exIndex++;
+  if(hiitState.exIndex>=hiitState.cls.ex.length){
+    hiitState.exIndex=0;
+    hiitState.round++;
+    if(hiitState.round>hiitState.cls.rounds){ finishHiit(); return; }
+    if(hiitState.cls.roundRestEnabled && hiitState.cls.roundRestSec>0){
+      hiitState.phase="roundrest";
+      hiitState.remaining=hiitState.cls.roundRestSec;
+      return;
+    }
+  }
+  hiitState.phase="work";
+  hiitState.remaining = hiitState.cls.format==="interval" ? hiitState.cls.workSec : hiitState.cls.intervalSec;
+}
+
+function handlePhaseEnd(){
+  const cls = hiitState.cls;
+  if(cls.format==="amrap"){ finishHiit(); return; }
+  if(hiitState.phase==="roundrest"){
+    cueBeep();
+    hiitState.phase="work";
+    hiitState.remaining = cls.format==="interval" ? cls.workSec : cls.intervalSec;
+    return;
+  }
+  if(cls.format==="interval"){
+    if(hiitState.phase==="work"){
+      cueBeep();
+      hiitState.phase="rest";
+      hiitState.remaining=cls.restSec;
+      if(cls.restSec<=0) advanceHiitExercise();
+    } else {
+      advanceHiitExercise();
+    }
+  } else {
+    advanceHiitExercise();
+  }
+}
+
+function tickHiit(){
+  if(!hiitState || hiitState.done) return;
+  hiitState.elapsedSec++;
+  hiitState.remaining--;
+  if(hiitState.remaining<=0) handlePhaseEnd();
+  renderHiitRunner();
+}
+
+function finishHiit(){
+  if(hiitInterval){ clearInterval(hiitInterval); hiitInterval=null; }
+  hiitState.running=false;
+  hiitState.done=true;
+  try{ if(navigator.vibrate) navigator.vibrate([200,100,200,100,200]); }catch(e){}
+  playBeep();
+  const durationMin = Math.max(1, Math.round(hiitState.elapsedSec/60));
+  LOG.push({sessionId:`hiit-${hiitState.cls.id}`, date:new Date().toISOString(), duration:durationMin, ex:[], hiit:true, hiitName:hiitState.cls.name});
+  saveLog().then(ok=>{ showToast(ok ? "Class complete! Logged \u2713" : "Class complete (sync failed)"); });
+}
+
+function toggleHiitTimer(){
+  if(hiitState.done) return;
+  if(hiitState.running){
+    clearInterval(hiitInterval); hiitInterval=null; hiitState.running=false;
+  } else {
+    hiitState.running=true;
+    hiitInterval = setInterval(tickHiit, 1000);
+  }
+  renderHiitRunner();
+}
+function skipHiitPhase(){
+  handlePhaseEnd();
+  renderHiitRunner();
+}
+function finishHiitEarly(){
+  if(!confirm("Finish this class now? It'll be logged with the time you've done so far.")) return;
+  finishHiit();
+  renderHiitRunner();
+}
+function incrementAmrapRound(){
+  hiitState.roundsCompleted++;
+  renderHiitRunner();
+}
+
+function renderHiitRunner(){
+  const s = hiitState, cls = s.cls;
+
+  if(s.done){
+    app.innerHTML = `
+      <div class="topbar">
+        <button class="back" onclick="home()">&#8592; Back</button>
+        <div class="topbar-info"><h2>${cls.name}</h2><div class="focus">Complete</div></div>
+      </div>
+      <div class="streak-hero">
+        <div class="num">&#10003;</div>
+        <div class="lbl">Class complete &mdash; logged to your activity</div>
+      </div>
+      <div class="last-updated">${Math.max(1,Math.round(s.elapsedSec/60))} min &middot; ${cls.ex.length} exercises</div>
+      <div class="savebar"><div class="inner"><button class="save-btn" onclick="home()">Done</button></div></div>
+    `;
+    return;
+  }
+
+  const exName = cls.ex[s.exIndex % cls.ex.length].n;
+  let phaseLabel, phaseClass;
+  if(cls.format==="amrap"){ phaseLabel="AMRAP"; phaseClass="amrap"; }
+  else if(s.phase==="roundrest"){ phaseLabel="ROUND REST"; phaseClass="rest"; }
+  else if(cls.format==="emom"){ phaseLabel="EMOM"; phaseClass="work"; }
+  else { phaseLabel = s.phase==="work" ? "WORK" : "REST"; phaseClass = s.phase; }
+  const exNameLabel = s.phase==="roundrest" ? `Up next: ${exName}` : exName;
+
+  const progressLabel = cls.format==="amrap"
+    ? `Rounds completed: ${s.roundsCompleted}`
+    : `Round ${Math.min(s.round,cls.rounds)} of ${cls.rounds} &middot; Exercise ${(s.exIndex%cls.ex.length)+1} of ${cls.ex.length}`;
+
+  const exList = cls.ex.map((e,i)=>{
+    const active = cls.format!=="amrap" && i===(s.exIndex%cls.ex.length);
+    return `<div class="hiit-ex-row${active?" active":""}"><div class="hx-name">${i+1}. ${e.n}</div></div>`;
+  }).join("");
+
+  const amrapBtn = cls.format==="amrap"
+    ? `<button class="rest-chip" style="width:100%;margin-bottom:14px" onclick="incrementAmrapRound()">+1 round (currently ${s.roundsCompleted})</button>`
+    : "";
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>${cls.name}</h2><div class="focus">${progressLabel}</div></div>
+    </div>
+    <div class="hiit-timer-card ${phaseClass}">
+      <div class="hiit-phase">${phaseLabel}</div>
+      <div class="hiit-countdown">${fmtRest(Math.max(0,s.remaining))}</div>
+      <div class="hiit-exname">${exNameLabel}</div>
+    </div>
+    ${amrapBtn}
+    <div class="hiit-controls">
+      <button class="hiit-ctrl-btn primary" onclick="toggleHiitTimer()">${s.running?"Pause":"Start"}</button>
+      <button class="hiit-ctrl-btn" onclick="skipHiitPhase()">Skip</button>
+      <button class="hiit-ctrl-btn" onclick="finishHiitEarly()">Finish</button>
+    </div>
+    <div class="section-label">Exercises</div>
+    ${exList}
+  `;
+}
+
 // ── Leaderboard (Ed vs Tara, consistency-based) ───────────
 function startOfWeekISO(){
   const now = new Date(); const dow=(now.getDay()+6)%7;
@@ -1136,6 +1778,38 @@ window.showMeasurements = showMeasurements;
 window.saveMeasurementEntry = saveMeasurementEntry;
 window.deleteMeasurementEntry = deleteMeasurementEntry;
 window.showLeaderboard = showLeaderboard;
+window.showHiitSettings = showHiitSettings;
+window.openHiitEditor = openHiitEditor;
+window.setHiitName = setHiitName;
+window.setHiitFormat = setHiitFormat;
+window.setHiitWork = setHiitWork;
+window.setHiitRest = setHiitRest;
+window.setHiitRounds = setHiitRounds;
+window.setHiitCap = setHiitCap;
+window.setHiitInterval = setHiitInterval;
+window.setHiitRoundRestEnabled = setHiitRoundRestEnabled;
+window.setHiitRoundRestSec = setHiitRoundRestSec;
+window.addHiitExercise = addHiitExercise;
+window.removeHiitExercise = removeHiitExercise;
+window.moveHiitExercise = moveHiitExercise;
+window.saveDraftHiit = saveDraftHiit;
+window.deleteHiitClass = deleteHiitClass;
+window.openHiitRunner = openHiitRunner;
+window.toggleHiitTimer = toggleHiitTimer;
+window.skipHiitPhase = skipHiitPhase;
+window.finishHiitEarly = finishHiitEarly;
+window.incrementAmrapRound = incrementAmrapRound;
+window.showSettings = showSettings;
+window.openSessionEditor = openSessionEditor;
+window.setDraftName = setDraftName;
+window.setDraftFocus = setDraftFocus;
+window.setDraftExSets = setDraftExSets;
+window.setDraftExReps = setDraftExReps;
+window.addDraftExercise = addDraftExercise;
+window.removeDraftExercise = removeDraftExercise;
+window.moveDraftExercise = moveDraftExercise;
+window.saveDraftSession = saveDraftSession;
+window.deleteSessionFromPlan = deleteSessionFromPlan;
 
 showProfilePicker();
 </script>
