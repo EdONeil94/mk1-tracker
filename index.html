@@ -47,9 +47,6 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 
 .histbtn{margin-top:12px;width:100%;background:none;border:1.5px dashed var(--line);
   color:var(--mute);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer}
-.refreshbtn{margin-top:10px;width:100%;background:var(--chip);border:1.5px solid var(--line);
-  color:var(--text);border-radius:14px;padding:12px;font-size:13.5px;font-weight:700;cursor:pointer}
-.refreshbtn:active{border-color:var(--accent)}
 
 .topbar{display:flex;align-items:center;gap:10px;padding:6px 0 12px}
 .back{background:var(--chip);border:none;color:var(--text);border-radius:11px;
@@ -121,7 +118,13 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 
 .empty{color:var(--mute);text-align:center;padding:50px 20px;font-size:14px;line-height:1.7}
 .empty strong{color:var(--text);display:block;font-size:16px;margin-bottom:8px}
-.section-label{color:var(--mute);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;margin:20px 0 10px}
+.section-label{color:var(--mute);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;
+  margin:20px 0 10px;display:flex;align-items:center;justify-content:space-between}
+.icon-btn{background:var(--chip);border:1.5px solid var(--line);color:var(--text);border-radius:9px;
+  width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;
+  cursor:pointer;flex-shrink:0}
+.icon-btn:active{border-color:var(--accent)}
+.label-actions{display:flex;gap:6px}
 .loading{color:var(--mute);text-align:center;padding:60px 20px;font-size:14px}
 .last-updated{text-align:center;color:var(--mute);font-size:12px;margin:6px 0 18px;line-height:1.6}
 .last-updated b{color:var(--text)}
@@ -184,15 +187,73 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .wdel{background:none;border:none;color:#5a6070;font-size:16px;cursor:pointer;padding:0 2px}
 .wdel:active{color:#a04030}
 
-.checkinbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
-  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
-  display:flex;align-items:center;justify-content:space-between}
-.checkinbtn .cb-label{display:flex;align-items:center;gap:8px}
 .qr-card{background:#fff;border-radius:18px;padding:16px;margin:0 auto 16px;max-width:320px;
   display:flex;justify-content:center}
 .qr-card img{width:100%;max-width:300px;display:block;border-radius:8px}
 .qr-empty{color:var(--mute);text-align:center;padding:50px 20px;font-size:14px;line-height:1.7}
 .qr-empty strong{color:var(--text);display:block;font-size:16px;margin-bottom:8px}
+
+.rest-bar{display:flex;gap:8px;align-items:center;margin:6px 0 18px}
+.rest-chip{background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0}
+.rest-chip:active{border-color:var(--accent)}
+.rest-display{flex:1;text-align:center;background:var(--card);border:1.5px solid var(--line);
+  border-radius:10px;padding:9px;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;
+  cursor:pointer;transition:background .2s,border-color .2s}
+.rest-display.running{background:var(--accent2);border-color:var(--accent2);color:#fff}
+
+.streakbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
+  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between}
+.streak-hero{text-align:center;background:var(--card);border:1.5px solid var(--line);
+  border-radius:16px;padding:22px;margin-bottom:16px}
+.streak-hero .num{font-size:40px;font-weight:800;color:var(--accent)}
+.streak-hero .lbl{color:var(--mute);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.heat-outer{display:flex;gap:6px}
+.heat-daylabels{display:flex;flex-direction:column;gap:3px;flex-shrink:0;padding-top:0}
+.heat-daylabel{width:11px;height:11px;font-size:8px;line-height:11px;text-align:center;color:var(--mute)}
+.heat-wrap{overflow-x:auto;padding-bottom:6px}
+.heat-grid{display:flex;gap:3px}
+.heat-col{display:flex;flex-direction:column;gap:3px}
+.heat-cell{width:11px;height:11px;border-radius:2px;background:var(--chip);border:1px solid var(--line)}
+.heat-cell.on{background:var(--good);border-color:var(--good)}
+.heat-legend{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:11px;margin-top:10px}
+
+.measurebtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
+  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between}
+.seg{display:flex;background:var(--chip);border:1.5px solid var(--line);border-radius:12px;
+  padding:3px;margin-bottom:14px}
+.seg button{flex:1;background:none;border:none;color:var(--mute);font-size:13px;font-weight:700;
+  padding:9px 4px;border-radius:9px;cursor:pointer}
+.seg button.active{background:var(--accent2);color:#fff}
+.measure-form{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.measure-form .mrow{display:flex;gap:8px;align-items:center}
+.measure-form label{width:54px;color:var(--mute);font-size:12px;font-weight:700;flex-shrink:0}
+.measure-form input{flex:1;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:10px;padding:11px;font-size:16px;font-weight:700;text-align:center;
+  -webkit-appearance:none;appearance:none}
+.measure-form input:focus{outline:none;border-color:var(--accent)}
+.measure-form button.save-measure{background:var(--accent2);border:none;color:#fff;border-radius:10px;
+  padding:12px;font-weight:800;font-size:14px;cursor:pointer;margin-top:4px}
+
+.leaderbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
+  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between}
+.lb-head{display:flex;justify-content:space-around;align-items:center;margin-bottom:16px}
+.lb-person{text-align:center}
+.lb-person .lb-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent2);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin:0 auto 8px;
+  background-size:cover;background-position:center}
+.lb-person .lb-name{font-weight:800;font-size:14px}
+.lb-vs{color:var(--mute);font-size:12px;font-weight:800}
+.lb-row{display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;gap:8px;
+  background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px 12px;margin-bottom:10px}
+.lb-row .lb-val{font-size:20px;font-weight:800;text-align:center}
+.lb-row .lb-val.lead{color:var(--accent)}
+.lb-row .lb-label{color:var(--mute);font-size:10.5px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.06em;text-align:center}
+.lb-loading{color:var(--mute);text-align:center;padding:60px 20px;font-size:14px}
 </style>
 </head>
 <body>
@@ -271,23 +332,28 @@ const PLAN = [
 
 let LOG = [];
 let WEIGHTS = [];
+let MEASUREMENTS = [];
 let STORAGE_AVAILABLE = true;
+const MEASURE_METRICS = [{id:"waist",label:"Waist"},{id:"chest",label:"Chest"},{id:"arms",label:"Arms"}];
+let currentMeasureMetric = "waist";
 
 async function loadLog(){
   try{
     const snap = await getDoc(profileDocRef());
     LOG = snap.exists() ? (snap.data().log || []) : [];
     WEIGHTS = snap.exists() ? (snap.data().weights || []) : [];
+    MEASUREMENTS = snap.exists() ? (snap.data().measurements || []) : [];
     STORAGE_AVAILABLE = true;
   }catch(e){
     STORAGE_AVAILABLE = false;
     LOG = [];
     WEIGHTS = [];
+    MEASUREMENTS = [];
   }
 }
 async function saveLog(){
   try{
-    await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, updatedAt: new Date().toISOString()});
+    await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, measurements: MEASUREMENTS, updatedAt: new Date().toISOString()});
     return true;
   }catch(e){ return false; }
 }
@@ -305,6 +371,80 @@ const timeAgo = iso => {
 };
 const lastOf = id => [...LOG].filter(w=>w.sessionId===id).sort((a,b)=>b.date.localeCompare(a.date))[0];
 
+function dayKey(iso){ return new Date(iso).toISOString().slice(0,10); }
+function trainedDaysSetFor(log){ return new Set(log.map(w=>dayKey(w.date))); }
+
+function weekStreakFor(log){
+  const days = trainedDaysSetFor(log);
+  function weekHasSession(weekStart){
+    for(let i=0;i<7;i++){
+      const d = new Date(weekStart); d.setDate(d.getDate()+i);
+      if(days.has(d.toISOString().slice(0,10))) return true;
+    }
+    return false;
+  }
+  const now = new Date();
+  const dow = (now.getDay()+6)%7; // 0 = Monday
+  let weekStart = new Date(now); weekStart.setDate(now.getDate()-dow); weekStart.setHours(0,0,0,0);
+  let streak = 0;
+  let cursor = new Date(weekStart);
+  while(weekHasSession(cursor)){
+    streak++;
+    cursor.setDate(cursor.getDate()-7);
+  }
+  return streak;
+}
+
+function sessionsInRange(log, startISO, endISO){
+  return log.filter(w=>w.date>=startISO && w.date<endISO).length;
+}
+
+function buildHeatmap(log){
+  const days = trainedDaysSetFor(log);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const totalDays = 84;
+  let start = new Date(today); start.setDate(today.getDate()-totalDays+1);
+  const dow = (start.getDay()+6)%7;
+  start.setDate(start.getDate()-dow);
+  const cells = [];
+  let cursor = new Date(start);
+  while(cursor<=today){
+    const key = cursor.toISOString().slice(0,10);
+    cells.push({date:key, trained:days.has(key)});
+    cursor.setDate(cursor.getDate()+1);
+  }
+  const cols = [];
+  for(let i=0;i<cells.length;i+=7) cols.push(cells.slice(i,i+7));
+  const colsHtml = cols.map(week=>{
+    const squares = week.map(c=>`<div class="heat-cell ${c.trained?"on":""}" title="${c.date}"></div>`).join("");
+    return `<div class="heat-col">${squares}</div>`;
+  }).join("");
+  const dayLetters = ["M","T","W","T","F","S","S"];
+  const labelsHtml = dayLetters.map(d=>`<div class="heat-daylabel">${d}</div>`).join("");
+  return `<div class="heat-outer">
+    <div class="heat-daylabels">${labelsHtml}</div>
+    <div class="heat-wrap"><div class="heat-grid">${colsHtml}</div></div>
+  </div>`;
+}
+
+function allTimeBest(exerciseName){
+  let best = null;
+  LOG.forEach(session=>{
+    session.ex.forEach(e=>{
+      if(e.n!==exerciseName) return;
+      e.sets.forEach(s=>{
+        const w = parseFloat(s.w);
+        if(isNaN(w)) return;
+        const r = parseInt(s.r)||0;
+        if(!best || w>best.weight || (w===best.weight && r>best.reps)){
+          best = {weight:w, reps:r};
+        }
+      });
+    });
+  });
+  return best;
+}
+
 function showToast(msg, ok=true){
   const t=$("toast");
   t.textContent=msg;
@@ -321,6 +461,53 @@ function startTimer(){
 }
 function stopTimer(){ if(timerInterval){clearInterval(timerInterval); timerInterval=null;} }
 function elapsedMinutes(){ return timerStart ? Math.round((Date.now()-timerStart)/60000) : 0; }
+
+let restInterval=null, restRemaining=0;
+function fmtRest(sec){ return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`; }
+function startRest(seconds){
+  clearInterval(restInterval);
+  restRemaining = seconds;
+  renderRest();
+  restInterval = setInterval(()=>{
+    restRemaining--;
+    if(restRemaining<=0){
+      clearInterval(restInterval); restInterval=null; restRemaining=0;
+      renderRest();
+      try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(e){}
+      playBeep();
+      showToast("\u23F1 Rest over \u2014 back to it!");
+      return;
+    }
+    renderRest();
+  },1000);
+}
+function cancelRest(){
+  clearInterval(restInterval); restInterval=null; restRemaining=0; renderRest();
+}
+function renderRest(){
+  const el = $("restDisplay");
+  if(!el) return;
+  if(restInterval){
+    el.textContent = fmtRest(restRemaining);
+    el.classList.add("running");
+  } else {
+    el.textContent = "Rest";
+    el.classList.remove("running");
+  }
+}
+function playBeep(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type="sine"; o.frequency.value=880;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime+0.02);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.5);
+    o.stop(ctx.currentTime+0.55);
+  }catch(e){}
+}
 
 function showProfilePicker(){
   stopTimer();
@@ -354,6 +541,7 @@ function switchProfile(){
 
 function home(){
   stopTimer();
+  cancelRest();
   const banner = STORAGE_AVAILABLE
     ? `<div class="sync-ok"><div class="dot"></div>Synced &mdash; same data on every device</div>`
     : `<div class="sync-banner">Couldn't reach the database. Check your internet connection and tap Refresh.</div>`;
@@ -381,16 +569,23 @@ function home(){
       <p>Tap a session. Last weights load automatically.</p>
       <div class="switch-profile" onclick="switchProfile()">${avatarHtml(CURRENT_PROFILE, "avatar-sm")}${CURRENT_PROFILE.name} &middot; switch</div>
     </div>
-    <div class="section-label">Sessions</div>
+    <div class="section-label">Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
     <div class="grid">${cards}</div>
     <button class="histbtn" onclick="showHistory()">📋 &nbsp;View full history &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>
-    <button class="refreshbtn" onclick="refresh()">🔄 &nbsp;Refresh &mdash; pull latest from other devices</button>
     <button class="weightbtn" onclick="showWeightTracker()">
       <span class="wb-label">⚖️ Body weight</span>
       <span class="wb-current">${weightLabel}</span>
     </button>
-    <button class="checkinbtn" onclick="showCheckIn()">
-      <span class="cb-label">📱 Gym check-in QR</span>
+    <button class="streakbtn" onclick="showActivity()">
+      <span class="cb-label">🔥 Activity &amp; streak</span>
+      <span>&rsaquo;</span>
+    </button>
+    <button class="measurebtn" onclick="showMeasurements()">
+      <span class="cb-label">📏 Body measurements</span>
+      <span>&rsaquo;</span>
+    </button>
+    <button class="leaderbtn" onclick="showLeaderboard()">
+      <span class="cb-label">🏆 Leaderboard</span>
       <span>&rsaquo;</span>
     </button>
   `;
@@ -410,6 +605,8 @@ function openSession(id){
     const prevHtml = (prev && prev.sets.length)
       ? `Last: <b>${prev.sets.map(s=>`${s.w||"?"}kg&times;${s.r||"?"}`).join(" &nbsp;\u00b7&nbsp; ")}</b>`
       : "First time logging this exercise";
+    const priorBest = allTimeBest(e.n);
+    const bestHtml = priorBest ? ` &nbsp;&middot;&nbsp; &#127942; PR: <b>${priorBest.weight}kg&times;${priorBest.reps}</b>` : "";
     const rows = Array.from({length:e.s},(_,si)=>{
       const pw = prev&&prev.sets[si] ? prev.sets[si].w : "";
       const pr = prev&&prev.sets[si] ? prev.sets[si].r : "";
@@ -417,7 +614,7 @@ function openSession(id){
     }).join("");
     return `<div class="ex" id="ex${i}">
       <div class="ex-head"><div class="ex-name">${i+1}. ${e.n}</div><div class="scheme">${e.s}&times;${e.r}</div></div>
-      <div class="prev">${prevHtml}</div>
+      <div class="prev">${prevHtml}${bestHtml}</div>
       <div class="sets" id="sets${i}">${rows}</div>
       <button class="addset-btn" onclick="addSet(${i},event)">+ add set</button>
     </div>`;
@@ -435,6 +632,12 @@ function openSession(id){
     </div>
     ${blocks}
     ${footer}
+    <div class="rest-bar">
+      <button class="rest-chip" onclick="startRest(60)">60s</button>
+      <button class="rest-chip" onclick="startRest(90)">90s</button>
+      <button class="rest-chip" onclick="startRest(120)">120s</button>
+      <div class="rest-display" id="restDisplay" onclick="cancelRest()">Rest</div>
+    </div>
     <div class="savebar"><div class="inner"><button class="save-btn" onclick="saveSession('${id}')">Save session</button></div></div>`;
   window.scrollTo(0,0);
   startTimer();
@@ -518,13 +721,36 @@ async function saveSession(id){
   }).filter(e=>e.sets.length);
 
   if(!ex.length){ showToast("Log at least one set first", false); return; }
+
+  // Spot new personal records before this session is added to history
+  const prHits = [];
+  ex.forEach(e=>{
+    const priorBest = allTimeBest(e.n);
+    let sessionMax = null;
+    e.sets.forEach(s=>{
+      const w = parseFloat(s.w);
+      if(isNaN(w)) return;
+      if(!sessionMax || w>sessionMax) sessionMax = w;
+    });
+    if(sessionMax!==null && (!priorBest || sessionMax>priorBest.weight)){
+      prHits.push(`${e.n.split("(")[0].trim()} ${sessionMax}kg`);
+    }
+  });
+
   const duration = elapsedMinutes();
   LOG.push({sessionId:id, date:new Date().toISOString(), duration, ex});
   const ok = await saveLog();
   stopTimer();
-  showToast(ok ? "Session saved & synced \u2713" : "Couldn't save \u2014 check your connection");
-  if(!ok) LOG.pop(); // don't keep an unsaved entry in memory if the write failed
-  setTimeout(home, 1000);
+  cancelRest();
+  if(!ok){
+    showToast("Couldn't save \u2014 check your connection");
+    LOG.pop(); // don't keep an unsaved entry in memory if the write failed
+  } else if(prHits.length){
+    showToast(`\u{1F3C6} New PR: ${prHits.slice(0,2).join(", ")}${prHits.length>2?` +${prHits.length-2} more`:""}`);
+  } else {
+    showToast("Session saved & synced \u2713");
+  }
+  setTimeout(home, ok && prHits.length ? 1800 : 1000);
 }
 
 function showHistory(){
@@ -556,14 +782,14 @@ async function delEntry(i){
 // ── Body weight tracker ──────────────────────────────────
 function sortedWeights(){ return [...WEIGHTS].sort((a,b)=>a.date.localeCompare(b.date)); }
 
-function changeSince(sorted, days){
+function changeSince(sorted, days, key="weight"){
   if(sorted.length<2) return null;
   const last = sorted[sorted.length-1];
   const cutoff = new Date(last.date).getTime() - days*86400000;
   let ref = null;
   for(const w of sorted){ if(new Date(w.date).getTime() <= cutoff) ref = w; }
   if(!ref || ref===last) return null;
-  return last.weight - ref.weight;
+  return last[key] - ref[key];
 }
 
 function deltaHtml(delta, decimals=1){
@@ -573,14 +799,14 @@ function deltaHtml(delta, decimals=1){
   return `<span class="value ${cls}">${arrow} ${Math.abs(delta).toFixed(decimals)}kg</span>`;
 }
 
-function buildWeightChartSVG(sorted){
-  if(sorted.length<2){
+function buildTrendChartSVG(pairs){
+  if(pairs.length<2){
     return `<div class="chart-empty">Log at least two entries to see a trend line here.</div>`;
   }
   const W=560, H=200, padL=38, padR=12, padT=16, padB=24;
   const plotW=W-padL-padR, plotH=H-padT-padB;
-  const times = sorted.map(w=>new Date(w.date).getTime());
-  const vals = sorted.map(w=>w.weight);
+  const times = pairs.map(w=>new Date(w.date).getTime());
+  const vals = pairs.map(w=>w.value);
   const minT=Math.min(...times), maxT=Math.max(...times);
   const minW=Math.min(...vals), maxW=Math.max(...vals);
   const range = Math.max(maxW-minW, 0.5);
@@ -588,7 +814,7 @@ function buildWeightChartSVG(sorted){
   const loY = minW-pad, hiY = maxW+pad;
   const x = t => padL + (maxT>minT ? (t-minT)/(maxT-minT) : 0.5) * plotW;
   const y = v => padT + plotH - (v-loY)/(hiY-loY) * plotH;
-  const pts = sorted.map((w,i)=>[x(times[i]), y(w.weight)]);
+  const pts = pairs.map((w,i)=>[x(times[i]), y(w.value)]);
   const lineD = pts.map((p,i)=>(i===0?"M":"L")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
   const areaD = lineD + ` L${pts[pts.length-1][0].toFixed(1)},${(padT+plotH).toFixed(1)} L${pts[0][0].toFixed(1)},${(padT+plotH).toFixed(1)} Z`;
   const circles = pts.map((p,i)=>{
@@ -601,8 +827,8 @@ function buildWeightChartSVG(sorted){
     return `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="var(--line)" stroke-width="1"/>
       <text x="${padL-6}" y="${yy}" fill="var(--mute)" font-size="10" text-anchor="end" dominant-baseline="middle">${v.toFixed(1)}</text>`;
   }).join("");
-  const firstLabel = fmtDate(sorted[0].date);
-  const lastLabel = fmtDate(sorted[sorted.length-1].date);
+  const firstLabel = fmtDate(pairs[0].date);
+  const lastLabel = fmtDate(pairs[pairs.length-1].date);
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
     ${gridlines}
     <path d="${areaD}" fill="var(--accent)" opacity="0.12"/>
@@ -611,6 +837,9 @@ function buildWeightChartSVG(sorted){
     <text x="${padL}" y="${H-6}" fill="var(--mute)" font-size="10">${firstLabel}</text>
     <text x="${W-padR}" y="${H-6}" fill="var(--mute)" font-size="10" text-anchor="end">${lastLabel}</text>
   </svg>`;
+}
+function buildWeightChartSVG(sorted){
+  return buildTrendChartSVG(sorted.map(w=>({date:w.date, value:w.weight})));
 }
 
 function showWeightTracker(){
@@ -683,6 +912,188 @@ async function deleteWeightEntry(idx){
   showWeightTracker();
 }
 
+// ── Activity & streak ─────────────────────────────────────
+function showActivity(){
+  stopTimer();
+  const streak = weekStreakFor(LOG);
+  const heatmap = buildHeatmap(LOG);
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Activity</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    <div class="streak-hero">
+      <div class="num">${streak}</div>
+      <div class="lbl">${streak===1?"week":"weeks"} streak &mdash; at least one session every week</div>
+    </div>
+    <div class="section-label">Last 12 weeks</div>
+    ${heatmap}
+    <div class="heat-legend"><div class="heat-cell"></div> No session &nbsp; <div class="heat-cell on"></div> Trained</div>
+    <div class="last-updated">${LOG.length} session${LOG.length!==1?"s":""} logged in total</div>
+  `;
+  window.scrollTo(0,0);
+}
+
+// ── Body measurements ─────────────────────────────────────
+function showMeasurements(metric){
+  stopTimer();
+  if(metric) currentMeasureMetric = metric;
+  const m = currentMeasureMetric;
+  const segButtons = MEASURE_METRICS.map(mm=>
+    `<button class="${mm.id===m?"active":""}" onclick="showMeasurements('${mm.id}')">${mm.label}</button>`
+  ).join("");
+
+  const sorted = [...MEASUREMENTS].filter(e=>e[m]!=null).sort((a,b)=>a.date.localeCompare(b.date));
+  const last = sorted[sorted.length-1];
+  const weekChange = changeSince(sorted, 7, m);
+  const monthChange = changeSince(sorted, 30, m);
+
+  const statRow = `<div class="stat-row">
+    <div class="stat-card"><div class="label">Current</div><div class="value">${last?last[m]+"cm":"&mdash;"}</div></div>
+    <div class="stat-card"><div class="label">7 days</div>${deltaHtml(weekChange)}</div>
+    <div class="stat-card"><div class="label">30 days</div>${deltaHtml(monthChange)}</div>
+  </div>`;
+
+  const chart = `<div class="chart-card">${buildTrendChartSVG(sorted.map(e=>({date:e.date, value:e[m]})))}</div>`;
+
+  const today = new Date().toISOString().slice(0,10);
+  const existingToday = MEASUREMENTS.find(e=>e.date.slice(0,10)===today) || {};
+  const form = `<div class="measure-form">
+    <div class="mrow"><input type="date" id="mDate" value="${today}" style="flex:1"></div>
+    <div class="mrow"><label>Waist</label><input type="number" inputmode="decimal" step="0.1" min="0" id="mWaist" placeholder="cm" value="${existingToday.waist??""}"></div>
+    <div class="mrow"><label>Chest</label><input type="number" inputmode="decimal" step="0.1" min="0" id="mChest" placeholder="cm" value="${existingToday.chest??""}"></div>
+    <div class="mrow"><label>Arms</label><input type="number" inputmode="decimal" step="0.1" min="0" id="mArms" placeholder="cm" value="${existingToday.arms??""}"></div>
+    <button class="save-measure" onclick="saveMeasurementEntry()">Save measurements</button>
+  </div>`;
+
+  const allSorted = [...MEASUREMENTS].sort((a,b)=>b.date.localeCompare(a.date));
+  const rows = allSorted.map(e=>{
+    const idx = MEASUREMENTS.indexOf(e);
+    const parts = MEASURE_METRICS.filter(mm=>e[mm.id]!=null).map(mm=>`${mm.label} ${e[mm.id]}cm`).join(" &nbsp;\u00b7&nbsp; ");
+    return `<div class="wrow">
+      <div class="wd">${fmtDate(e.date)}</div>
+      <div class="wright"><span class="wv" style="font-size:12px;font-weight:700">${parts||"&mdash;"}</span><button class="wdel" onclick="deleteMeasurementEntry(${idx})" aria-label="Delete">&times;</button></div>
+    </div>`;
+  }).join("");
+  const historyBlock = allSorted.length
+    ? `<div class="section-label">History</div><div class="hday">${rows}</div>`
+    : `<div class="chart-empty">No entries yet &mdash; log your first measurements below.</div>`;
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Body Measurements</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    <div class="seg">${segButtons}</div>
+    ${statRow}
+    ${chart}
+    ${form}
+    ${historyBlock}
+  `;
+  window.scrollTo(0,0);
+}
+
+async function saveMeasurementEntry(){
+  const dateVal = $("mDate").value;
+  const waist = parseFloat($("mWaist").value);
+  const chest = parseFloat($("mChest").value);
+  const arms = parseFloat($("mArms").value);
+  if(!dateVal || (isNaN(waist) && isNaN(chest) && isNaN(arms))){
+    showToast("Enter a date and at least one measurement", false);
+    return;
+  }
+  const iso = new Date(dateVal+"T12:00:00").toISOString();
+  const dayStr = iso.slice(0,10);
+  let entry = MEASUREMENTS.find(e=>e.date.slice(0,10)===dayStr);
+  if(!entry){ entry = {date: iso}; MEASUREMENTS.push(entry); }
+  if(!isNaN(waist)) entry.waist = Math.round(waist*10)/10;
+  if(!isNaN(chest)) entry.chest = Math.round(chest*10)/10;
+  if(!isNaN(arms)) entry.arms = Math.round(arms*10)/10;
+  const ok = await saveLog();
+  showToast(ok ? "Measurements saved & synced \u2713" : "Couldn't save \u2014 check your connection");
+  showMeasurements();
+}
+
+async function deleteMeasurementEntry(idx){
+  if(!confirm("Remove this measurement entry?")) return;
+  MEASUREMENTS.splice(idx,1);
+  await saveLog();
+  showMeasurements();
+}
+
+// ── Leaderboard (Ed vs Tara, consistency-based) ───────────
+function startOfWeekISO(){
+  const now = new Date(); const dow=(now.getDay()+6)%7;
+  const d = new Date(now); d.setDate(now.getDate()-dow); d.setHours(0,0,0,0);
+  return d.toISOString();
+}
+function startOfMonthISO(){
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0).toISOString();
+}
+
+async function showLeaderboard(){
+  stopTimer();
+  app.innerHTML = `<div class="topbar"><button class="back" onclick="home()">&#8592; Back</button>
+    <div class="topbar-info"><h2>Leaderboard</h2></div></div>
+    <div class="lb-loading">Loading both trackers&hellip;</div>`;
+  window.scrollTo(0,0);
+
+  const results = await Promise.all(PROFILES.map(async p=>{
+    try{
+      const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${p.id}`));
+      const log = snap.exists() ? (snap.data().log || []) : [];
+      return {profile:p, log, ok:true};
+    }catch(e){
+      return {profile:p, log:[], ok:false};
+    }
+  }));
+
+  const weekStart = startOfWeekISO(), monthStart = startOfMonthISO(), now = new Date().toISOString();
+  const stats = results.map(r=>({
+    profile:r.profile,
+    ok:r.ok,
+    week: sessionsInRange(r.log, weekStart, now),
+    month: sessionsInRange(r.log, monthStart, now),
+    streak: weekStreakFor(r.log),
+    total: r.log.length
+  }));
+  const [a,b] = stats;
+
+  function row(label, va, vb){
+    return `<div class="lb-row">
+      <div class="lb-val ${va>vb?"lead":""}">${va}</div>
+      <div class="lb-label">${label}</div>
+      <div class="lb-val ${vb>va?"lead":""}">${vb}</div>
+    </div>`;
+  }
+
+  const head = `<div class="lb-head">
+    <div class="lb-person">${avatarHtml(a.profile,"lb-avatar")}<div class="lb-name">${a.profile.name}</div></div>
+    <div class="lb-vs">VS</div>
+    <div class="lb-person">${avatarHtml(b.profile,"lb-avatar")}<div class="lb-name">${b.profile.name}</div></div>
+  </div>`;
+
+  const offlineNote = (!a.ok || !b.ok)
+    ? `<div class="sync-banner">Couldn't load one of the trackers \u2014 numbers below may be incomplete.</div>`
+    : "";
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Leaderboard</h2><div class="focus">Consistency, not weights</div></div>
+    </div>
+    ${offlineNote}
+    ${head}
+    ${row("This week", a.week, b.week)}
+    ${row("This month", a.month, b.month)}
+    ${row("Week streak", a.streak, b.streak)}
+    ${row("All-time", a.total, b.total)}
+    <div class="last-updated">Based on sessions logged, not weight lifted \u2014 just about showing up.</div>
+  `;
+  window.scrollTo(0,0);
+}
+
 // ── Gym check-in QR ──────────────────────────────────────
 function showCheckIn(){
   stopTimer();
@@ -718,6 +1129,13 @@ window.saveWeightEntry = saveWeightEntry;
 window.deleteWeightEntry = deleteWeightEntry;
 window.updateSetIndicator = updateSetIndicator;
 window.showCheckIn = showCheckIn;
+window.startRest = startRest;
+window.cancelRest = cancelRest;
+window.showActivity = showActivity;
+window.showMeasurements = showMeasurements;
+window.saveMeasurementEntry = saveMeasurementEntry;
+window.deleteMeasurementEntry = deleteMeasurementEntry;
+window.showLeaderboard = showLeaderboard;
 
 showProfilePicker();
 </script>
