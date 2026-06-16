@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MK1 Tracker">
+<meta name="theme-color" content="#15181f">
+<title>MK1 Workout Tracker</title>
+<style>
+:root{
+  --paper:#15181f; --card:#1e2230;
+  --accent:#e2502a; --accent2:#c8401f;
+  --mute:#8a90a0; --line:#2e3445; --text:#eceef2;
+  --good:#3fae6a; --chip:#252c3a;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;background:var(--paper);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
+#app{max-width:500px;margin:0 auto;padding:14px 14px 100px}
+
+.sync-banner{background:#2a1f1f;border:1.5px solid #5a3030;color:#e0a890;border-radius:14px;
+  padding:12px 14px;font-size:12.5px;line-height:1.5;margin-bottom:14px}
+.sync-ok{background:var(--chip);border:1.5px solid var(--line);color:var(--mute);border-radius:14px;
+  padding:10px 14px;font-size:12px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.sync-ok .dot{width:7px;height:7px;border-radius:50%;background:var(--good);flex-shrink:0}
+
+.page-header{padding:6px 0 4px}
+.kicker{color:var(--accent);font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+.page-header h1{font-size:26px;font-weight:800;letter-spacing:-.03em;margin-top:2px}
+.page-header p{color:var(--mute);font-size:13px;margin-top:4px}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.scard{background:var(--card);border:1.5px solid var(--line);border-radius:16px;
+  padding:16px 14px;cursor:pointer;transition:transform .08s;position:relative;overflow:hidden}
+.scard:active{transform:scale(.97)}
+.scard::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);opacity:0;transition:opacity .2s}
+.scard.has-data::before{opacity:1}
+.scard h2{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.scard .focus{color:var(--mute);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.scard .last{color:var(--mute);font-size:12px;margin-top:12px;line-height:1.4}
+.scard .last b{color:var(--text)}
+
+.histbtn{margin-top:12px;width:100%;background:none;border:1.5px dashed var(--line);
+  color:var(--mute);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer}
+.refreshbtn{margin-top:10px;width:100%;background:var(--chip);border:1.5px solid var(--line);
+  color:var(--text);border-radius:14px;padding:12px;font-size:13.5px;font-weight:700;cursor:pointer}
+.refreshbtn:active{border-color:var(--accent)}
+
+.topbar{display:flex;align-items:center;gap:10px;padding:6px 0 12px}
+.back{background:var(--chip);border:none;color:var(--text);border-radius:11px;
+  padding:9px 14px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.topbar-info{flex:1;min-width:0}
+.topbar-info h2{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.topbar-info .focus{color:var(--accent);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+.timer-chip{flex-shrink:0;background:var(--chip);border:1.5px solid var(--line);border-radius:11px;
+  padding:7px 12px;text-align:center;line-height:1.1}
+.timer-chip .tlabel{color:var(--mute);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.timer-chip .tval{color:var(--accent);font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:1px}
+
+.ex{background:var(--card);border:1.5px solid var(--line);border-radius:16px;
+  padding:14px;margin-bottom:10px;transition:border-color .2s}
+.ex.done{border-color:var(--good)}
+.ex-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px}
+.ex-name{font-weight:700;font-size:15px;line-height:1.3}
+.scheme{color:var(--accent);font-weight:800;font-size:13px;white-space:nowrap;flex-shrink:0}
+.prev{color:var(--mute);font-size:12px;margin:5px 0 10px;line-height:1.4}
+.prev b{color:var(--text)}
+
+.sets{display:flex;flex-direction:column;gap:7px}
+.setrow{display:grid;grid-template-columns:24px 1fr 1fr 42px 26px;gap:6px;align-items:center}
+.setn{color:var(--mute);font-size:12px;font-weight:800;text-align:center}
+.setrow input{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:10px;padding:10px 6px;font-size:17px;font-weight:700;text-align:center;
+  -webkit-appearance:none;appearance:none}
+.setrow input:focus{outline:none;border-color:var(--accent)}
+.setrow input::placeholder{color:#454e62;font-weight:600}
+.tick{background:var(--chip);border:1.5px solid var(--line);color:var(--mute);
+  border-radius:10px;height:44px;font-size:18px;cursor:pointer;width:100%}
+.tick.on{background:var(--good);border-color:var(--good);color:#fff}
+.remove-set{background:none;border:none;color:#5a6070;font-size:18px;cursor:pointer;height:44px;width:100%}
+.remove-set:active{color:#a04030}
+.addset-btn{background:none;border:none;color:var(--mute);font-size:12px;font-weight:700;
+  padding:8px 0 2px;cursor:pointer;letter-spacing:.04em}
+
+.savebar{position:fixed;bottom:0;left:0;right:0;
+  background:linear-gradient(transparent,var(--paper) 30%);padding:16px 14px calc(16px + var(--safe-bot));pointer-events:none}
+.savebar .inner{max-width:500px;margin:0 auto;pointer-events:all}
+.save-btn{width:100%;background:var(--accent2);border:none;color:#fff;border-radius:16px;
+  padding:17px;font-size:17px;font-weight:800;cursor:pointer}
+.save-btn:disabled{opacity:.4}
+
+.toast{position:fixed;top:calc(16px + var(--safe-top));left:50%;transform:translateX(-50%);
+  background:var(--good);color:#fff;padding:11px 20px;border-radius:99px;
+  font-weight:700;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;white-space:nowrap}
+.toast.show{opacity:1}
+
+.hday{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.hday-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.hday-head b{font-size:15px;font-weight:800}
+.hday-head span{color:var(--mute);font-size:12px}
+.hday-head .dur{color:var(--accent);font-weight:700}
+.hrow{display:flex;justify-content:space-between;gap:10px;font-size:13px;
+  padding:6px 0;border-top:1px solid var(--line);align-items:baseline}
+.hrow .hn{color:var(--mute);flex:1}
+.hrow .hv{font-weight:700;text-align:right;white-space:nowrap;color:var(--text)}
+.del-btn{background:none;border:none;color:#7a4040;font-size:12px;font-weight:700;cursor:pointer;padding:8px 0 0}
+
+.empty{color:var(--mute);text-align:center;padding:50px 20px;font-size:14px;line-height:1.7}
+.empty strong{color:var(--text);display:block;font-size:16px;margin-bottom:8px}
+.section-label{color:var(--mute);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;margin:20px 0 10px}
+.loading{color:var(--mute);text-align:center;padding:60px 20px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div id="app"><div class="loading">Loading your data&hellip;</div></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ── Your Firebase project ──
+const firebaseConfig = {
+  apiKey: "AIzaSyBdnQ059dw1NMV5_OZtG24YUsXY6SNlOxg",
+  authDomain: "mk1-gym-personal.firebaseapp.com",
+  projectId: "mk1-gym-personal",
+  storageBucket: "mk1-gym-personal.firebasestorage.app",
+  messagingSenderId: "277373795968",
+  appId: "1:277373795968:web:33415ae3314ae1619b7065",
+  measurementId: "G-RJG1LJBR3Q"
+};
+// Address your log is stored at. Change this string for a more private/unique address if you ever want to.
+const TRACKER_ID = "ed-mk1-tracker";
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const logDocRef = doc(db, "trackers", TRACKER_ID);
+
+const PLAN = [
+  {id:"upperA", name:"Upper A", focus:"Chest-press focus", ex:[
+    {n:"Incline chest press machine", s:3, r:"8-10"},
+    {n:"Lat pulldown (wide grip)", s:3, r:"10-12"},
+    {n:"Flat chest press machine", s:3, r:"10-12"},
+    {n:"Wide grip seated row", s:3, r:"10-12"},
+    {n:"Dumbbell lateral raises", s:3, r:"12-15"},
+    {n:"Single arm cable tricep extension", s:2, r:"12-15"},
+    {n:"Seated dumbbell biceps curl", s:2, r:"10-12"}
+  ]},
+  {id:"lowerA", name:"Lower A", focus:"Quad focus", ex:[
+    {n:"Abductor machine (warm-up)", s:2, r:"15"},
+    {n:"Leg press", s:3, r:"8-10"},
+    {n:"Leg extension", s:3, r:"12-15"},
+    {n:"Seated / lying leg curl", s:3, r:"10-12"},
+    {n:"Romanian deadlift", s:3, r:"8-10"},
+    {n:"Standing calf raise machine", s:4, r:"12-15"}
+  ]},
+  {id:"upperB", name:"Upper B", focus:"Back focus", ex:[
+    {n:"Flat bench machine press", s:3, r:"8-10"},
+    {n:"Single arm back row machine", s:3, r:"10-12 ea"},
+    {n:"Incline dumbbell fly", s:3, r:"12-15"},
+    {n:"Lat pulldown (close grip)", s:3, r:"10-12"},
+    {n:"Lateral raise m/c + reverse fly (SS)", s:3, r:"12-15 ea"},
+    {n:"Overhead rope tricep extension", s:2, r:"12-15"},
+    {n:"Dumbbell preacher curl", s:2, r:"10-12"}
+  ]},
+  {id:"lowerB", name:"Lower B", focus:"Glute / hamstring focus", ex:[
+    {n:"Abductor machine (last set to fail)", s:2, r:"15-20"},
+    {n:"Hip thrusts", s:3, r:"8-12"},
+    {n:"Hack squat", s:3, r:"8-10"},
+    {n:"Leg curl", s:3, r:"12-15"},
+    {n:"Walking lunges", s:2, r:"10-12 /leg"},
+    {n:"Seated calf raises", s:4, r:"15-20"}
+  ]}
+];
+
+let LOG = [];
+let STORAGE_AVAILABLE = true;
+
+async function loadLog(){
+  try{
+    const snap = await getDoc(logDocRef);
+    LOG = snap.exists() ? (snap.data().log || []) : [];
+    STORAGE_AVAILABLE = true;
+  }catch(e){
+    STORAGE_AVAILABLE = false;
+    LOG = [];
+  }
+}
+async function saveLog(){
+  try{
+    await setDoc(logDocRef, {log: LOG, updatedAt: new Date().toISOString()});
+    return true;
+  }catch(e){ return false; }
+}
+
+const $ = id => document.getElementById(id);
+const app = $("app");
+const fmtDate = iso => new Date(iso).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+const lastOf = id => [...LOG].filter(w=>w.sessionId===id).sort((a,b)=>b.date.localeCompare(a.date))[0];
+
+function showToast(msg, ok=true){
+  const t=$("toast");
+  t.textContent=msg;
+  t.style.background = ok ? "var(--good)" : "#a04030";
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1400);
+}
+
+let timerStart=null, timerInterval=null;
+function fmtElapsed(ms){ const s=Math.floor(ms/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+function startTimer(){
+  stopTimer(); timerStart=Date.now();
+  timerInterval=setInterval(()=>{ const el=$("sessionTimer"); if(!el){stopTimer();return;} el.textContent=fmtElapsed(Date.now()-timerStart); },1000);
+}
+function stopTimer(){ if(timerInterval){clearInterval(timerInterval); timerInterval=null;} }
+function elapsedMinutes(){ return timerStart ? Math.round((Date.now()-timerStart)/60000) : 0; }
+
+function home(){
+  stopTimer();
+  const banner = STORAGE_AVAILABLE
+    ? `<div class="sync-ok"><div class="dot"></div>Synced &mdash; same data on every device</div>`
+    : `<div class="sync-banner">Couldn't reach the database. Check your internet connection and tap Refresh.</div>`;
+
+  const cards = PLAN.map(p=>{
+    const last = lastOf(p.id);
+    let lastHtml = "Not logged yet";
+    if(last){
+      const topSet = last.ex.flatMap(e=>e.sets).filter(s=>s.w).sort((a,b)=>b.w-a.w)[0];
+      lastHtml = `Last: <b>${fmtDate(last.date)}</b>` + (topSet ? `<br>Top weight: <b>${topSet.w}kg</b>` : "");
+    }
+    return `<div class="scard${last?" has-data":""}" onclick="openSession('${p.id}')">
+      <h2>${p.name}</h2><div class="focus">${p.focus}</div><div class="last">${lastHtml}</div>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = `
+    ${banner}
+    <div class="page-header">
+      <div class="kicker">MK1 Gym &middot; Selby</div>
+      <h1>Workout Tracker</h1>
+      <p>Tap a session. Last weights load automatically.</p>
+    </div>
+    <div class="section-label">Sessions</div>
+    <div class="grid">${cards}</div>
+    <button class="histbtn" onclick="showHistory()">📋 &nbsp;View full history &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>
+    <button class="refreshbtn" onclick="refresh()">🔄 &nbsp;Refresh &mdash; pull latest from other devices</button>
+  `;
+}
+
+async function refresh(){
+  showToast("Checking for updates\u2026");
+  await loadLog();
+  home();
+}
+
+function openSession(id){
+  const p = PLAN.find(x=>x.id===id);
+  const last = lastOf(id);
+  const blocks = p.ex.map((e,i)=>{
+    const prev = last && last.ex.find(le=>le.n===e.n);
+    const prevHtml = (prev && prev.sets.length)
+      ? `Last: <b>${prev.sets.map(s=>`${s.w||"?"}kg&times;${s.r||"?"}`).join(" &nbsp;\u00b7&nbsp; ")}</b>`
+      : "First time logging this exercise";
+    const rows = Array.from({length:e.s},(_,si)=>{
+      const pw = prev&&prev.sets[si] ? prev.sets[si].w : "";
+      const pr = prev&&prev.sets[si] ? prev.sets[si].r : "";
+      return makeSetRow(si,pw,pr);
+    }).join("");
+    return `<div class="ex" id="ex${i}">
+      <div class="ex-head"><div class="ex-name">${i+1}. ${e.n}</div><div class="scheme">${e.s}&times;${e.r}</div></div>
+      <div class="prev">${prevHtml}</div>
+      <div class="sets" id="sets${i}">${rows}</div>
+      <button class="addset-btn" onclick="addSet(${i},event)">+ add set</button>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>${p.name}</h2><div class="focus">${p.focus}</div></div>
+      <div class="timer-chip"><div class="tlabel">Time</div><div class="tval" id="sessionTimer">0:00</div></div>
+    </div>
+    ${blocks}
+    <div class="savebar"><div class="inner"><button class="save-btn" onclick="saveSession('${id}')">Save session</button></div></div>`;
+  window.scrollTo(0,0);
+  startTimer();
+}
+
+function makeSetRow(si, pw, pr){
+  return `<div class="setrow" data-pw="${pw}" data-pr="${pr}">
+    <div class="setn">S${si+1}</div>
+    <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" placeholder="${pw!==''?pw+' kg':'kg'}">
+    <input type="number" inputmode="numeric" min="0" class="r-input" placeholder="${pr!==''?pr+' reps':'reps'}">
+    <button class="tick" onclick="tick(this)">&#10003;</button>
+    <button class="remove-set" onclick="removeSet(this)" aria-label="Remove set">&times;</button>
+  </div>`;
+}
+function renumber(setsEl){ [...setsEl.children].forEach((row,idx)=>{ row.querySelector(".setn").textContent="S"+(idx+1); }); }
+
+function tick(btn){
+  const row = btn.closest(".setrow");
+  const w = row.querySelector(".w-input"), r = row.querySelector(".r-input");
+  const pw = row.dataset.pw, pr = row.dataset.pr;
+  if(!btn.classList.contains("on")){
+    if(!w.value && pw!=="") w.value = pw;
+    if(!r.value && pr!=="") r.value = pr;
+    btn.classList.add("on");
+  } else btn.classList.remove("on");
+  checkDone(btn.closest(".ex"));
+}
+function checkDone(exEl){
+  if(!exEl) return;
+  const ticks = exEl.querySelectorAll(".tick"), on = exEl.querySelectorAll(".tick.on");
+  exEl.classList.toggle("done", ticks.length>0 && ticks.length===on.length);
+}
+function addSet(ei, e){
+  e.preventDefault();
+  const c=$("sets"+ei);
+  c.insertAdjacentHTML("beforeend", makeSetRow(c.children.length, "", ""));
+}
+function removeSet(btn){
+  const row = btn.closest(".setrow"), setsEl = row.closest(".sets"), exEl = btn.closest(".ex");
+  if(setsEl.children.length<=1){ showToast("Keep at least one set", false); return; }
+  row.remove(); renumber(setsEl); checkDone(exEl);
+}
+
+async function saveSession(id){
+  const p = PLAN.find(x=>x.id===id);
+  const ex = p.ex.map((e,i)=>{
+    const c=$("sets"+i); const sets=[];
+    [...c.children].forEach(row=>{
+      const w=row.querySelector(".w-input").value.trim();
+      const r=row.querySelector(".r-input").value.trim();
+      if(w||r) sets.push({w:w?parseFloat(w):"", r:r?parseInt(r):""});
+    });
+    return {n:e.n, sets};
+  }).filter(e=>e.sets.length);
+
+  if(!ex.length){ showToast("Log at least one set first", false); return; }
+  const duration = elapsedMinutes();
+  LOG.push({sessionId:id, date:new Date().toISOString(), duration, ex});
+  const ok = await saveLog();
+  stopTimer();
+  showToast(ok ? "Session saved & synced \u2713" : "Couldn't save \u2014 check your connection");
+  if(!ok) LOG.pop(); // don't keep an unsaved entry in memory if the write failed
+  setTimeout(home, 1000);
+}
+
+function showHistory(){
+  if(!LOG.length){
+    app.innerHTML = `<div class="topbar"><button class="back" onclick="home()">&#8592; Back</button><div class="topbar-info"><h2>History</h2></div></div>
+      <div class="empty"><strong>No sessions yet</strong>Log your first session and it'll appear here.</div>`;
+    return;
+  }
+  const sorted = [...LOG].map((w,i)=>({...w,_i:i})).sort((a,b)=>b.date.localeCompare(a.date));
+  const html = sorted.map(w=>{
+    const p = PLAN.find(x=>x.id===w.sessionId)||{name:w.sessionId};
+    const rows = w.ex.map(e=>`<div class="hrow"><div class="hn">${e.n}</div><div class="hv">${e.sets.map(s=>`${s.w||"?"}×${s.r||"?"}`).join("  ")}</div></div>`).join("");
+    return `<div class="hday">
+      <div class="hday-head"><b>${p.name}</b><span>${fmtDate(w.date)}${w.duration?` &middot; <span class="dur">${w.duration} min</span>`:""}</span></div>
+      ${rows}
+      <button class="del-btn" onclick="delEntry(${w._i})">Remove this entry</button>
+    </div>`;
+  }).join("");
+  app.innerHTML = `<div class="topbar"><button class="back" onclick="home()">&#8592; Back</button><div class="topbar-info"><h2>History</h2><div class="focus">${LOG.length} sessions logged</div></div></div>${html}`;
+  window.scrollTo(0,0);
+}
+async function delEntry(i){
+  if(!confirm("Remove this session? This can't be undone.")) return;
+  LOG.splice(i,1);
+  await saveLog();
+  showHistory();
+}
+
+// Expose handlers used by inline onclick="" attributes — required because
+// top-level functions in a <script type="module"> are NOT global by default.
+window.home = home;
+window.openSession = openSession;
+window.addSet = addSet;
+window.tick = tick;
+window.removeSet = removeSet;
+window.saveSession = saveSession;
+window.showHistory = showHistory;
+window.delEntry = delEntry;
+window.refresh = refresh;
+
+(async()=>{ await loadLog(); home(); })();
+</script>
+</body>
+</html>
