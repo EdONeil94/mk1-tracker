@@ -719,18 +719,7 @@ window.deleteWeightEntry = deleteWeightEntry;
 window.updateSetIndicator = updateSetIndicator;
 window.showCheckIn = showCheckIn;
 
-(async()=>{
-  let saved = null;
-  try{ saved = localStorage.getItem("mk1-profile"); }catch(e){}
-  const match = PROFILES.find(p=>p.id===saved);
-  if(match){
-    CURRENT_PROFILE = match;
-    await loadLog();
-    home();
-  } else {
-    showProfilePicker();
-  }
-})();
+showProfilePicker();
 </script>
 </body>
 </html>
