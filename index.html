@@ -74,11 +74,20 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .sets{display:flex;flex-direction:column;gap:7px}
 .setrow{display:grid;grid-template-columns:24px 1fr 1fr 42px 26px;gap:6px;align-items:center}
 .setn{color:var(--mute);font-size:12px;font-weight:800;text-align:center}
+.field{position:relative}
 .setrow input{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
   border-radius:10px;padding:10px 6px;font-size:17px;font-weight:700;text-align:center;
   -webkit-appearance:none;appearance:none}
 .setrow input:focus{outline:none;border-color:var(--accent)}
 .setrow input::placeholder{color:#454e62;font-weight:600}
+.trend-ind{position:absolute;top:-6px;right:-5px;width:15px;height:15px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;
+  background:var(--chip);border:1.5px solid var(--line);color:var(--mute);opacity:0;
+  transition:opacity .15s;pointer-events:none}
+.trend-ind.up,.trend-ind.down,.trend-ind.same{opacity:1}
+.trend-ind.up{background:var(--good);border-color:var(--good);color:#fff}
+.trend-ind.down{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.trend-ind.same{background:var(--chip);border-color:var(--mute);color:var(--mute)}
 .tick{background:var(--chip);border:1.5px solid var(--line);color:var(--mute);
   border-radius:10px;height:44px;font-size:18px;cursor:pointer;width:100%}
 .tick.on{background:var(--good);border-color:var(--good);color:#fff}
@@ -420,13 +429,38 @@ function openSession(id){
 function makeSetRow(si, pw, pr){
   return `<div class="setrow" data-pw="${pw}" data-pr="${pr}">
     <div class="setn">S${si+1}</div>
-    <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" placeholder="${pw!==''?pw+' kg':'kg'}">
-    <input type="number" inputmode="numeric" min="0" class="r-input" placeholder="${pr!==''?pr+' reps':'reps'}">
+    <div class="field">
+      <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" placeholder="${pw!==''?pw+' kg':'kg'}" oninput="updateSetIndicator(this)">
+      <span class="trend-ind"></span>
+    </div>
+    <div class="field">
+      <input type="number" inputmode="numeric" min="0" class="r-input" placeholder="${pr!==''?pr+' reps':'reps'}" oninput="updateSetIndicator(this)">
+      <span class="trend-ind"></span>
+    </div>
     <button class="tick" onclick="tick(this)">&#10003;</button>
     <button class="remove-set" onclick="removeSet(this)" aria-label="Remove set">&times;</button>
   </div>`;
 }
 function renumber(setsEl){ [...setsEl.children].forEach((row,idx)=>{ row.querySelector(".setn").textContent="S"+(idx+1); }); }
+
+function updateSetIndicator(inputEl){
+  const row = inputEl.closest(".setrow");
+  const indicator = inputEl.parentElement.querySelector(".trend-ind");
+  if(!row || !indicator) return;
+  const isWeight = inputEl.classList.contains("w-input");
+  const prevRaw = isWeight ? row.dataset.pw : row.dataset.pr;
+  const prev = prevRaw!=="" ? parseFloat(prevRaw) : null;
+  const curRaw = inputEl.value.trim();
+  const cur = curRaw!=="" ? parseFloat(curRaw) : null;
+  if(prev===null || cur===null || isNaN(prev) || isNaN(cur)){
+    indicator.className = "trend-ind";
+    indicator.innerHTML = "";
+    return;
+  }
+  if(cur>prev){ indicator.className="trend-ind up"; indicator.innerHTML="&#9650;"; }
+  else if(cur<prev){ indicator.className="trend-ind down"; indicator.innerHTML="&#9660;"; }
+  else { indicator.className="trend-ind same"; indicator.innerHTML="&#8212;"; }
+}
 
 function tick(btn){
   const row = btn.closest(".setrow");
@@ -437,6 +471,8 @@ function tick(btn){
     if(!r.value && pr!=="") r.value = pr;
     btn.classList.add("on");
   } else btn.classList.remove("on");
+  updateSetIndicator(w);
+  updateSetIndicator(r);
   checkDone(btn.closest(".ex"));
 }
 function checkDone(exEl){
@@ -649,6 +685,7 @@ window.switchProfile = switchProfile;
 window.showWeightTracker = showWeightTracker;
 window.saveWeightEntry = saveWeightEntry;
 window.deleteWeightEntry = deleteWeightEntry;
+window.updateSetIndicator = updateSetIndicator;
 
 (async()=>{
   let saved = null;
