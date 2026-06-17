@@ -2756,7 +2756,7 @@ async function toggleAdminClientLink(clientId, checked){
 }
 
 // ── Account settings (edit your own email) ───────────────
-function showAccountSettings(){
+function showAccountSettings(preserveScroll){
   stopTimer();
   const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
   const layout = getHomeLayoutFor(current);
@@ -2804,7 +2804,7 @@ function showAccountSettings(){
     <div class="last-updated" style="text-align:left">Reorder with the arrows, untick anything you don't want to see &mdash; including Sessions or HIIT Classes if you only use one. Changes save instantly.</div>
     ${layoutRows}
   `;
-  window.scrollTo(0,0);
+  if(!preserveScroll) window.scrollTo(0,0);
 }
 
 async function saveHomeLayout(layout){
@@ -2819,14 +2819,14 @@ async function moveHomeModule(idx, dir){
   if(newIdx<0 || newIdx>=layout.length) return;
   [layout[idx], layout[newIdx]] = [layout[newIdx], layout[idx]];
   await saveHomeLayout(layout);
-  showAccountSettings();
+  showAccountSettings(true);
 }
 async function toggleHomeModuleVisibility(idx, checked){
   const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
   const layout = getHomeLayoutFor(current);
   layout[idx].hidden = !checked;
   await saveHomeLayout(layout);
-  showAccountSettings();
+  showAccountSettings(true);
 }
 
 async function saveAccountEmail(){
