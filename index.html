@@ -293,6 +293,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .trainerbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--accent2);
   color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
   display:flex;align-items:center;justify-content:space-between}
+.role-badge{color:var(--mute);font-size:11px;margin-left:6px;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
 
 .settingsbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
   color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
@@ -756,6 +757,7 @@ function renderAuthScreen(){
       ${errorHtml}
       ${claimSection}
       <div class="auth-field"><label>Username</label><input type="text" id="authUsername" autocomplete="username" placeholder="e.g. ed"></div>
+      ${!isLogin ? `<div class="auth-field"><label>Email address</label><input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com"></div>` : ""}
       <div class="auth-field"><label>Password</label><input type="password" id="authPassword" autocomplete="${isLogin?"current-password":"new-password"}" placeholder="********"></div>
       ${!isLogin ? `<div class="auth-field"><label>Confirm password</label><input type="password" id="authPassword2" autocomplete="new-password" placeholder="********"></div>` : ""}
       ${extraFields}
@@ -779,11 +781,11 @@ async function submitAuth(){
   const username = ($("authUsername").value||"").trim();
   const password = $("authPassword").value||"";
   if(!username || !password){ authError="Enter a username and password."; renderAuthScreen(); return; }
-  const email = usernameToEmail(username);
+  const authEmail = usernameToEmail(username);
 
   if(authMode==="login"){
     try{
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, authEmail, password);
     }catch(e){
       authError = "Couldn't log in. Check your username and password.";
       renderAuthScreen();
@@ -792,6 +794,12 @@ async function submitAuth(){
   }
 
   const password2 = $("authPassword2") ? $("authPassword2").value : "";
+  const realEmail = ($("authEmail")?.value||"").trim();
+  if(!realEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(realEmail)){
+    authError = "Enter a valid email address.";
+    renderAuthScreen();
+    return;
+  }
   if(password.length<6){ authError="Password needs to be at least 6 characters."; renderAuthScreen(); return; }
   if(password!==password2){ authError="Passwords don't match."; renderAuthScreen(); return; }
   if(!signupWho){ authError="Choose who you are first."; renderAuthScreen(); return; }
@@ -810,11 +818,11 @@ async function submitAuth(){
   }
 
   try{
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const cred = await createUserWithEmailAndPassword(auth, authEmail, password);
     await setDoc(doc(db,"users",cred.user.uid), {profileId});
     const existing = PEOPLE.find(p=>p.id===profileId);
-    if(existing){ existing.uid = cred.user.uid; }
-    else{ PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid}); }
+    if(existing){ existing.uid = cred.user.uid; existing.email = realEmail; }
+    else{ PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail}); }
     await savePeople();
   }catch(e){
     authError = (e && e.code==="auth/email-already-in-use") ? "That username is already taken." : "Couldn't create that account.";
@@ -827,6 +835,16 @@ function logOut(){
   signOut(auth);
 }
 
+// Ed owns this deployment, so his account always carries admin rights -
+// corrected automatically here in case it was ever set otherwise.
+async function ensureEdIsAdmin(){
+  const ed = PEOPLE.find(p=>p.id==="ed");
+  if(ed && ed.role!=="admin"){
+    ed.role = "admin";
+    await savePeople();
+  }
+}
+
 async function bootForUser(user){
   if(!user){
     CURRENT_PROFILE = null;
@@ -835,6 +853,7 @@ async function bootForUser(user){
   }
   app.innerHTML = `<div class="loading">Loading your data&hellip;</div>`;
   await loadPeople();
+  await ensureEdIsAdmin();
   let mapping = null;
   try{
     const snap = await getDoc(doc(db,"users",user.uid));
@@ -895,6 +914,12 @@ function home(){
         <span>&rsaquo;</span>
       </button>`
     : "";
+  const adminSection = CURRENT_PROFILE.role==="admin"
+    ? `<button class="trainerbtn" onclick="showAdminDashboard()">
+        <span class="cb-label">🛠️ Admin</span>
+        <span>&rsaquo;</span>
+      </button>`
+    : "";
 
   app.innerHTML = `
     ${banner}
@@ -903,8 +928,10 @@ function home(){
       <h1>${CURRENT_PROFILE.name}'s Workout Tracker</h1>
       <p>Tap a session. Last weights load automatically.</p>
       <div class="switch-profile" onclick="logOut()">${avatarHtml(CURRENT_PROFILE, "avatar-sm")}${CURRENT_PROFILE.name} &middot; log out</div>
+      <div class="switch-profile" onclick="showAccountSettings()" style="margin-left:8px">&#9881; Account settings</div>
     </div>
     ${trainerSection}
+    ${adminSection}
     <div class="section-label">Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
     <div class="grid">${cards}</div>
     <button class="histbtn" onclick="showHistory()">📋 &nbsp;View full history &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>
@@ -1951,6 +1978,7 @@ function showCheckIn(){
 // ── Trainer dashboard & client linking ────────────────────
 async function showTrainerDashboard(){
   stopTimer();
+  detailBackTarget = "showTrainerDashboard";
   app.innerHTML = `<div class="topbar"><button class="back" onclick="home()">&#8592; Back</button>
     <div class="topbar-info"><h2>Trainer Dashboard</h2><div class="focus">${CURRENT_PROFILE.name}</div></div></div>
     <div class="lb-loading">Loading your clients&hellip;</div>`;
@@ -2031,9 +2059,11 @@ async function toggleClientLink(clientId, checked){
   showToast("Updated");
 }
 
+let detailBackTarget = "showTrainerDashboard";
+
 async function showClientDetail(clientId){
   stopTimer();
-  app.innerHTML = `<div class="topbar"><button class="back" onclick="showTrainerDashboard()">&#8592; Back</button>
+  app.innerHTML = `<div class="topbar"><button class="back" onclick="${detailBackTarget}()">&#8592; Back</button>
     <div class="topbar-info"><h2>Client</h2></div></div><div class="lb-loading">Loading&hellip;</div>`;
   window.scrollTo(0,0);
 
@@ -2058,7 +2088,7 @@ async function showClientDetail(clientId){
 
   app.innerHTML = `
     <div class="topbar">
-      <button class="back" onclick="showTrainerDashboard()">&#8592; Back</button>
+      <button class="back" onclick="${detailBackTarget}()">&#8592; Back</button>
       <div class="topbar-info"><h2>${person.name}</h2><div class="focus">Client overview</div></div>
     </div>
     <div class="stat-row">
@@ -2072,6 +2102,124 @@ async function showClientDetail(clientId){
     ${recent ? `<div class="hday">${recent}</div>` : '<div class="chart-empty">No sessions logged yet.</div>'}
   `;
   window.scrollTo(0,0);
+}
+
+// ── Admin dashboard (view everyone, manage roles & trainer links) ──
+let editPersonId = null;
+
+async function showAdminDashboard(){
+  stopTimer();
+  detailBackTarget = "showAdminDashboard";
+  app.innerHTML = `<div class="topbar"><button class="back" onclick="home()">&#8592; Back</button>
+    <div class="topbar-info"><h2>Admin</h2></div></div><div class="lb-loading">Loading everyone&hellip;</div>`;
+  window.scrollTo(0,0);
+
+  await loadPeople();
+  const rows = PEOPLE.map(p=>{
+    const roleLabel = p.role==="admin" ? "Admin" : p.role==="trainer" ? "Trainer" : "Client";
+    return `<div class="sess-row">
+      <div class="sr-info" style="cursor:pointer" onclick="showClientDetail('${p.id}')">
+        <b>${p.name}</b><span class="role-badge">${roleLabel}</span>
+      </div>
+      <div class="sr-actions">
+        <button class="icon-btn" onclick="openEditPerson('${p.id}')" aria-label="Edit role">&#9998;</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Admin</h2><div class="focus">${PEOPLE.length} registered</div></div>
+    </div>
+    ${rows || '<div class="chart-empty">No one registered yet.</div>'}
+  `;
+  window.scrollTo(0,0);
+}
+
+function openEditPerson(id){
+  editPersonId = id;
+  renderEditPerson();
+}
+
+function renderEditPerson(){
+  const p = PEOPLE.find(x=>x.id===editPersonId);
+  if(!p){ showAdminDashboard(); return; }
+
+  const roles = [{id:"client",label:"Client"},{id:"trainer",label:"Trainer"},{id:"admin",label:"Admin"}];
+  const roleButtons = roles.map(r=>
+    `<button class="${p.role===r.id?"active":""}" onclick="setPersonRole('${r.id}')">${r.label}</button>`
+  ).join("");
+
+  let linksSection = "";
+  if(p.role==="trainer"){
+    const linked = new Set(p.clientIds || []);
+    const candidates = PEOPLE.filter(c=>c.role!=="trainer" && c.id!==p.id);
+    const rows = candidates.map(c=>`
+      <div class="sess-row">
+        <div class="sr-info"><b>${c.name}</b></div>
+        <input type="checkbox" ${linked.has(c.id)?"checked":""} onchange="toggleAdminClientLink('${c.id}', this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
+      </div>`).join("");
+    linksSection = `<div class="section-label">Linked clients</div>${rows || '<div class="chart-empty">No other clients to link yet.</div>'}`;
+  }
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="showAdminDashboard()">&#8592; Back</button>
+      <div class="topbar-info"><h2>${p.name}</h2><div class="focus">Edit role</div></div>
+    </div>
+    <div class="editor-field"><label>Role</label><div class="seg">${roleButtons}</div></div>
+    ${linksSection}
+  `;
+  window.scrollTo(0,0);
+}
+
+async function setPersonRole(role){
+  const p = PEOPLE.find(x=>x.id===editPersonId);
+  if(!p) return;
+  p.role = role;
+  if(role==="trainer" && !p.clientIds) p.clientIds = [];
+  await savePeople();
+  renderEditPerson();
+}
+
+async function toggleAdminClientLink(clientId, checked){
+  const p = PEOPLE.find(x=>x.id===editPersonId);
+  if(!p) return;
+  if(!p.clientIds) p.clientIds = [];
+  if(checked){ if(!p.clientIds.includes(clientId)) p.clientIds.push(clientId); }
+  else{ p.clientIds = p.clientIds.filter(id=>id!==clientId); }
+  await savePeople();
+  showToast("Updated");
+}
+
+// ── Account settings (edit your own email) ───────────────
+function showAccountSettings(){
+  stopTimer();
+  const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Account Settings</h2><div class="focus">${current.name}</div></div>
+    </div>
+    <div class="editor-field"><label>Name</label><input type="text" value="${current.name}" disabled></div>
+    <div class="editor-field"><label>Email address</label><input type="email" id="accountEmail" value="${current.email||""}" placeholder="you@example.com"></div>
+    <button class="save-session-btn" onclick="saveAccountEmail()">Save</button>
+  `;
+  window.scrollTo(0,0);
+}
+
+async function saveAccountEmail(){
+  const val = ($("accountEmail").value||"").trim();
+  if(!val || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){
+    showToast("Enter a valid email address", false);
+    return;
+  }
+  await loadPeople();
+  const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
+  if(p){ p.email = val; CURRENT_PROFILE.email = val; }
+  const ok = await savePeople();
+  showToast(ok ? "Email updated \u2713" : "Couldn't save \u2014 check your connection");
 }
 
 // Expose handlers used by inline onclick="" attributes — required because
@@ -2094,6 +2242,12 @@ window.showTrainerDashboard = showTrainerDashboard;
 window.showManageClients = showManageClients;
 window.toggleClientLink = toggleClientLink;
 window.showClientDetail = showClientDetail;
+window.showAdminDashboard = showAdminDashboard;
+window.openEditPerson = openEditPerson;
+window.setPersonRole = setPersonRole;
+window.toggleAdminClientLink = toggleAdminClientLink;
+window.showAccountSettings = showAccountSettings;
+window.saveAccountEmail = saveAccountEmail;
 window.showWeightTracker = showWeightTracker;
 window.saveWeightEntry = saveWeightEntry;
 window.deleteWeightEntry = deleteWeightEntry;
