@@ -445,6 +445,29 @@ const DEFAULT_PEOPLE = [
 let PEOPLE = [];
 function peopleDocRef(){ return doc(db, "meta", "people"); }
 
+// A deliberately narrow, public-readable lookup so people can log in with
+// either their username or their real email. It contains ONLY email->username
+// pairs - no names, roles, or client links - everything else stays behind
+// the normal "must be signed in" rule.
+function loginLookupDocRef(){ return doc(db, "meta", "login-lookup"); }
+
+async function getUsernameForEmail(email){
+  try{
+    const snap = await getDoc(loginLookupDocRef());
+    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
+    return map[email.trim().toLowerCase()] || null;
+  }catch(e){ return null; }
+}
+async function registerLoginLookup(email, username){
+  try{
+    const snap = await getDoc(loginLookupDocRef());
+    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
+    map[email.trim().toLowerCase()] = username;
+    await setDoc(loginLookupDocRef(), {map});
+    return true;
+  }catch(e){ return false; }
+}
+
 async function loadPeople(){
   try{
     const snap = await getDoc(peopleDocRef());
@@ -756,7 +779,7 @@ function renderAuthScreen(){
       ${tabs}
       ${errorHtml}
       ${claimSection}
-      <div class="auth-field"><label>Username</label><input type="text" id="authUsername" autocomplete="username" placeholder="e.g. ed"></div>
+      <div class="auth-field"><label>${isLogin?"Username or email":"Username"}</label><input type="text" id="authUsername" autocomplete="username" placeholder="${isLogin?"e.g. ed or ed@example.com":"e.g. ed"}"></div>
       ${!isLogin ? `<div class="auth-field"><label>Email address</label><input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com"></div>` : ""}
       <div class="auth-field"><label>Password</label><input type="password" id="authPassword" autocomplete="${isLogin?"current-password":"new-password"}" placeholder="********"></div>
       ${!isLogin ? `<div class="auth-field"><label>Confirm password</label><input type="password" id="authPassword2" autocomplete="new-password" placeholder="********"></div>` : ""}
@@ -778,21 +801,33 @@ function uniquePersonId(name){
 }
 
 async function submitAuth(){
-  const username = ($("authUsername").value||"").trim();
+  const input = ($("authUsername").value||"").trim();
   const password = $("authPassword").value||"";
-  if(!username || !password){ authError="Enter a username and password."; renderAuthScreen(); return; }
-  const authEmail = usernameToEmail(username);
+  if(!input || !password){ authError="Enter your username/email and password."; renderAuthScreen(); return; }
 
   if(authMode==="login"){
+    let loginUsername = input;
+    if(input.includes("@")){
+      const found = await getUsernameForEmail(input);
+      if(!found){
+        authError = "No account found for that email.";
+        renderAuthScreen();
+        return;
+      }
+      loginUsername = found;
+    }
     try{
-      await signInWithEmailAndPassword(auth, authEmail, password);
+      await signInWithEmailAndPassword(auth, usernameToEmail(loginUsername), password);
     }catch(e){
-      authError = "Couldn't log in. Check your username and password.";
+      authError = "Couldn't log in. Check your username/email and password.";
       renderAuthScreen();
     }
     return;
   }
 
+  // signup
+  const username = input;
+  const authEmail = usernameToEmail(username);
   const password2 = $("authPassword2") ? $("authPassword2").value : "";
   const realEmail = ($("authEmail")?.value||"").trim();
   if(!realEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(realEmail)){
@@ -821,9 +856,10 @@ async function submitAuth(){
     const cred = await createUserWithEmailAndPassword(auth, authEmail, password);
     await setDoc(doc(db,"users",cred.user.uid), {profileId});
     const existing = PEOPLE.find(p=>p.id===profileId);
-    if(existing){ existing.uid = cred.user.uid; existing.email = realEmail; }
-    else{ PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail}); }
+    if(existing){ existing.uid = cred.user.uid; existing.email = realEmail; existing.username = username; }
+    else{ PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail, username}); }
     await savePeople();
+    await registerLoginLookup(realEmail, username);
   }catch(e){
     authError = (e && e.code==="auth/email-already-in-use") ? "That username is already taken." : "Couldn't create that account.";
     renderAuthScreen();
@@ -873,6 +909,7 @@ function home(){
   stopTimer();
   cancelRest();
   cancelHiit();
+  if(CURRENT_PROFILE.role==="trainer"){ renderTrainerHome(); return; }
   const banner = STORAGE_AVAILABLE
     ? `<div class="sync-ok"><div class="dot"></div>Synced &mdash; same data on every device</div>`
     : `<div class="sync-banner">Couldn't reach the database. Check your internet connection and tap Refresh.</div>`;
@@ -908,12 +945,6 @@ function home(){
       <span>&rsaquo;</span>
     </button>`;
 
-  const trainerSection = CURRENT_PROFILE.role==="trainer"
-    ? `<button class="trainerbtn" onclick="showTrainerDashboard()">
-        <span class="cb-label">👥 Trainer dashboard</span>
-        <span>&rsaquo;</span>
-      </button>`
-    : "";
   const adminSection = CURRENT_PROFILE.role==="admin"
     ? `<button class="trainerbtn" onclick="showAdminDashboard()">
         <span class="cb-label">🛠️ Admin</span>
@@ -930,7 +961,6 @@ function home(){
       <div class="switch-profile" onclick="logOut()">${avatarHtml(CURRENT_PROFILE, "avatar-sm")}${CURRENT_PROFILE.name} &middot; log out</div>
       <div class="switch-profile" onclick="showAccountSettings()" style="margin-left:8px">&#9881; Account settings</div>
     </div>
-    ${trainerSection}
     ${adminSection}
     <div class="section-label">Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
     <div class="grid">${cards}</div>
@@ -1976,12 +2006,9 @@ function showCheckIn(){
 }
 
 // ── Trainer dashboard & client linking ────────────────────
-async function showTrainerDashboard(){
-  stopTimer();
-  detailBackTarget = "showTrainerDashboard";
-  app.innerHTML = `<div class="topbar"><button class="back" onclick="home()">&#8592; Back</button>
-    <div class="topbar-info"><h2>Trainer Dashboard</h2><div class="focus">${CURRENT_PROFILE.name}</div></div></div>
-    <div class="lb-loading">Loading your clients&hellip;</div>`;
+async function renderTrainerHome(){
+  detailBackTarget = "home";
+  app.innerHTML = `<div class="loading">Loading your clients&hellip;</div>`;
   window.scrollTo(0,0);
 
   await loadPeople();
@@ -2016,13 +2043,16 @@ async function showTrainerDashboard(){
   }).join("");
 
   app.innerHTML = `
-    <div class="topbar">
-      <button class="back" onclick="home()">&#8592; Back</button>
-      <div class="topbar-info"><h2>Trainer Dashboard</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    <div class="page-header">
+      <div class="kicker">MK1 Gym &middot; Selby</div>
+      <h1>${CURRENT_PROFILE.name}'s Clients</h1>
+      <p>Tap a client for their summary, weight trend, and to manage their sessions.</p>
+      <div class="switch-profile" onclick="logOut()">${avatarHtml(CURRENT_PROFILE, "avatar-sm")}${CURRENT_PROFILE.name} &middot; log out</div>
+      <div class="switch-profile" onclick="showAccountSettings()" style="margin-left:8px">&#9881; Account settings</div>
     </div>
     <button class="addsessbtn" onclick="showManageClients()">&#9881; Manage linked clients</button>
     <div class="section-label" style="margin-top:16px">Your clients</div>
-    ${rows || '<div class="chart-empty">No clients linked yet. Tap above to add some.</div>'}
+    ${rows || '<div class="chart-empty">No clients linked yet \u2014 ask an admin to link some to you.</div>'}
   `;
   window.scrollTo(0,0);
 }
@@ -2038,7 +2068,7 @@ function showManageClients(){
     </div>`).join("");
   app.innerHTML = `
     <div class="topbar">
-      <button class="back" onclick="showTrainerDashboard()">&#8592; Back</button>
+      <button class="back" onclick="home()">&#8592; Back</button>
       <div class="topbar-info"><h2>Manage Clients</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
     </div>
     ${rows || '<div class="chart-empty">No other people registered yet \u2014 they need to create an account first.</div>'}
@@ -2059,7 +2089,7 @@ async function toggleClientLink(clientId, checked){
   showToast("Updated");
 }
 
-let detailBackTarget = "showTrainerDashboard";
+let detailBackTarget = "home";
 
 async function showClientDetail(clientId){
   stopTimer();
@@ -2080,10 +2110,13 @@ async function showClientDetail(clientId){
   const streak = weekStreakFor(log);
   const sortedW = [...weights].sort((a,b)=>a.date.localeCompare(b.date));
   const chart = buildWeightChartSVG(sortedW);
-  const recent = [...log].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8).map(s=>{
-    const planEntry = PLAN.find(p=>p.id===s.sessionId);
-    const label = planEntry ? planEntry.name : (s.hiit ? (s.hiitName||"HIIT class") : s.sessionId);
-    return `<div class="wrow"><div class="wd">${fmtDate(s.date)}</div><div class="wright"><span class="wv" style="font-size:12px">${label}</span></div></div>`;
+  const recent = [...log].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6).map(s=>{
+    const title = s.hiit ? (s.hiitName||"HIIT class") : (s.sessionId||"Session");
+    const exLines = (s.ex||[]).map(e=>`${e.n}: ${e.sets.map(st=>`${st.w||"?"}kg&times;${st.r||"?"}`).join(", ")}`).join("<br>");
+    return `<div class="hday">
+      <div class="hday-head"><b>${title}</b><span>${fmtDate(s.date)}${s.duration?` &middot; ${s.duration} min`:""}</span></div>
+      ${exLines ? `<div class="last-updated" style="text-align:left;margin:8px 0 0">${exLines}</div>` : ""}
+    </div>`;
   }).join("");
 
   app.innerHTML = `
@@ -2096,10 +2129,11 @@ async function showClientDetail(clientId){
       <div class="stat-card"><div class="label">This month</div><div class="value">${month}</div></div>
       <div class="stat-card"><div class="label">Streak</div><div class="value">${streak}</div></div>
     </div>
-    <div class="section-label">Weight trend</div>
+    <button class="addsessbtn" onclick="manageClientSessions('${clientId}')">📋 Manage ${person.name}'s sessions</button>
+    <div class="section-label" style="margin-top:16px">Weight trend</div>
     <div class="chart-card">${chart}</div>
-    <div class="section-label">Recent sessions</div>
-    ${recent ? `<div class="hday">${recent}</div>` : '<div class="chart-empty">No sessions logged yet.</div>'}
+    <div class="section-label">Recent session summaries</div>
+    ${recent || '<div class="chart-empty">No sessions logged yet.</div>'}
   `;
   window.scrollTo(0,0);
 }
@@ -2217,9 +2251,176 @@ async function saveAccountEmail(){
   }
   await loadPeople();
   const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
-  if(p){ p.email = val; CURRENT_PROFILE.email = val; }
+  if(p){
+    if(!p.username) p.username = p.id; // accounts created before username tracking existed
+    p.email = val;
+    CURRENT_PROFILE.email = val;
+    CURRENT_PROFILE.username = p.username;
+  }
   const ok = await savePeople();
+  if(ok && p) await registerLoginLookup(val, p.username);
   showToast(ok ? "Email updated \u2713" : "Couldn't save \u2014 check your connection");
+}
+
+// ── Manage a CLIENT's sessions (trainer/admin building on a client's
+// behalf). Deliberately kept completely separate from PLAN/saveLog/draftSession
+// (the self-service machinery tied to CURRENT_PROFILE) so there is no risk of
+// a trainer's own session edits ever landing in the wrong person's document.
+let trainerClientId = null;
+let trainerClientPlan = [];
+let trainerDraftSession = null;
+
+async function manageClientSessions(clientId){
+  stopTimer();
+  trainerClientId = clientId;
+  app.innerHTML = `<div class="loading">Loading sessions&hellip;</div>`;
+  window.scrollTo(0,0);
+  try{
+    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
+    trainerClientPlan = (snap.exists() && snap.data().plan) ? snap.data().plan : JSON.parse(JSON.stringify(DEFAULT_PLAN));
+  }catch(e){
+    trainerClientPlan = JSON.parse(JSON.stringify(DEFAULT_PLAN));
+  }
+  renderTrainerClientSessions();
+}
+
+function renderTrainerClientSessions(){
+  const person = PEOPLE.find(p=>p.id===trainerClientId) || {id:trainerClientId, name:trainerClientId};
+  const rows = trainerClientPlan.map(p=>`
+    <div class="sess-row">
+      <div class="sr-info"><b>${p.name}</b><span>${p.focus} &middot; ${p.ex.length} exercise${p.ex.length!==1?"s":""}</span></div>
+      <div class="sr-actions">
+        <button class="icon-btn" onclick="openTrainerSessionEditor('${p.id}')" aria-label="Edit">&#9998;</button>
+        <button class="icon-btn" onclick="deleteTrainerClientSession('${p.id}')" aria-label="Delete">&times;</button>
+      </div>
+    </div>`).join("");
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="showClientDetail('${trainerClientId}')">&#8592; Back</button>
+      <div class="topbar-info"><h2>${person.name}'s Sessions</h2><div class="focus">Managed by ${CURRENT_PROFILE.name}</div></div>
+    </div>
+    ${rows || '<div class="chart-empty">No sessions yet.</div>'}
+    <button class="addsessbtn" onclick="openTrainerSessionEditor(null)">+ Create new session</button>
+  `;
+  window.scrollTo(0,0);
+}
+
+function openTrainerSessionEditor(id){
+  if(id){
+    trainerDraftSession = JSON.parse(JSON.stringify(trainerClientPlan.find(p=>p.id===id)));
+  } else {
+    trainerDraftSession = {id:null, name:"", focus:"", ex:[]};
+  }
+  renderTrainerSessionEditor();
+}
+
+function renderTrainerSessionEditor(){
+  const exRows = trainerDraftSession.ex.map((e,i)=>`
+    <div class="draft-ex">
+      <div class="dx-reorder">
+        <button onclick="moveTrainerDraftExercise(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
+        <button onclick="moveTrainerDraftExercise(${i},1)" ${i===trainerDraftSession.ex.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
+      </div>
+      <div class="dx-name">${e.n}</div>
+      <input class="dx-sets" type="number" min="1" value="${e.s}" oninput="setTrainerDraftExSets(${i},this.value)">
+      <input class="dx-reps" type="text" value="${e.r}" oninput="setTrainerDraftExReps(${i},this.value)">
+      <button class="dx-remove" onclick="removeTrainerDraftExercise(${i})" aria-label="Remove">&times;</button>
+    </div>`).join("");
+
+  const isNew = !trainerDraftSession.id;
+  const deleteBtn = !isNew
+    ? `<button class="delete-session-btn" onclick="deleteTrainerClientSession('${trainerDraftSession.id}')">Delete</button>`
+    : "";
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="renderTrainerClientSessions()">&#8592; Back</button>
+      <div class="topbar-info"><h2>${isNew?"New Session":"Edit Session"}</h2></div>
+    </div>
+    <div class="editor-field">
+      <label>Session name</label>
+      <input type="text" value="${trainerDraftSession.name}" placeholder="e.g. Push Day" oninput="setTrainerDraftName(this.value)">
+    </div>
+    <div class="editor-field">
+      <label>Focus tagline</label>
+      <input type="text" value="${trainerDraftSession.focus}" placeholder="e.g. Chest &amp; triceps" oninput="setTrainerDraftFocus(this.value)">
+    </div>
+    <div class="section-label">Exercises</div>
+    ${exRows || '<div class="chart-empty">No exercises added yet.</div>'}
+    <div class="add-ex-row">
+      <select id="trainerExercisePicker">${exercisePickerOptions()}</select>
+      <button onclick="addTrainerDraftExercise()">Add</button>
+    </div>
+    <div class="editor-actions">
+      <button class="save-session-btn" onclick="saveTrainerDraftSession()">Save session</button>
+      ${deleteBtn}
+    </div>
+  `;
+  window.scrollTo(0,0);
+}
+
+function setTrainerDraftName(v){ trainerDraftSession.name = v; }
+function setTrainerDraftFocus(v){ trainerDraftSession.focus = v; }
+function setTrainerDraftExSets(i,v){ trainerDraftSession.ex[i].s = parseInt(v)||1; }
+function setTrainerDraftExReps(i,v){ trainerDraftSession.ex[i].r = v; }
+
+function addTrainerDraftExercise(){
+  const sel = $("trainerExercisePicker");
+  if(!sel || !sel.value) return;
+  trainerDraftSession.ex.push({n:sel.value, s:3, r:"10-12"});
+  renderTrainerSessionEditor();
+}
+function removeTrainerDraftExercise(idx){
+  trainerDraftSession.ex.splice(idx,1);
+  renderTrainerSessionEditor();
+}
+function moveTrainerDraftExercise(idx, dir){
+  const newIdx = idx + dir;
+  if(newIdx<0 || newIdx>=trainerDraftSession.ex.length) return;
+  const arr = trainerDraftSession.ex;
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  renderTrainerSessionEditor();
+}
+
+function uniqueTrainerSessionId(name){
+  const base = slugify(name);
+  let id = base, n = 2;
+  while(trainerClientPlan.some(p=>p.id===id)){ id = `${base}-${n}`; n++; }
+  return id;
+}
+
+async function saveTrainerClientPlan(){
+  try{
+    // merge:true is essential here - it touches ONLY the plan field on the
+    // client's document, leaving their log/weights/measurements untouched.
+    await setDoc(doc(db, "trackers", `${TRACKER_ID}-${trainerClientId}`), {plan: trainerClientPlan}, {merge:true});
+    return true;
+  }catch(e){ return false; }
+}
+
+async function saveTrainerDraftSession(){
+  const name = (trainerDraftSession.name||"").trim();
+  const focus = (trainerDraftSession.focus||"").trim();
+  if(!name){ showToast("Give the session a name", false); return; }
+  if(!trainerDraftSession.ex.length){ showToast("Add at least one exercise", false); return; }
+  if(!trainerDraftSession.id){
+    trainerDraftSession.id = uniqueTrainerSessionId(name);
+    trainerClientPlan.push({id:trainerDraftSession.id, name, focus, ex:trainerDraftSession.ex});
+  } else {
+    const idx = trainerClientPlan.findIndex(p=>p.id===trainerDraftSession.id);
+    const updated = {id:trainerDraftSession.id, name, focus, ex:trainerDraftSession.ex};
+    if(idx>=0) trainerClientPlan[idx] = updated; else trainerClientPlan.push(updated);
+  }
+  const ok = await saveTrainerClientPlan();
+  showToast(ok ? "Session saved & synced \u2713" : "Couldn't save \u2014 check your connection");
+  renderTrainerClientSessions();
+}
+
+async function deleteTrainerClientSession(id){
+  if(!confirm("Delete this session? The client's past history logged under it stays in their records.")) return;
+  trainerClientPlan = trainerClientPlan.filter(p=>p.id!==id);
+  await saveTrainerClientPlan();
+  renderTrainerClientSessions();
 }
 
 // Expose handlers used by inline onclick="" attributes — required because
@@ -2238,7 +2439,6 @@ window.setSignupWho = setSignupWho;
 window.setSignupRole = setSignupRole;
 window.submitAuth = submitAuth;
 window.logOut = logOut;
-window.showTrainerDashboard = showTrainerDashboard;
 window.showManageClients = showManageClients;
 window.toggleClientLink = toggleClientLink;
 window.showClientDetail = showClientDetail;
@@ -2248,6 +2448,17 @@ window.setPersonRole = setPersonRole;
 window.toggleAdminClientLink = toggleAdminClientLink;
 window.showAccountSettings = showAccountSettings;
 window.saveAccountEmail = saveAccountEmail;
+window.manageClientSessions = manageClientSessions;
+window.openTrainerSessionEditor = openTrainerSessionEditor;
+window.setTrainerDraftName = setTrainerDraftName;
+window.setTrainerDraftFocus = setTrainerDraftFocus;
+window.setTrainerDraftExSets = setTrainerDraftExSets;
+window.setTrainerDraftExReps = setTrainerDraftExReps;
+window.addTrainerDraftExercise = addTrainerDraftExercise;
+window.removeTrainerDraftExercise = removeTrainerDraftExercise;
+window.moveTrainerDraftExercise = moveTrainerDraftExercise;
+window.saveTrainerDraftSession = saveTrainerDraftSession;
+window.deleteTrainerClientSession = deleteTrainerClientSession;
 window.showWeightTracker = showWeightTracker;
 window.saveWeightEntry = saveWeightEntry;
 window.deleteWeightEntry = deleteWeightEntry;
