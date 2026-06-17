@@ -140,6 +140,15 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .profile-avatar{width:56px;height:56px;border-radius:50%;background:var(--accent2);color:#fff;
   display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;margin:0 auto 12px;
   background-size:cover;background-position:center}
+.photo-upload-row{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+.photo-preview{width:72px;height:72px;border-radius:50%;background:var(--accent2);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;flex-shrink:0;
+  background-size:cover;background-position:center}
+.photo-upload-actions{display:flex;flex-direction:column;gap:8px;flex:1}
+.photo-upload-btn{background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;text-align:center}
+.photo-remove-btn{background:none;border:none;color:#a04030;font-size:12px;font-weight:700;
+  cursor:pointer;padding:0;text-align:left}
 .profile-name{font-size:16px;font-weight:800}
 
 .auth-wrap{padding-top:40px;max-width:380px;margin:0 auto}
@@ -189,6 +198,12 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .stat-card .value.up{color:var(--accent)}
 .stat-card .value.down{color:var(--good)}
 .stat-card .value.flat{color:var(--mute)}
+.stat-card .label .metric-delta{display:block;font-size:10px;font-weight:800;margin-top:2px;text-transform:none;letter-spacing:0}
+.metric-delta.up{color:var(--good)}
+.metric-delta.down{color:var(--accent)}
+.metric-delta.flat{color:var(--mute)}
+.radar-legend{display:flex;gap:18px;justify-content:center;margin-top:4px;font-size:11px;color:var(--mute)}
+.radar-legend .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 
 .chart-card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;
   padding:14px 10px;margin-bottom:14px}
@@ -322,6 +337,10 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .dashboardbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
   color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
   display:flex;align-items:center;justify-content:space-between}
+.exmetricsbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
+  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between}
+.exrow{cursor:pointer}
 .chart-legend{display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--mute)}
 .chart-legend .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 .trainerbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--accent2);
@@ -470,7 +489,7 @@ const KNOWN_QR = {
 };
 
 function avatarHtml(p, cls){
-  const photo = KNOWN_PHOTOS[p.id];
+  const photo = p.photo || KNOWN_PHOTOS[p.id];
   return photo
     ? `<div class="${cls}" style="background-image:url('${photo}')"></div>`
     : `<div class="${cls}">${(p.name||"?")[0]}</div>`;
@@ -830,8 +849,8 @@ let signupRole = "client";
 function renderAuthScreen(){
   const isLogin = authMode==="login";
   const tabs = `<div class="auth-tabs">
-    <button class="${isLogin?"active":""}" onclick="setAuthMode('login')">Log in</button>
-    <button class="${!isLogin?"active":""}" onclick="setAuthMode('signup')">Create account</button>
+    <button class="${isLogin?"active":""}" onclick="setAuthMode('login')">Log In</button>
+    <button class="${!isLogin?"active":""}" onclick="setAuthMode('signup')">Create Account</button>
   </div>`;
   const errorHtml = authError ? `<div class="auth-error">${authError}</div>` : "";
 
@@ -990,6 +1009,81 @@ async function bootForUser(user){
   home();
 }
 
+// The optional, user-customizable home screen blocks. Order here is the
+// default for anyone who hasn't customized yet; admin's own Admin button is
+// role-gated separately and isn't part of this customizable set.
+const HOME_MODULES = [
+  {id:"sessions", label:"Sessions"},
+  {id:"hiit", label:"HIIT Classes"},
+  {id:"weight", label:"Body weight"},
+  {id:"activity", label:"Activity & streak"},
+  {id:"musclemap", label:"Muscle map"},
+  {id:"dashboard", label:"Dashboard"},
+  {id:"exercisemetrics", label:"Exercise metrics"},
+  {id:"measurements", label:"Body measurements"},
+  {id:"leaderboard", label:"Leaderboard"},
+  {id:"managesessions", label:"Manage sessions"}
+];
+
+function getHomeLayoutFor(person){
+  const saved = (person && person.homeLayout) || [];
+  const savedIds = new Set(saved.map(m=>m.id));
+  const merged = saved.filter(m=>HOME_MODULES.some(hm=>hm.id===m.id));
+  HOME_MODULES.forEach(m=>{ if(!savedIds.has(m.id)) merged.push({id:m.id, hidden:false}); });
+  return merged;
+}
+
+function homeModuleHtml(id, ctx){
+  switch(id){
+    case "sessions": return `
+      <div class="section-label">Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
+      <div class="grid">${ctx.cards}</div>
+      <button class="histbtn" onclick="showHistory()">📋 &nbsp;View Full History &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>`;
+    case "hiit": return ctx.hiitSection;
+    case "weight": return `
+      <button class="weightbtn" onclick="showWeightTracker()">
+        <span class="wb-label">⚖️ Body Weight</span>
+        <span class="wb-current">${ctx.weightLabel}</span>
+      </button>`;
+    case "activity": return `
+      <button class="streakbtn" onclick="showActivity()">
+        <span class="cb-label">🔥 Activity &amp; Streak</span>
+        <span>&rsaquo;</span>
+      </button>`;
+    case "musclemap": return `
+      <button class="musclemapbtn" onclick="showMuscleMap(7)">
+        <span class="cb-label">💪 Muscle Map</span>
+        <span>&rsaquo;</span>
+      </button>`;
+    case "dashboard": return `
+      <button class="dashboardbtn" onclick="openDashboard()">
+        <span class="cb-label">📊 Dashboard</span>
+        <span>&rsaquo;</span>
+      </button>`;
+    case "exercisemetrics": return `
+      <button class="exmetricsbtn" onclick="openExercisePicker()">
+        <span class="cb-label">📈 Exercise Metrics</span>
+        <span>&rsaquo;</span>
+      </button>`;
+    case "measurements": return `
+      <button class="measurebtn" onclick="showMeasurements()">
+        <span class="cb-label">📏 Body Measurements</span>
+        <span>&rsaquo;</span>
+      </button>`;
+    case "leaderboard": return `
+      <button class="leaderbtn" onclick="showLeaderboard()">
+        <span class="cb-label">🏆 Leaderboard</span>
+        <span>&rsaquo;</span>
+      </button>`;
+    case "managesessions": return `
+      <button class="settingsbtn" onclick="showSettings()">
+        <span class="cb-label">⚙️ Manage Sessions</span>
+        <span>&rsaquo;</span>
+      </button>`;
+    default: return "";
+  }
+}
+
 function home(){
   stopTimer();
   cancelRest();
@@ -1026,7 +1120,7 @@ function home(){
     <div class="section-label">HIIT Classes</div>
     ${HIIT_CLASSES.length ? `<div class="hiit-grid">${hiitCards}</div>` : '<div class="chart-empty">No HIIT classes yet &mdash; build one below.</div>'}
     <button class="hiitbtn" onclick="showHiitSettings()">
-      <span class="cb-label">⚡ Manage HIIT classes</span>
+      <span class="cb-label">⚡ Manage HIIT Classes</span>
       <span>&rsaquo;</span>
     </button>`;
 
@@ -1036,6 +1130,10 @@ function home(){
         <span>&rsaquo;</span>
       </button>`
     : "";
+
+  const ctx = {cards, weightLabel, hiitSection};
+  const layout = getHomeLayoutFor(CURRENT_PROFILE);
+  const moduleHtml = layout.filter(m=>!m.hidden).map(m=>homeModuleHtml(m.id, ctx)).join("");
 
   app.innerHTML = `
     ${banner}
@@ -1047,38 +1145,7 @@ function home(){
       <div class="switch-profile" onclick="showAccountSettings()" style="margin-left:8px">&#9881; Account settings</div>
     </div>
     ${adminSection}
-    <div class="section-label">Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
-    <div class="grid">${cards}</div>
-    <button class="histbtn" onclick="showHistory()">📋 &nbsp;View full history &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>
-    ${hiitSection}
-    <button class="weightbtn" onclick="showWeightTracker()">
-      <span class="wb-label">⚖️ Body weight</span>
-      <span class="wb-current">${weightLabel}</span>
-    </button>
-    <button class="streakbtn" onclick="showActivity()">
-      <span class="cb-label">🔥 Activity &amp; streak</span>
-      <span>&rsaquo;</span>
-    </button>
-    <button class="musclemapbtn" onclick="showMuscleMap(7)">
-      <span class="cb-label">💪 Muscle map</span>
-      <span>&rsaquo;</span>
-    </button>
-    <button class="dashboardbtn" onclick="openDashboard()">
-      <span class="cb-label">📊 Dashboard</span>
-      <span>&rsaquo;</span>
-    </button>
-    <button class="measurebtn" onclick="showMeasurements()">
-      <span class="cb-label">📏 Body measurements</span>
-      <span>&rsaquo;</span>
-    </button>
-    <button class="leaderbtn" onclick="showLeaderboard()">
-      <span class="cb-label">🏆 Leaderboard</span>
-      <span>&rsaquo;</span>
-    </button>
-    <button class="settingsbtn" onclick="showSettings()">
-      <span class="cb-label">⚙️ Manage sessions</span>
-      <span>&rsaquo;</span>
-    </button>
+    ${moduleHtml}
   `;
 }
 
@@ -1637,7 +1704,7 @@ function showSettings(){
       <div class="topbar-info"><h2>Manage Sessions</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
     </div>
     ${rows || '<div class="chart-empty">No sessions yet.</div>'}
-    <button class="addsessbtn" onclick="openSessionEditor(null)">+ Create new session</button>
+    <button class="addsessbtn" onclick="openSessionEditor(null)">+ Create New Session</button>
   `;
   window.scrollTo(0,0);
 }
@@ -1797,7 +1864,7 @@ function showHiitSettings(){
       <div class="topbar-info"><h2>HIIT Classes</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
     </div>
     ${rows || '<div class="chart-empty">No HIIT classes yet.</div>'}
-    <button class="addsessbtn" onclick="openHiitEditor(null)">+ Create new HIIT class</button>
+    <button class="addsessbtn" onclick="openHiitEditor(null)">+ Create New HIIT Class</button>
   `;
   window.scrollTo(0,0);
 }
@@ -2253,7 +2320,7 @@ async function renderTrainerHome(){
       <div class="switch-profile" onclick="logOut()">${avatarHtml(CURRENT_PROFILE, "avatar-sm")}${CURRENT_PROFILE.name} &middot; log out</div>
       <div class="switch-profile" onclick="showAccountSettings()" style="margin-left:8px">&#9881; Account settings</div>
     </div>
-    <button class="addsessbtn" onclick="showManageClients()">&#9881; Manage linked clients</button>
+    <button class="addsessbtn" onclick="showManageClients()">&#9881; Manage Linked Clients</button>
     <div class="section-label" style="margin-top:16px">Your clients</div>
     ${rows || '<div class="chart-empty">No clients linked yet \u2014 ask an admin to link some to you.</div>'}
   `;
@@ -2335,8 +2402,9 @@ async function showClientDetail(clientId){
       <div class="stat-card"><div class="label">This month</div><div class="value">${month}</div></div>
       <div class="stat-card"><div class="label">Streak</div><div class="value">${streak}</div></div>
     </div>
-    <button class="addsessbtn" onclick="manageClientSessions('${clientId}')">📋 Manage ${person.name}'s sessions</button>
-    <button class="addsessbtn" onclick="openDashboard('${clientId}')">📊 ${person.name}'s dashboard</button>
+    <button class="addsessbtn" onclick="manageClientSessions('${clientId}')">📋 Manage ${person.name}'s Sessions</button>
+    <button class="addsessbtn" onclick="openDashboard('${clientId}')">📊 ${person.name}'s Dashboard</button>
+    <button class="addsessbtn" onclick="openExercisePicker('${clientId}')">📈 ${person.name}'s Exercise Metrics</button>
     <div class="section-label" style="margin-top:16px">Weight trend</div>
     <div class="chart-card">${chart}</div>
     <div class="section-label">Recent session summaries</div>
@@ -2458,10 +2526,31 @@ async function toggleAdminClientLink(clientId, checked){
 function showAccountSettings(){
   stopTimer();
   const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
+  const layout = getHomeLayoutFor(current);
+  const layoutRows = layout.map((m,i)=>{
+    const mod = HOME_MODULES.find(h=>h.id===m.id);
+    return `<div class="sess-row">
+      <div class="dx-reorder">
+        <button onclick="moveHomeModule(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
+        <button onclick="moveHomeModule(${i},1)" ${i===layout.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
+      </div>
+      <div class="sr-info"><b>${mod?mod.label:m.id}</b></div>
+      <input type="checkbox" ${m.hidden?"":"checked"} onchange="toggleHomeModuleVisibility(${i}, this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
+    </div>`;
+  }).join("");
+
   app.innerHTML = `
     <div class="topbar">
       <button class="back" onclick="home()">&#8592; Back</button>
       <div class="topbar-info"><h2>Account Settings</h2><div class="focus">${current.name}</div></div>
+    </div>
+    <div class="photo-upload-row">
+      ${avatarHtml(current, "photo-preview")}
+      <div class="photo-upload-actions">
+        <button class="photo-upload-btn" onclick="triggerPhotoUpload()">📷 ${current.photo||KNOWN_PHOTOS[current.id]?"Change photo":"Add a photo"}</button>
+        ${current.photo ? `<button class="photo-remove-btn" onclick="removeProfilePhoto()">Remove photo</button>` : ""}
+      </div>
+      <input type="file" id="photoFileInput" accept="image/*" style="display:none" onchange="handlePhotoFileSelected(event)">
     </div>
     <div class="editor-field"><label>Name</label><input type="text" value="${current.name}" disabled></div>
     <div class="editor-field">
@@ -2471,8 +2560,34 @@ function showAccountSettings(){
     <div class="last-updated" style="text-align:left;margin-top:-4px">Changing this updates your actual login &mdash; you'll need to use the new username next time, not the old one.</div>
     <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="accountEmail" value="${current.email||""}" placeholder="you@example.com"></div>
     <button class="save-session-btn" onclick="saveAccountEmail()">Save</button>
+
+    <div class="section-label" style="margin-top:24px">Home screen layout</div>
+    <div class="last-updated" style="text-align:left">Reorder with the arrows, untick anything you don't want to see &mdash; including Sessions or HIIT Classes if you only use one. Changes save instantly.</div>
+    ${layoutRows}
   `;
   window.scrollTo(0,0);
+}
+
+async function saveHomeLayout(layout){
+  const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
+  if(p){ p.homeLayout = layout; CURRENT_PROFILE.homeLayout = layout; }
+  await savePeople();
+}
+async function moveHomeModule(idx, dir){
+  const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
+  const layout = getHomeLayoutFor(current);
+  const newIdx = idx + dir;
+  if(newIdx<0 || newIdx>=layout.length) return;
+  [layout[idx], layout[newIdx]] = [layout[newIdx], layout[idx]];
+  await saveHomeLayout(layout);
+  showAccountSettings();
+}
+async function toggleHomeModuleVisibility(idx, checked){
+  const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
+  const layout = getHomeLayoutFor(current);
+  layout[idx].hidden = !checked;
+  await saveHomeLayout(layout);
+  showAccountSettings();
 }
 
 async function saveAccountEmail(){
@@ -2516,6 +2631,72 @@ async function saveAccountEmail(){
   showToast(ok ? "Saved \u2713" : "Couldn't save \u2014 check your connection");
 }
 
+// ── Profile photo upload (resize + center-crop + compress client-side,
+// since there's no backend to do it for us; keeps each photo small enough
+// that storing it directly on the shared people-directory document stays
+// well within Firestore's per-document size limit) ──────────────────────
+function triggerPhotoUpload(){
+  const input = $("photoFileInput");
+  if(input) input.click();
+}
+
+function processImageFile(file){
+  return new Promise((resolve, reject)=>{
+    if(!file.type || !file.type.startsWith("image/")){
+      reject(new Error("not an image"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const size = 200;
+        const canvas = document.createElement("canvas");
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width-minSide)/2, sy = (img.height-minSide)/2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.onerror = ()=>reject(new Error("couldn't read that image"));
+      img.src = e.target.result;
+    };
+    reader.onerror = ()=>reject(new Error("couldn't read that file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotoFileSelected(event){
+  const file = event.target.files && event.target.files[0];
+  event.target.value = "";
+  if(!file) return;
+  if(file.size > 12*1024*1024){
+    showToast("That image is too large \u2014 try a smaller one", false);
+    return;
+  }
+  showToast("Processing photo\u2026");
+  try{
+    const dataUrl = await processImageFile(file);
+    const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
+    if(p){ p.photo = dataUrl; CURRENT_PROFILE.photo = dataUrl; }
+    const ok = await savePeople();
+    showToast(ok ? "Photo updated \u2713" : "Couldn't save \u2014 check your connection");
+    showAccountSettings();
+  }catch(e){
+    showToast("Couldn't process that image", false);
+  }
+}
+
+async function removeProfilePhoto(){
+  if(!confirm("Remove your profile photo?")) return;
+  const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
+  if(p){ delete p.photo; delete CURRENT_PROFILE.photo; }
+  const ok = await savePeople();
+  showToast(ok ? "Photo removed" : "Couldn't save \u2014 check your connection");
+  showAccountSettings();
+}
+
 // ── Manage a CLIENT's sessions (trainer/admin building on a client's
 // behalf). Deliberately kept completely separate from PLAN/saveLog/draftSession
 // (the self-service machinery tied to CURRENT_PROFILE) so there is no risk of
@@ -2554,7 +2735,7 @@ function renderTrainerClientSessions(){
       <div class="topbar-info"><h2>${person.name}'s Sessions</h2><div class="focus">Managed by ${CURRENT_PROFILE.name}</div></div>
     </div>
     ${rows || '<div class="chart-empty">No sessions yet.</div>'}
-    <button class="addsessbtn" onclick="openTrainerSessionEditor(null)">+ Create new session</button>
+    <button class="addsessbtn" onclick="openTrainerSessionEditor(null)">+ Create New Session</button>
   `;
   window.scrollTo(0,0);
 }
@@ -2882,6 +3063,104 @@ function setDashboardPeriod(period){
   renderDashboard();
 }
 
+// Six broad categories for the radar chart (Biceps/Triceps combined into
+// "Arms" here specifically, unlike the more granular MUSCLE_SECTIONS used
+// elsewhere - matches how most fitness apps present a distribution chart).
+const RADAR_CATEGORIES = [
+  {label:"Chest", groups:["chest"]},
+  {label:"Shoulders", groups:["shoulders"]},
+  {label:"Arms", groups:["biceps","triceps"]},
+  {label:"Legs", groups:["quads","hamstrings","glutes","calves"]},
+  {label:"Core", groups:["abs"]},
+  {label:"Back", groups:["back"]}
+];
+
+function computeMuscleVolume(logEntries){
+  const totals = {};
+  MUSCLE_GROUPS.forEach(g=>totals[g]=0);
+  logEntries.forEach(session=>{
+    (session.ex||[]).forEach(e=>{
+      const group = EXERCISE_MUSCLE_MAP[e.n];
+      if(!group) return;
+      (e.sets||[]).forEach(s=>{
+        const w = parseFloat(s.w)||0, r = parseInt(s.r)||0;
+        totals[group] += w*r;
+      });
+    });
+  });
+  return totals;
+}
+function radarCategoryVolumes(muscleVolumeTotals){
+  return RADAR_CATEGORIES.map(cat=>cat.groups.reduce((s,g)=>s+(muscleVolumeTotals[g]||0), 0));
+}
+
+function periodLogStats(log, daysBack, offsetDays){
+  offsetDays = offsetDays || 0;
+  const end = new Date(Date.now() - offsetDays*86400000);
+  const start = new Date(end.getTime() - daysBack*86400000);
+  const inRange = log.filter(s=>{ const d = new Date(s.date); return d>=start && d<end; });
+  const workouts = inRange.length;
+  const duration = inRange.reduce((sum,s)=>sum+(s.duration||0),0);
+  const sets = inRange.reduce((sum,s)=>sum+(s.ex||[]).reduce((s2,e)=>s2+((e.sets||[]).length),0), 0);
+  const volume = inRange.reduce((sum,s)=>sum+(s.ex||[]).reduce((s2,e)=>s2+(e.sets||[]).reduce((s3,st)=>s3+(parseFloat(st.w)||0)*(parseInt(st.r)||0),0),0), 0);
+  return {workouts, duration, sets, volume, log:inRange};
+}
+
+function fmtDuration(mins){
+  mins = Math.round(mins);
+  if(mins<60) return `${mins}m`;
+  return `${Math.floor(mins/60)}h ${mins%60}m`;
+}
+function fmtVolume(v){
+  v = Math.round(v);
+  if(v>=1000) return `${(v/1000).toFixed(1)}k kg`;
+  return `${v} kg`;
+}
+function metricDeltaHtml(cur, prev, fmt){
+  const diff = cur - prev;
+  if(Math.abs(diff) < 0.5) return `<span class="metric-delta flat">&#8212;</span>`;
+  const cls = diff>0 ? "up" : "down";
+  const arrow = diff>0 ? "&#9650;" : "&#9660;";
+  return `<span class="metric-delta ${cls}">${arrow} ${fmt(Math.abs(diff))}</span>`;
+}
+
+function buildRadarChartSVG(currentVals, previousVals, labels){
+  const N = labels.length;
+  const W=300, H=300, cx=150, cy=150, maxR=98;
+  const maxVal = Math.max(...currentVals, ...previousVals, 1);
+  const angleFor = i => -Math.PI/2 + i*(2*Math.PI/N);
+  const pointFor = (i, val) => {
+    const r = (val/maxVal)*maxR;
+    const a = angleFor(i);
+    return [cx + r*Math.cos(a), cy + r*Math.sin(a)];
+  };
+  const rings = [0.25,0.5,0.75,1].map(frac=>{
+    const pts = labels.map((_,i)=>{
+      const a = angleFor(i), r = frac*maxR;
+      return `${(cx+r*Math.cos(a)).toFixed(1)},${(cy+r*Math.sin(a)).toFixed(1)}`;
+    }).join(" ");
+    return `<polygon points="${pts}" fill="none" stroke="var(--line)" stroke-width="1"/>`;
+  }).join("");
+  const spokes = labels.map((_,i)=>{
+    const a = angleFor(i);
+    const x2 = cx+maxR*Math.cos(a), y2 = cy+maxR*Math.sin(a);
+    return `<line x1="${cx}" y1="${cy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`;
+  }).join("");
+  const labelPts = labels.map((lab,i)=>{
+    const a = angleFor(i), lr = maxR + 20;
+    const x = cx+lr*Math.cos(a), y = cy+lr*Math.sin(a);
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="var(--mute)" font-size="12" text-anchor="middle" dominant-baseline="middle">${lab}</text>`;
+  }).join("");
+  const prevPts = previousVals.map((v,i)=>pointFor(i,v).map(n=>n.toFixed(1)).join(",")).join(" ");
+  const currPts = currentVals.map((v,i)=>pointFor(i,v).map(n=>n.toFixed(1)).join(",")).join(" ");
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    ${rings}${spokes}
+    <polygon points="${prevPts}" fill="var(--mute)" opacity="0.15" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <polygon points="${currPts}" fill="var(--accent)" opacity="0.25" stroke="var(--accent)" stroke-width="2"/>
+    ${labelPts}
+  </svg>`;
+}
+
 async function renderDashboard(){
   stopTimer();
   const isSelf = dashboardTargetId === CURRENT_PROFILE.id;
@@ -2903,6 +3182,15 @@ async function renderDashboard(){
   const weekStart = startOfWeekISO(), now = new Date().toISOString();
   const visitsThisWeek = sessionsInRange(log, weekStart, now);
   const minsThisWeek = log.filter(s=>s.date>=weekStart && s.date<now).reduce((sum,s)=>sum+(s.duration||0),0);
+
+  // Current vs previous equivalent period, for the radar chart and trend badges
+  const curStats = periodLogStats(log, dashboardTimePeriod, 0);
+  const prevStats = periodLogStats(log, dashboardTimePeriod, dashboardTimePeriod);
+  const curRadar = radarCategoryVolumes(computeMuscleVolume(curStats.log));
+  const prevRadar = radarCategoryVolumes(computeMuscleVolume(prevStats.log));
+  const radarLabels = RADAR_CATEGORIES.map(c=>c.label);
+  const radarSvg = buildRadarChartSVG(curRadar, prevRadar, radarLabels);
+  const radarHasData = curRadar.some(v=>v>0) || prevRadar.some(v=>v>0);
 
   const sparse = dashboardTimePeriod>7;
   const chartOpts = {showValues: !sparse, labelEvery: sparse?5:1};
@@ -2932,6 +3220,32 @@ async function renderDashboard(){
 
     ${periodToggle}
 
+    <div class="section-label">Muscle distribution &mdash; last ${dashboardTimePeriod} days</div>
+    <div class="chart-card">
+      ${radarHasData ? radarSvg : '<div class="chart-empty">No volume logged yet in this window.</div>'}
+      <div class="radar-legend"><span><span class="dot" style="background:var(--accent)"></span>Current</span><span><span class="dot" style="background:var(--mute)"></span>Previous ${dashboardTimePeriod} days</span></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="label">Workouts${metricDeltaHtml(curStats.workouts, prevStats.workouts, v=>Math.round(v))}</div>
+        <div class="value">${curStats.workouts}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Duration${metricDeltaHtml(curStats.duration, prevStats.duration, fmtDuration)}</div>
+        <div class="value">${fmtDuration(curStats.duration)}</div>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="label">Volume${metricDeltaHtml(curStats.volume, prevStats.volume, fmtVolume)}</div>
+        <div class="value">${fmtVolume(curStats.volume)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Sets${metricDeltaHtml(curStats.sets, prevStats.sets, v=>Math.round(v))}</div>
+        <div class="value">${curStats.sets}</div>
+      </div>
+    </div>
+
     <div class="section-label">Visits &mdash; last ${dashboardTimePeriod} days</div>
     <div class="chart-card">${visitsChart}</div>
 
@@ -2943,6 +3257,170 @@ async function renderDashboard(){
       ${typeChart}
       <div class="chart-legend"><span><span class="dot" style="background:var(--accent)"></span>Gym</span><span><span class="dot" style="background:var(--good)"></span>HIIT</span></div>
     </div>
+  `;
+  window.scrollTo(0,0);
+}
+
+// ── Per-exercise metrics (weight / reps / volume trends) ──
+let exerciseMetricsTargetId = null;
+let exerciseMetricsIsSelf = true;
+let exerciseMetricsLog = [];
+let exerciseMetricsName = null;
+let exerciseMetricsPeriod = 7;
+
+function getLoggedExerciseNames(log){
+  const set = new Set();
+  log.forEach(s=>(s.ex||[]).forEach(e=>{ if(e.sets && e.sets.length) set.add(e.n); }));
+  return [...set].sort();
+}
+
+function computeExercisePoints(log, name){
+  const points = [];
+  log.forEach(s=>{
+    const e = (s.ex||[]).find(x=>x.n===name);
+    if(!e || !e.sets || !e.sets.length) return;
+    let topWeight = null, repsAtTop = 0, volume = 0;
+    e.sets.forEach(st=>{
+      const w = parseFloat(st.w)||0, r = parseInt(st.r)||0;
+      volume += w*r;
+      if(topWeight===null || w>topWeight){ topWeight = w; repsAtTop = r; }
+    });
+    points.push({date:s.date, weight:topWeight||0, reps:repsAtTop, volume});
+  });
+  return points.sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+async function openExercisePicker(personId){
+  exerciseMetricsTargetId = personId || CURRENT_PROFILE.id;
+  exerciseMetricsIsSelf = exerciseMetricsTargetId === CURRENT_PROFILE.id;
+  app.innerHTML = `<div class="loading">Loading exercises&hellip;</div>`;
+  window.scrollTo(0,0);
+  if(exerciseMetricsIsSelf){
+    exerciseMetricsLog = LOG;
+  } else {
+    try{
+      const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${exerciseMetricsTargetId}`));
+      exerciseMetricsLog = snap.exists() ? (snap.data().log || []) : [];
+    }catch(e){ exerciseMetricsLog = []; }
+  }
+  renderExercisePicker();
+}
+
+function totalSetsForExercise(log, name){
+  let total = 0;
+  log.forEach(s=>{
+    const e = (s.ex||[]).find(x=>x.n===name);
+    if(e && e.sets) total += e.sets.length;
+  });
+  return total;
+}
+
+function groupExercisesBySection(log, names){
+  const groupToSection = {};
+  MUSCLE_SECTIONS.forEach(sec=>sec.groups.forEach(g=>{ groupToSection[g] = sec.label; }));
+
+  const buckets = {};
+  names.forEach(n=>{
+    const muscleGroup = EXERCISE_MUSCLE_MAP[n];
+    const sectionLabel = groupToSection[muscleGroup] || "Other";
+    if(!buckets[sectionLabel]) buckets[sectionLabel] = [];
+    buckets[sectionLabel].push({name:n, sets:totalSetsForExercise(log, n)});
+  });
+
+  const sections = Object.keys(buckets).map(label=>{
+    const items = buckets[label].sort((a,b)=>b.sets-a.sets);
+    const total = items.reduce((s,i)=>s+i.sets, 0);
+    return {label, total, items};
+  });
+  sections.sort((a,b)=>b.total-a.total);
+  return sections;
+}
+
+function renderExercisePicker(){
+  const names = getLoggedExerciseNames(exerciseMetricsLog);
+  const person = exerciseMetricsIsSelf ? CURRENT_PROFILE : (PEOPLE.find(p=>p.id===exerciseMetricsTargetId) || {id:exerciseMetricsTargetId, name:exerciseMetricsTargetId});
+  const backOnclick = exerciseMetricsIsSelf ? "home()" : `showClientDetail('${exerciseMetricsTargetId}')`;
+
+  const sections = groupExercisesBySection(exerciseMetricsLog, names);
+  const rows = sections.map(sec=>{
+    const itemRows = sec.items.map(it=>`
+      <div class="sess-row exrow" onclick="openExerciseMetrics('${it.name.replace(/'/g,"\\'")}')">
+        <div class="sr-info"><b>${it.name}</b><span>${it.sets} set${it.sets!==1?"s":""} logged</span></div>
+        <div style="color:var(--mute);font-size:18px">&rsaquo;</div>
+      </div>`).join("");
+    return `<div class="section-label" style="margin:14px 0 6px">${sec.label}</div>${itemRows}`;
+  }).join("");
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="${backOnclick}">&#8592; Back</button>
+      <div class="topbar-info"><h2>Exercise Metrics</h2><div class="focus">${person.name}</div></div>
+    </div>
+    ${rows || '<div class="chart-empty">No exercises logged yet &mdash; complete a session first.</div>'}
+  `;
+  window.scrollTo(0,0);
+}
+
+function openExerciseMetrics(name){
+  exerciseMetricsName = name;
+  exerciseMetricsPeriod = 7;
+  renderExerciseMetrics();
+}
+function setExerciseMetricsPeriod(period){
+  exerciseMetricsPeriod = period;
+  renderExerciseMetrics();
+}
+
+function renderExerciseMetrics(){
+  const allPoints = computeExercisePoints(exerciseMetricsLog, exerciseMetricsName);
+  const cutoff = new Date(Date.now() - exerciseMetricsPeriod*86400000).toISOString();
+  const points = allPoints.filter(p=>p.date>=cutoff);
+  const last = points[points.length-1];
+
+  // All-time PR is deliberately computed from the FULL history (allPoints),
+  // not the period-filtered points, since it shouldn't change when toggling 7/30 days.
+  let pr = null;
+  allPoints.forEach(p=>{
+    if(!pr || p.weight>pr.weight || (p.weight===pr.weight && p.reps>pr.reps)){
+      pr = {weight:p.weight, reps:p.reps, date:p.date};
+    }
+  });
+  const prHtml = pr ? `<div class="streak-hero">
+      <div class="num">${pr.weight}kg &times; ${pr.reps}</div>
+      <div class="lbl">All-time PR &middot; ${fmtDate(pr.date)}</div>
+    </div>` : "";
+
+  const weightChart = buildTrendChartSVG(points.map(p=>({date:p.date, value:p.weight})));
+  const repsChart = buildTrendChartSVG(points.map(p=>({date:p.date, value:p.reps})));
+  const volumeChart = buildTrendChartSVG(points.map(p=>({date:p.date, value:p.volume})));
+
+  const periodToggle = `<div class="seg">
+    <button class="${exerciseMetricsPeriod===7?"active":""}" onclick="setExerciseMetricsPeriod(7)">7 days</button>
+    <button class="${exerciseMetricsPeriod===30?"active":""}" onclick="setExerciseMetricsPeriod(30)">30 days</button>
+  </div>`;
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="renderExercisePicker()">&#8592; Back</button>
+      <div class="topbar-info"><h2>${exerciseMetricsName}</h2><div class="focus">${points.length} session${points.length!==1?"s":""} in range</div></div>
+    </div>
+    ${prHtml}
+    ${periodToggle}
+    <div class="stat-row">
+      <div class="stat-card"><div class="label">Top weight</div><div class="value">${last?last.weight+"kg":"&mdash;"}</div></div>
+      <div class="stat-card"><div class="label">Reps at top</div><div class="value">${last?last.reps:"&mdash;"}</div></div>
+      <div class="stat-card"><div class="label">Volume</div><div class="value">${last?last.volume:"&mdash;"}</div></div>
+    </div>
+
+    <div class="section-label">Weight &mdash; top set, last ${exerciseMetricsPeriod} days</div>
+    <div class="chart-card">${weightChart}</div>
+
+    <div class="section-label">Reps &mdash; at top weight, last ${exerciseMetricsPeriod} days</div>
+    <div class="chart-card">${repsChart}</div>
+
+    <div class="section-label">Total volume &mdash; last ${exerciseMetricsPeriod} days</div>
+    <div class="chart-card">${volumeChart}</div>
+    <div class="last-updated">Volume = weight &times; reps, summed across every set that exercise that session.</div>
   `;
   window.scrollTo(0,0);
 }
@@ -2976,6 +3454,11 @@ window.saveEditedPersonDetails = saveEditedPersonDetails;
 window.toggleAdminClientLink = toggleAdminClientLink;
 window.showAccountSettings = showAccountSettings;
 window.saveAccountEmail = saveAccountEmail;
+window.triggerPhotoUpload = triggerPhotoUpload;
+window.handlePhotoFileSelected = handlePhotoFileSelected;
+window.removeProfilePhoto = removeProfilePhoto;
+window.moveHomeModule = moveHomeModule;
+window.toggleHomeModuleVisibility = toggleHomeModuleVisibility;
 window.manageClientSessions = manageClientSessions;
 window.renderTrainerClientSessions = renderTrainerClientSessions;
 window.openTrainerSessionEditor = openTrainerSessionEditor;
@@ -3000,6 +3483,10 @@ window.showActivity = showActivity;
 window.showMuscleMap = showMuscleMap;
 window.openDashboard = openDashboard;
 window.setDashboardPeriod = setDashboardPeriod;
+window.openExercisePicker = openExercisePicker;
+window.renderExercisePicker = renderExercisePicker;
+window.openExerciseMetrics = openExerciseMetrics;
+window.setExerciseMetricsPeriod = setExerciseMetricsPeriod;
 window.showMeasurements = showMeasurements;
 window.saveMeasurementEntry = saveMeasurementEntry;
 window.deleteMeasurementEntry = deleteMeasurementEntry;
