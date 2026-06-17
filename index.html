@@ -290,6 +290,18 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .lbrank-row .lbr-stats{color:var(--mute);font-size:11px;margin-top:2px}
 .lbrank-row .lbr-rank{font-size:18px;font-weight:800;color:var(--mute);width:24px;text-align:center;flex-shrink:0}
 .lbrank-row.top .lbr-rank{color:var(--accent)}
+
+.musclemapbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
+  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between}
+.heat-legend-bar{display:flex;align-items:center;gap:8px;margin:10px 0 6px;font-size:11px;color:var(--mute)}
+.heat-legend-bar .bar{flex:1;height:10px;border-radius:5px;
+  background:linear-gradient(to right, rgb(58,70,92), rgb(226,80,42))}
+.dashboardbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
+  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between}
+.chart-legend{display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--mute)}
+.chart-legend .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 .trainerbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--accent2);
   color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
   display:flex;align-items:center;justify-content:space-between}
@@ -538,6 +550,39 @@ const EXERCISE_LIBRARY = [
   {cat:"Cardio", items:["Treadmill","Stairmaster","Rowing machine","Stationary bike","Elliptical","Assault bike","Jump rope"]}
 ];
 
+// Which body region each exercise primarily trains, for the muscle map.
+// Cardio machines intentionally map to nothing - they don't isolate a muscle group.
+const EXERCISE_MUSCLE_MAP = {
+  "Flat bench press (barbell)":"chest","Flat bench press (machine)":"chest","Incline bench press (dumbbell)":"chest",
+  "Incline chest press (machine)":"chest","Cable chest fly":"chest","Dips":"chest","Smith machine bench press":"chest","Pec deck machine":"chest",
+  "Lat pulldown (wide grip)":"back","Lat pulldown (close grip)":"back","Seated cable row":"back","Single arm dumbbell row":"back",
+  "T-bar row":"back","Back extension":"back","Pull-up":"back","Conventional deadlift":"back","Sumo deadlift":"back",
+  "Chest-supported row":"back","Reverse grip lat pulldown":"back",
+  "Overhead shoulder press (dumbbell)":"shoulders","Shoulder press (machine)":"shoulders","Lateral raise (dumbbell)":"shoulders",
+  "Lateral raise (machine)":"shoulders","Rear delt fly":"shoulders","Face pull":"shoulders","Arnold press":"shoulders",
+  "Cable lateral raise":"shoulders","Barbell shrug":"shoulders",
+  "Barbell bicep curl":"biceps","Dumbbell bicep curl":"biceps","Seated dumbbell curl":"biceps","Preacher curl":"biceps",
+  "Hammer curl":"biceps","EZ bar curl":"biceps","Cable curl":"biceps",
+  "Tricep pushdown (cable)":"triceps","Overhead tricep extension (rope)":"triceps","Skull crusher":"triceps",
+  "Single arm tricep extension":"triceps","Close-grip bench press":"triceps","Diamond push-up":"triceps","Cable kickback":"triceps",
+  "Barbell squat":"quads","Leg press":"quads","Leg extension":"quads","Leg curl":"hamstrings","Romanian deadlift":"hamstrings",
+  "Walking lunges":"quads","Bulgarian split squat":"quads","Hack squat":"quads","Standing calf raise":"calves",
+  "Seated calf raise":"calves","Hip thrust":"glutes","Abductor machine":"glutes","Goblet squat":"quads","Front squat":"quads",
+  "Step-ups":"quads","Glute bridge":"glutes","Single-leg leg press":"quads","Smith machine squat":"quads",
+  "Plank":"abs","Cable crunch":"abs","Hanging leg raise":"abs","Russian twist":"abs","Ab wheel rollout":"abs",
+  "Side plank":"abs","Mountain climbers":"abs","Bicycle crunch":"abs",
+  // Aliases for the original default-session exercise names (predate the
+  // exercise library's naming convention) so existing history maps correctly.
+  "Incline chest press machine":"chest","Flat chest press machine":"chest","Flat bench machine press":"chest",
+  "Incline dumbbell fly":"chest","Wide grip seated row":"back","Single arm back row machine":"back",
+  "Dumbbell lateral raises":"shoulders","Lateral raise m/c + reverse fly (SS)":"shoulders",
+  "Single arm cable tricep extension":"triceps","Overhead rope tricep extension":"triceps",
+  "Seated dumbbell biceps curl":"biceps","Dumbbell preacher curl":"biceps",
+  "Abductor machine (warm-up)":"glutes","Abductor machine (last set to fail)":"glutes","Hip thrusts":"glutes",
+  "Seated / lying leg curl":"hamstrings","Standing calf raise machine":"calves","Seated calf raises":"calves"
+};
+const MUSCLE_GROUPS = ["chest","back","shoulders","biceps","triceps","abs","quads","hamstrings","glutes","calves"];
+
 // Separate, bodyweight/kettlebell/dumbbell/core-focused library for HIIT classes
 const HIIT_EXERCISE_LIBRARY = [
   {cat:"Bodyweight", items:["Burpees","Mountain climbers","Jumping jacks","High knees","Squat jumps","Push-ups","Walking lunges","Star jumps","Bear crawl","Tuck jumps"]},
@@ -598,7 +643,18 @@ const timeAgo = iso => {
 };
 const lastOf = id => [...LOG].filter(w=>w.sessionId===id).sort((a,b)=>b.date.localeCompare(a.date))[0];
 
-function dayKey(iso){ return new Date(iso).toISOString().slice(0,10); }
+// Local calendar-day string (YYYY-MM-DD), using the browser's local date
+// components rather than the UTC date toISOString() would give. Using UTC
+// here was the source of a real bug: anyone in a timezone ahead of UTC (UK
+// during BST, for instance) would have "today" silently resolve to the UTC
+// date, which can be a full day behind local midnight - sessions logged
+// today were vanishing from the heatmap entirely. Every day-bucketing
+// feature in the app should go through this one function.
+function localDayKey(d){
+  const dt = (d instanceof Date) ? d : new Date(d);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+}
+function dayKey(iso){ return localDayKey(iso); }
 function trainedDaysSetFor(log){ return new Set(log.map(w=>dayKey(w.date))); }
 
 function weekStreakFor(log){
@@ -606,7 +662,7 @@ function weekStreakFor(log){
   function weekHasSession(weekStart){
     for(let i=0;i<7;i++){
       const d = new Date(weekStart); d.setDate(d.getDate()+i);
-      if(days.has(d.toISOString().slice(0,10))) return true;
+      if(days.has(localDayKey(d))) return true;
     }
     return false;
   }
@@ -636,7 +692,7 @@ function buildHeatmap(log){
   const cells = [];
   let cursor = new Date(start);
   while(cursor<=today){
-    const key = cursor.toISOString().slice(0,10);
+    const key = localDayKey(cursor);
     cells.push({date:key, trained:days.has(key)});
     cursor.setDate(cursor.getDate()+1);
   }
@@ -974,6 +1030,14 @@ function home(){
       <span class="cb-label">🔥 Activity &amp; streak</span>
       <span>&rsaquo;</span>
     </button>
+    <button class="musclemapbtn" onclick="showMuscleMap(7)">
+      <span class="cb-label">💪 Muscle map</span>
+      <span>&rsaquo;</span>
+    </button>
+    <button class="dashboardbtn" onclick="openDashboard()">
+      <span class="cb-label">📊 Dashboard</span>
+      <span>&rsaquo;</span>
+    </button>
     <button class="measurebtn" onclick="showMeasurements()">
       <span class="cb-label">📏 Body measurements</span>
       <span>&rsaquo;</span>
@@ -1143,12 +1207,15 @@ async function saveSession(id){
   if(!ok){
     showToast("Couldn't save \u2014 check your connection");
     LOG.pop(); // don't keep an unsaved entry in memory if the write failed
-  } else if(prHits.length){
-    showToast(`\u{1F3C6} New PR: ${prHits.slice(0,2).join(", ")}${prHits.length>2?` +${prHits.length-2} more`:""}`);
+    setTimeout(home, 1000);
   } else {
-    showToast("Session saved & synced \u2713");
+    if(prHits.length){
+      showToast(`\u{1F3C6} New PR: ${prHits.slice(0,2).join(", ")}${prHits.length>2?` +${prHits.length-2} more`:""}`);
+    } else {
+      showToast("Session saved & synced \u2713");
+    }
+    setTimeout(()=>showPostSessionSummary(ex, prHits), 1200);
   }
-  setTimeout(home, ok && prHits.length ? 1800 : 1000);
 }
 
 function showHistory(){
@@ -1195,6 +1262,91 @@ function deltaHtml(delta, decimals=1){
   const cls = delta>0.05 ? "up" : delta<-0.05 ? "down" : "flat";
   const arrow = delta>0.05 ? "&#9650;" : delta<-0.05 ? "&#9660;" : "&#8212;";
   return `<span class="value ${cls}">${arrow} ${Math.abs(delta).toFixed(decimals)}kg</span>`;
+}
+
+// ── Bar charts (dashboard) ────────────────────────────────
+function buildBarChartSVG(items, opts={}){
+  const color = opts.color || "var(--accent)";
+  const labelEvery = opts.labelEvery || 1;
+  const unit = opts.unit || "";
+  const showValues = opts.showValues!==false;
+  const W=560, H=190, padL=26, padR=10, padT=18, padB=30;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const maxV = Math.max(...items.map(i=>i.value), 1);
+  const n = items.length;
+  const slot = plotW/n;
+  const barW = Math.max(slot*0.55, 3);
+  const bars = items.map((it,i)=>{
+    const h = (it.value/maxV)*plotH;
+    const x = padL + slot*i + (slot-barW)/2;
+    const y = padT + plotH - h;
+    const showLabel = (i % labelEvery === 0) || i===n-1;
+    const valueLabel = (showValues && it.value>0) ? `<text x="${(x+barW/2).toFixed(1)}" y="${(y-4).toFixed(1)}" fill="var(--mute)" font-size="9" text-anchor="middle">${it.value}${unit}</text>` : "";
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" rx="3" fill="${color}"/>
+      ${valueLabel}
+      ${showLabel ? `<text x="${(x+barW/2).toFixed(1)}" y="${H-8}" fill="var(--mute)" font-size="9" text-anchor="middle">${it.label}</text>` : ""}`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" stroke="var(--line)" stroke-width="1"/>
+    ${bars}
+  </svg>`;
+}
+
+function buildStackedBarChartSVG(items, seriesKeys, colors, opts={}){
+  const showValues = opts.showValues!==false;
+  const labelEvery = opts.labelEvery || 1;
+  const W=560, H=190, padL=26, padR=10, padT=18, padB=30;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const totals = items.map(it => seriesKeys.reduce((s,k)=>s+(it[k]||0),0));
+  const maxV = Math.max(...totals, 1);
+  const n = items.length;
+  const slot = plotW/n;
+  const barW = Math.max(slot*0.55, 3);
+  const bars = items.map((it,i)=>{
+    const x = padL + slot*i + (slot-barW)/2;
+    let cursorY = padT + plotH;
+    let segs = "";
+    seriesKeys.forEach(k=>{
+      const v = it[k]||0;
+      const h = (v/maxV)*plotH;
+      cursorY -= h;
+      if(v>0) segs += `<rect x="${x.toFixed(1)}" y="${cursorY.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" fill="${colors[k]}"/>`;
+    });
+    const total = totals[i];
+    const totalLabel = (showValues && total>0) ? `<text x="${(x+barW/2).toFixed(1)}" y="${(cursorY-4).toFixed(1)}" fill="var(--mute)" font-size="9" text-anchor="middle">${total}</text>` : "";
+    const showLabel = (i % labelEvery === 0) || i===n-1;
+    return `${segs}${totalLabel}${showLabel ? `<text x="${(x+barW/2).toFixed(1)}" y="${H-8}" fill="var(--mute)" font-size="9" text-anchor="middle">${it.label}</text>` : ""}`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" stroke="var(--line)" stroke-width="1"/>
+    ${bars}
+  </svg>`;
+}
+
+function dailyVisitBuckets(log, daysBack){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = [];
+  for(let i=daysBack-1;i>=0;i--){
+    const d = new Date(today); d.setDate(today.getDate()-i);
+    const key = localDayKey(d);
+    const inDay = log.filter(s=>localDayKey(s.date)===key);
+    const label = daysBack<=7 ? d.toLocaleDateString("en-GB",{weekday:"short"}) : String(d.getDate());
+    days.push({label, value:inDay.length, gym:inDay.filter(s=>!s.hiit).length, hiit:inDay.filter(s=>s.hiit).length});
+  }
+  return days;
+}
+
+function dailyMinutesBuckets(log, daysBack){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = [];
+  for(let i=daysBack-1;i>=0;i--){
+    const d = new Date(today); d.setDate(today.getDate()-i);
+    const key = localDayKey(d);
+    const mins = log.filter(s=>localDayKey(s.date)===key).reduce((sum,s)=>sum+(s.duration||0),0);
+    const label = daysBack<=7 ? d.toLocaleDateString("en-GB",{weekday:"short"}) : String(d.getDate());
+    days.push({label, value:mins});
+  }
+  return days;
 }
 
 function buildTrendChartSVG(pairs){
@@ -1255,7 +1407,7 @@ function showWeightTracker(){
 
   const chart = `<div class="chart-card">${buildWeightChartSVG(sorted)}</div>`;
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDayKey(new Date());
   const form = `<div class="weight-form">
     <input type="date" id="wDate" value="${today}">
     <input type="number" inputmode="decimal" step="0.1" min="0" id="wVal" placeholder="kg">
@@ -1354,7 +1506,7 @@ function showMeasurements(metric){
 
   const chart = `<div class="chart-card">${buildTrendChartSVG(sorted.map(e=>({date:e.date, value:e[m]})))}</div>`;
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDayKey(new Date());
   const existingToday = MEASUREMENTS.find(e=>e.date.slice(0,10)===today) || {};
   const form = `<div class="measure-form">
     <div class="mrow"><input type="date" id="mDate" value="${today}" style="flex:1"></div>
@@ -2130,6 +2282,7 @@ async function showClientDetail(clientId){
       <div class="stat-card"><div class="label">Streak</div><div class="value">${streak}</div></div>
     </div>
     <button class="addsessbtn" onclick="manageClientSessions('${clientId}')">📋 Manage ${person.name}'s sessions</button>
+    <button class="addsessbtn" onclick="openDashboard('${clientId}')">📊 ${person.name}'s dashboard</button>
     <div class="section-label" style="margin-top:16px">Weight trend</div>
     <div class="chart-card">${chart}</div>
     <div class="section-label">Recent session summaries</div>
@@ -2237,7 +2390,12 @@ function showAccountSettings(){
       <div class="topbar-info"><h2>Account Settings</h2><div class="focus">${current.name}</div></div>
     </div>
     <div class="editor-field"><label>Name</label><input type="text" value="${current.name}" disabled></div>
-    <div class="editor-field"><label>Email address</label><input type="email" id="accountEmail" value="${current.email||""}" placeholder="you@example.com"></div>
+    <div class="editor-field">
+      <label>Username</label>
+      <input type="text" id="accountUsername" value="${current.username||current.id}" placeholder="e.g. ed">
+    </div>
+    <div class="last-updated" style="text-align:left;margin-top:-4px">This must exactly match what you currently type to log in &mdash; not your name or email. If you're unsure, log out and check what works before changing this.</div>
+    <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="accountEmail" value="${current.email||""}" placeholder="you@example.com"></div>
     <button class="save-session-btn" onclick="saveAccountEmail()">Save</button>
   `;
   window.scrollTo(0,0);
@@ -2245,21 +2403,26 @@ function showAccountSettings(){
 
 async function saveAccountEmail(){
   const val = ($("accountEmail").value||"").trim();
+  const usernameVal = ($("accountUsername").value||"").trim();
   if(!val || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){
     showToast("Enter a valid email address", false);
+    return;
+  }
+  if(!usernameVal){
+    showToast("Enter your username", false);
     return;
   }
   await loadPeople();
   const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
   if(p){
-    if(!p.username) p.username = p.id; // accounts created before username tracking existed
+    p.username = usernameVal;
     p.email = val;
     CURRENT_PROFILE.email = val;
-    CURRENT_PROFILE.username = p.username;
+    CURRENT_PROFILE.username = usernameVal;
   }
   const ok = await savePeople();
-  if(ok && p) await registerLoginLookup(val, p.username);
-  showToast(ok ? "Email updated \u2713" : "Couldn't save \u2014 check your connection");
+  if(ok && p) await registerLoginLookup(val, usernameVal);
+  showToast(ok ? "Saved \u2713" : "Couldn't save \u2014 check your connection");
 }
 
 // ── Manage a CLIENT's sessions (trainer/admin building on a client's
@@ -2423,6 +2586,222 @@ async function deleteTrainerClientSession(id){
   renderTrainerClientSessions();
 }
 
+// ── Muscle map ──────────────────────────────────────────────
+function computeMuscleSets(logEntries){
+  const totals = {};
+  MUSCLE_GROUPS.forEach(g=>totals[g]=0);
+  logEntries.forEach(session=>{
+    (session.ex||[]).forEach(e=>{
+      const group = EXERCISE_MUSCLE_MAP[e.n];
+      if(group) totals[group] += (e.sets||[]).length;
+    });
+  });
+  return totals;
+}
+
+function heatColor(sets, cap){
+  if(sets<=0) return "#2a3144";
+  const t = Math.min(sets/Math.max(cap,1), 1);
+  const cold=[58,70,92], hot=[226,80,42];
+  const r = Math.round(cold[0]+(hot[0]-cold[0])*t);
+  const g = Math.round(cold[1]+(hot[1]-cold[1])*t);
+  const b = Math.round(cold[2]+(hot[2]-cold[2])*t);
+  return `rgb(${r},${g},${b})`;
+}
+
+function buildMuscleMapSVG(totals){
+  const cap = Math.max(...MUSCLE_GROUPS.map(g=>totals[g]||0), 1);
+  const C = {};
+  MUSCLE_GROUPS.forEach(g=>C[g]=heatColor(totals[g]||0, cap));
+  const O = "#3a4050";
+  return `<svg viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(40,5)">
+    <circle cx="75" cy="20" r="16" fill="none" stroke="${O}" stroke-width="2"/>
+    <ellipse cx="40" cy="52" rx="14" ry="11" fill="${C.shoulders}" stroke="#15181f" stroke-width="2"/>
+    <ellipse cx="110" cy="52" rx="14" ry="11" fill="${C.shoulders}" stroke="#15181f" stroke-width="2"/>
+    <rect x="48" y="46" width="54" height="36" rx="14" fill="${C.chest}" stroke="#15181f" stroke-width="2"/>
+    <rect x="55" y="83" width="40" height="42" rx="8" fill="${C.abs}" stroke="#15181f" stroke-width="2"/>
+    <rect x="22" y="60" width="14" height="38" rx="7" fill="${C.biceps}" stroke="#15181f" stroke-width="2"/>
+    <rect x="114" y="60" width="14" height="38" rx="7" fill="${C.biceps}" stroke="#15181f" stroke-width="2"/>
+    <rect x="18" y="100" width="12" height="34" rx="6" fill="none" stroke="${O}" stroke-width="2"/>
+    <rect x="120" y="100" width="12" height="34" rx="6" fill="none" stroke="${O}" stroke-width="2"/>
+    <rect x="50" y="127" width="20" height="62" rx="9" fill="${C.quads}" stroke="#15181f" stroke-width="2"/>
+    <rect x="80" y="127" width="20" height="62" rx="9" fill="${C.quads}" stroke="#15181f" stroke-width="2"/>
+    <rect x="51" y="191" width="17" height="50" rx="7" fill="none" stroke="${O}" stroke-width="2"/>
+    <rect x="82" y="191" width="17" height="50" rx="7" fill="none" stroke="${O}" stroke-width="2"/>
+    <text x="75" y="260" fill="#8a90a0" font-size="11" text-anchor="middle" font-family="sans-serif">FRONT</text>
+  </g>
+  <g transform="translate(255,5)">
+    <circle cx="75" cy="20" r="16" fill="none" stroke="${O}" stroke-width="2"/>
+    <path d="M 50 38 L 100 38 L 110 56 L 75 50 L 40 56 Z" fill="${C.shoulders}" stroke="#15181f" stroke-width="2"/>
+    <rect x="48" y="55" width="54" height="50" rx="12" fill="${C.back}" stroke="#15181f" stroke-width="2"/>
+    <rect x="22" y="60" width="14" height="38" rx="7" fill="${C.triceps}" stroke="#15181f" stroke-width="2"/>
+    <rect x="114" y="60" width="14" height="38" rx="7" fill="${C.triceps}" stroke="#15181f" stroke-width="2"/>
+    <rect x="18" y="100" width="12" height="34" rx="6" fill="none" stroke="${O}" stroke-width="2"/>
+    <rect x="120" y="100" width="12" height="34" rx="6" fill="none" stroke="${O}" stroke-width="2"/>
+    <rect x="50" y="108" width="50" height="24" rx="10" fill="${C.glutes}" stroke="#15181f" stroke-width="2"/>
+    <rect x="50" y="134" width="20" height="55" rx="9" fill="${C.hamstrings}" stroke="#15181f" stroke-width="2"/>
+    <rect x="80" y="134" width="20" height="55" rx="9" fill="${C.hamstrings}" stroke="#15181f" stroke-width="2"/>
+    <rect x="51" y="191" width="17" height="50" rx="7" fill="${C.calves}" stroke="#15181f" stroke-width="2"/>
+    <rect x="82" y="191" width="17" height="50" rx="7" fill="${C.calves}" stroke="#15181f" stroke-width="2"/>
+    <text x="75" y="260" fill="#8a90a0" font-size="11" text-anchor="middle" font-family="sans-serif">BACK</text>
+  </g>
+</svg>`;
+}
+
+const MUSCLE_SECTIONS = [
+  {label:"Chest", groups:["chest"]},
+  {label:"Back", groups:["back"]},
+  {label:"Shoulders", groups:["shoulders"]},
+  {label:"Biceps", groups:["biceps"]},
+  {label:"Triceps", groups:["triceps"]},
+  {label:"Legs", groups:["quads","hamstrings","glutes","calves"]},
+  {label:"Core", groups:["abs"]}
+];
+
+function muscleStatsRows(totals){
+  const sections = MUSCLE_SECTIONS.map(sec=>{
+    const rows = sec.groups
+      .map(g=>({name:g.charAt(0).toUpperCase()+g.slice(1), count:totals[g]||0}))
+      .sort((a,b)=>b.count-a.count);
+    const total = rows.reduce((s,r)=>s+r.count,0);
+    return {label:sec.label, total, rows};
+  }).sort((a,b)=>b.total-a.total);
+
+  return sections.map(sec=>{
+    const rowsHtml = sec.rows.map(r=>
+      `<div class="hrow"><div class="hn">${r.name}</div><div class="hv">${r.count} set${r.count!==1?"s":""}</div></div>`
+    ).join("");
+    return `<div class="section-label" style="margin:14px 0 6px">${sec.label} &middot; ${sec.total} set${sec.total!==1?"s":""}</div>
+      <div class="hday">${rowsHtml}</div>`;
+  }).join("");
+}
+
+function showPostSessionSummary(ex, prHits){
+  const totals = computeMuscleSets([{ex}]);
+  const svg = buildMuscleMapSVG(totals);
+  const prHtml = (prHits && prHits.length)
+    ? `<div class="last-updated">&#127942; New PR: ${prHits.join(", ")}</div>`
+    : "";
+  app.innerHTML = `
+    <div class="topbar"><div class="topbar-info"><h2>Session Complete</h2><div class="focus">Nice work, ${CURRENT_PROFILE.name}</div></div></div>
+    ${prHtml}
+    <div class="chart-card">${svg}</div>
+    <div class="heat-legend-bar"><span>Less</span><div class="bar"></div><span>More</span></div>
+    <div class="section-label">What you trained</div>
+    ${muscleStatsRows(totals)}
+    <div class="savebar"><div class="inner"><button class="save-btn" onclick="home()">Done</button></div></div>
+  `;
+  window.scrollTo(0,0);
+}
+
+let muscleMapPeriod = 7;
+function showMuscleMap(period){
+  if(period) muscleMapPeriod = period;
+  stopTimer();
+  const cutoff = new Date(Date.now() - muscleMapPeriod*86400000).toISOString();
+  const recentLogs = LOG.filter(s=>s.date>=cutoff);
+  const totals = computeMuscleSets(recentLogs);
+  const svg = buildMuscleMapSVG(totals);
+  const segButtons = [7,30].map(p=>
+    `<button class="${p===muscleMapPeriod?"active":""}" onclick="showMuscleMap(${p})">${p} days</button>`
+  ).join("");
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Muscle Map</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    <div class="seg">${segButtons}</div>
+    <div class="last-updated">${recentLogs.length} session${recentLogs.length!==1?"s":""} logged in the last ${muscleMapPeriod} days</div>
+    <div class="chart-card">${svg}</div>
+    <div class="heat-legend-bar"><span>Less</span><div class="bar"></div><span>More</span></div>
+    <div class="section-label">Sets per muscle group</div>
+    ${muscleStatsRows(totals)}
+  `;
+  window.scrollTo(0,0);
+}
+
+// ── Dashboard (visits, time spent, session type) ──────────
+let dashboardTargetId = null;
+let dashboardTimePeriod = 7;
+
+async function openDashboard(personId){
+  dashboardTargetId = personId || CURRENT_PROFILE.id;
+  dashboardTimePeriod = 7;
+  await renderDashboard();
+}
+
+function setDashboardPeriod(period){
+  dashboardTimePeriod = period;
+  renderDashboard();
+}
+
+async function renderDashboard(){
+  stopTimer();
+  const isSelf = dashboardTargetId === CURRENT_PROFILE.id;
+  app.innerHTML = `<div class="topbar"><button class="back" onclick="${isSelf?"home()":`showClientDetail('${dashboardTargetId}')`}">&#8592; Back</button>
+    <div class="topbar-info"><h2>Dashboard</h2></div></div><div class="lb-loading">Loading&hellip;</div>`;
+  window.scrollTo(0,0);
+
+  let log;
+  if(isSelf){
+    log = LOG;
+  } else {
+    try{
+      const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${dashboardTargetId}`));
+      log = snap.exists() ? (snap.data().log || []) : [];
+    }catch(e){ log = []; }
+  }
+  const person = isSelf ? CURRENT_PROFILE : (PEOPLE.find(p=>p.id===dashboardTargetId) || {id:dashboardTargetId, name:dashboardTargetId});
+
+  const weekStart = startOfWeekISO(), now = new Date().toISOString();
+  const visitsThisWeek = sessionsInRange(log, weekStart, now);
+  const minsThisWeek = log.filter(s=>s.date>=weekStart && s.date<now).reduce((sum,s)=>sum+(s.duration||0),0);
+
+  const sparse = dashboardTimePeriod>7;
+  const chartOpts = {showValues: !sparse, labelEvery: sparse?5:1};
+
+  const dailyVisits = dailyVisitBuckets(log, dashboardTimePeriod);
+  const visitsChart = buildBarChartSVG(dailyVisits.map(d=>({label:d.label, value:d.value})), {...chartOpts, color:"var(--accent)"});
+
+  const dailyTime = dailyMinutesBuckets(log, dashboardTimePeriod);
+  const timeChart = buildBarChartSVG(dailyTime, {...chartOpts, color:"var(--good)", unit:"m"});
+
+  const typeChart = buildStackedBarChartSVG(dailyVisits, ["gym","hiit"], {gym:"var(--accent)", hiit:"var(--good)"}, chartOpts);
+
+  const periodToggle = `<div class="seg">
+    <button class="${dashboardTimePeriod===7?"active":""}" onclick="setDashboardPeriod(7)">7 days</button>
+    <button class="${dashboardTimePeriod===30?"active":""}" onclick="setDashboardPeriod(30)">30 days</button>
+  </div>`;
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="${isSelf?"home()":`showClientDetail('${dashboardTargetId}')`}">&#8592; Back</button>
+      <div class="topbar-info"><h2>Dashboard</h2><div class="focus">${person.name}</div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="label">Visits this week</div><div class="value">${visitsThisWeek}</div></div>
+      <div class="stat-card"><div class="label">Minutes this week</div><div class="value">${minsThisWeek}</div></div>
+    </div>
+
+    ${periodToggle}
+
+    <div class="section-label">Visits &mdash; last ${dashboardTimePeriod} days</div>
+    <div class="chart-card">${visitsChart}</div>
+
+    <div class="section-label">Time spent &mdash; last ${dashboardTimePeriod} days</div>
+    <div class="chart-card">${timeChart}</div>
+
+    <div class="section-label">Session type &mdash; last ${dashboardTimePeriod} days</div>
+    <div class="chart-card">
+      ${typeChart}
+      <div class="chart-legend"><span><span class="dot" style="background:var(--accent)"></span>Gym</span><span><span class="dot" style="background:var(--good)"></span>HIIT</span></div>
+    </div>
+  `;
+  window.scrollTo(0,0);
+}
+
 // Expose handlers used by inline onclick="" attributes — required because
 // top-level functions in a <script type="module"> are NOT global by default.
 window.home = home;
@@ -2467,6 +2846,9 @@ window.showCheckIn = showCheckIn;
 window.startRest = startRest;
 window.cancelRest = cancelRest;
 window.showActivity = showActivity;
+window.showMuscleMap = showMuscleMap;
+window.openDashboard = openDashboard;
+window.setDashboardPeriod = setDashboardPeriod;
 window.showMeasurements = showMeasurements;
 window.saveMeasurementEntry = saveMeasurementEntry;
 window.deleteMeasurementEntry = deleteMeasurementEntry;
