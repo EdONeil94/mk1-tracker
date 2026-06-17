@@ -64,6 +64,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .ex.done{border-color:var(--good)}
 .ex-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px}
 .ex-name{font-weight:700;font-size:15px;line-height:1.3}
+.ex-note{color:var(--mute);font-size:12px;font-style:italic;margin-top:2px;line-height:1.4}
 .scheme{color:var(--accent);font-weight:800;font-size:13px;white-space:nowrap;flex-shrink:0}
 .prev{color:var(--mute);font-size:12px;margin:5px 0 10px;line-height:1.4}
 .prev b{color:var(--text)}
@@ -333,6 +334,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   display:flex;align-items:center;justify-content:space-between}
 .sess-row{display:flex;align-items:center;justify-content:space-between;background:var(--card);
   border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:10px}
+.sess-row .sr-info{flex:1;min-width:0}
 .sess-row .sr-info b{display:block;font-size:14px;font-weight:800}
 .sess-row .sr-info span{color:var(--mute);font-size:11px}
 .sess-row .sr-actions{display:flex;gap:6px}
@@ -346,16 +348,22 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   border-radius:10px;padding:12px;font-size:15px;font-weight:600;-webkit-appearance:none;appearance:none}
 .editor-field input:focus{outline:none;border-color:var(--accent)}
 
-.draft-ex{display:flex;align-items:center;gap:8px;background:var(--card);border:1.5px solid var(--line);
+.draft-ex{background:var(--card);border:1.5px solid var(--line);
   border-radius:12px;padding:10px 12px;margin-bottom:8px}
-.draft-ex .dx-name{flex:1;font-size:13.5px;font-weight:700}
-.draft-ex input{background:var(--chip);border:1.5px solid var(--line);color:var(--text);
-  border-radius:8px;padding:7px;font-size:13px;font-weight:700;text-align:center;
+.dx-main-row{display:flex;align-items:center;gap:8px}
+.dx-main-row .dx-name{flex:1;font-size:13.5px;font-weight:700}
+.dx-main-row input{background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:8px;padding:7px 3px;font-size:13px;font-weight:700;text-align:center;
   -webkit-appearance:none;appearance:none}
-.draft-ex .dx-sets{width:34px}
-.draft-ex .dx-reps{width:62px}
-.draft-ex .dx-remove{background:none;border:none;color:#5a6070;font-size:17px;cursor:pointer}
-.draft-ex .dx-remove:active{color:#a04030}
+.dx-sets{width:42px}
+.dx-reps{width:64px}
+.dx-remove{background:none;border:none;color:#5a6070;font-size:17px;cursor:pointer}
+.dx-remove:active{color:#a04030}
+.dx-note-row{margin-top:8px}
+.dx-note-row input{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:8px;padding:8px 10px;font-size:12.5px;font-weight:500;text-align:left;
+  -webkit-appearance:none;appearance:none}
+.dx-note-row input::placeholder{color:#5a6070;font-weight:400}
 .dx-reorder{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
 .dx-reorder button{width:20px;height:16px;background:var(--chip);border:1px solid var(--line);
   color:var(--mute);font-size:9px;line-height:1;border-radius:4px;cursor:pointer;
@@ -1097,6 +1105,7 @@ function openSession(id){
     }).join("");
     return `<div class="ex" id="ex${i}">
       <div class="ex-head"><div class="ex-name">${i+1}. ${e.n}</div><div class="scheme">${e.s}&times;${e.r}</div></div>
+      ${e.note ? `<div class="ex-note">${e.note}</div>` : ""}
       <div class="prev">${prevHtml}${bestHtml}</div>
       <div class="sets" id="sets${i}">${rows}</div>
       <button class="addset-btn" onclick="addSet(${i},event)">+ add set</button>
@@ -1610,8 +1619,12 @@ function uniqueSessionId(name){
 
 function showSettings(){
   stopTimer();
-  const rows = PLAN.map(p=>`
+  const rows = PLAN.map((p,i)=>`
     <div class="sess-row">
+      <div class="dx-reorder">
+        <button onclick="moveSessionInPlan('${p.id}',-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
+        <button onclick="moveSessionInPlan('${p.id}',1)" ${i===PLAN.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
+      </div>
       <div class="sr-info"><b>${p.name}</b><span>${p.focus} &middot; ${p.ex.length} exercise${p.ex.length!==1?"s":""}</span></div>
       <div class="sr-actions">
         <button class="icon-btn" onclick="openSessionEditor('${p.id}')" aria-label="Edit">&#9998;</button>
@@ -1627,6 +1640,16 @@ function showSettings(){
     <button class="addsessbtn" onclick="openSessionEditor(null)">+ Create new session</button>
   `;
   window.scrollTo(0,0);
+}
+
+async function moveSessionInPlan(id, dir){
+  const idx = PLAN.findIndex(p=>p.id===id);
+  if(idx<0) return;
+  const newIdx = idx + dir;
+  if(newIdx<0 || newIdx>=PLAN.length) return;
+  [PLAN[idx], PLAN[newIdx]] = [PLAN[newIdx], PLAN[idx]];
+  await saveLog();
+  showSettings();
 }
 
 function exercisePickerOptions(){
@@ -1649,14 +1672,17 @@ function openSessionEditor(id){
 function renderSessionEditor(){
   const exRows = draftSession.ex.map((e,i)=>`
     <div class="draft-ex">
-      <div class="dx-reorder">
-        <button onclick="moveDraftExercise(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
-        <button onclick="moveDraftExercise(${i},1)" ${i===draftSession.ex.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
+      <div class="dx-main-row">
+        <div class="dx-reorder">
+          <button onclick="moveDraftExercise(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
+          <button onclick="moveDraftExercise(${i},1)" ${i===draftSession.ex.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
+        </div>
+        <div class="dx-name">${e.n}</div>
+        <input class="dx-sets" type="text" inputmode="numeric" value="${e.s}" oninput="setDraftExSets(${i},this.value)">
+        <input class="dx-reps" type="text" value="${e.r}" oninput="setDraftExReps(${i},this.value)">
+        <button class="dx-remove" onclick="removeDraftExercise(${i})" aria-label="Remove">&times;</button>
       </div>
-      <div class="dx-name">${e.n}</div>
-      <input class="dx-sets" type="number" min="1" value="${e.s}" oninput="setDraftExSets(${i},this.value)">
-      <input class="dx-reps" type="text" value="${e.r}" oninput="setDraftExReps(${i},this.value)">
-      <button class="dx-remove" onclick="removeDraftExercise(${i})" aria-label="Remove">&times;</button>
+      <div class="dx-note-row"><input type="text" value="${(e.note||"").replace(/"/g,"&quot;")}" placeholder="Add a note for this exercise (optional)" oninput="setDraftExNote(${i},this.value)"></div>
     </div>`).join("");
 
   const isNew = !draftSession.id;
@@ -1698,11 +1724,12 @@ function setDraftName(v){ draftSession.name = v; }
 function setDraftFocus(v){ draftSession.focus = v; }
 function setDraftExSets(i,v){ draftSession.ex[i].s = parseInt(v)||1; }
 function setDraftExReps(i,v){ draftSession.ex[i].r = v; }
+function setDraftExNote(i,v){ draftSession.ex[i].note = v; }
 
 function addDraftExercise(){
   const sel = $("exercisePicker");
   if(!sel || !sel.value) return;
-  draftSession.ex.push({n:sel.value, s:3, r:"10-12"});
+  draftSession.ex.push({n:sel.value, s:3, r:"10-12", note:""});
   renderSessionEditor();
 }
 function removeDraftExercise(idx){
@@ -2544,14 +2571,17 @@ function openTrainerSessionEditor(id){
 function renderTrainerSessionEditor(){
   const exRows = trainerDraftSession.ex.map((e,i)=>`
     <div class="draft-ex">
-      <div class="dx-reorder">
-        <button onclick="moveTrainerDraftExercise(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
-        <button onclick="moveTrainerDraftExercise(${i},1)" ${i===trainerDraftSession.ex.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
+      <div class="dx-main-row">
+        <div class="dx-reorder">
+          <button onclick="moveTrainerDraftExercise(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
+          <button onclick="moveTrainerDraftExercise(${i},1)" ${i===trainerDraftSession.ex.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
+        </div>
+        <div class="dx-name">${e.n}</div>
+        <input class="dx-sets" type="text" inputmode="numeric" value="${e.s}" oninput="setTrainerDraftExSets(${i},this.value)">
+        <input class="dx-reps" type="text" value="${e.r}" oninput="setTrainerDraftExReps(${i},this.value)">
+        <button class="dx-remove" onclick="removeTrainerDraftExercise(${i})" aria-label="Remove">&times;</button>
       </div>
-      <div class="dx-name">${e.n}</div>
-      <input class="dx-sets" type="number" min="1" value="${e.s}" oninput="setTrainerDraftExSets(${i},this.value)">
-      <input class="dx-reps" type="text" value="${e.r}" oninput="setTrainerDraftExReps(${i},this.value)">
-      <button class="dx-remove" onclick="removeTrainerDraftExercise(${i})" aria-label="Remove">&times;</button>
+      <div class="dx-note-row"><input type="text" value="${(e.note||"").replace(/"/g,"&quot;")}" placeholder="Add a note for this exercise (optional)" oninput="setTrainerDraftExNote(${i},this.value)"></div>
     </div>`).join("");
 
   const isNew = !trainerDraftSession.id;
@@ -2590,11 +2620,12 @@ function setTrainerDraftName(v){ trainerDraftSession.name = v; }
 function setTrainerDraftFocus(v){ trainerDraftSession.focus = v; }
 function setTrainerDraftExSets(i,v){ trainerDraftSession.ex[i].s = parseInt(v)||1; }
 function setTrainerDraftExReps(i,v){ trainerDraftSession.ex[i].r = v; }
+function setTrainerDraftExNote(i,v){ trainerDraftSession.ex[i].note = v; }
 
 function addTrainerDraftExercise(){
   const sel = $("trainerExercisePicker");
   if(!sel || !sel.value) return;
-  trainerDraftSession.ex.push({n:sel.value, s:3, r:"10-12"});
+  trainerDraftSession.ex.push({n:sel.value, s:3, r:"10-12", note:""});
   renderTrainerSessionEditor();
 }
 function removeTrainerDraftExercise(idx){
@@ -2952,6 +2983,7 @@ window.setTrainerDraftName = setTrainerDraftName;
 window.setTrainerDraftFocus = setTrainerDraftFocus;
 window.setTrainerDraftExSets = setTrainerDraftExSets;
 window.setTrainerDraftExReps = setTrainerDraftExReps;
+window.setTrainerDraftExNote = setTrainerDraftExNote;
 window.addTrainerDraftExercise = addTrainerDraftExercise;
 window.removeTrainerDraftExercise = removeTrainerDraftExercise;
 window.moveTrainerDraftExercise = moveTrainerDraftExercise;
@@ -2994,11 +3026,13 @@ window.skipHiitPhase = skipHiitPhase;
 window.finishHiitEarly = finishHiitEarly;
 window.incrementAmrapRound = incrementAmrapRound;
 window.showSettings = showSettings;
+window.moveSessionInPlan = moveSessionInPlan;
 window.openSessionEditor = openSessionEditor;
 window.setDraftName = setDraftName;
 window.setDraftFocus = setDraftFocus;
 window.setDraftExSets = setDraftExSets;
 window.setDraftExReps = setDraftExReps;
+window.setDraftExNote = setDraftExNote;
 window.addDraftExercise = addDraftExercise;
 window.removeDraftExercise = removeDraftExercise;
 window.moveDraftExercise = moveDraftExercise;
