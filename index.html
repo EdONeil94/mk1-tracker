@@ -463,7 +463,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateEmail, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, verifyBeforeUpdateEmail, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // ── Your Firebase project ──
 const firebaseConfig = {
@@ -1039,17 +1039,22 @@ async function submitAuth(){
         return;
       }
     } else {
-      // Username path: resolve via the new lookup first (real email), falling
-      // back to the legacy placeholder-email derivation for anyone who
-      // hasn't completed the one-time migration in Account Settings yet.
+      // Username path: try the new lookup's real email first, but a real
+      // email change isn't instant any more (Firebase requires clicking a
+      // verification link before it actually takes effect) - so during that
+      // window the lookup can point at an email Firebase hasn't activated
+      // yet. Always fall back to the legacy placeholder-email derivation
+      // before giving up, rather than failing outright.
       const resolvedEmail = await getEmailForUsername(input);
-      const emailToTry = resolvedEmail || usernameToEmail(input);
-      try{
-        await signInWithEmailAndPassword(auth, emailToTry, password);
-      }catch(e){
-        authError = "Couldn't log in. Check your username/email and password.";
-        renderAuthScreen();
+      const candidates = resolvedEmail ? [resolvedEmail, usernameToEmail(input)] : [usernameToEmail(input)];
+      for(const candidate of candidates){
+        try{
+          await signInWithEmailAndPassword(auth, candidate, password);
+          return;
+        }catch(e){ /* try next candidate */ }
       }
+      authError = "Couldn't log in. Check your username/email and password.";
+      renderAuthScreen();
       return;
     }
   }
@@ -2842,13 +2847,21 @@ async function saveAccountEmail(){
   // profile field) - this one check naturally covers both a genuine new
   // email change AND the one-time migration off the old placeholder email
   // for any account that hasn't done it yet, with no special-casing needed.
+  // Firebase deprecated the old instant updateEmail() in favour of this -
+  // it sends a confirmation link to the new address rather than switching
+  // immediately, so the actual Firebase Auth email only updates once that
+  // link is clicked.
+  let emailChangePending = false;
   if(auth.currentUser && auth.currentUser.email !== val){
     try{
-      await updateEmail(auth.currentUser, val);
+      await verifyBeforeUpdateEmail(auth.currentUser, val);
+      emailChangePending = true;
     }catch(e){
-      const msg = (e && e.code==="auth/requires-recent-login")
-        ? "For security, log out and back in, then try saving your email again."
-        : "Couldn't update your login email \u2014 nothing was changed.";
+      let msg;
+      if(e && e.code==="auth/requires-recent-login") msg = "For security, log out and back in, then try saving your email again.";
+      else if(e && e.code==="auth/email-already-in-use") msg = "That email is already linked to a different account here.";
+      else if(e && e.code==="auth/invalid-email") msg = "That doesn't look like a valid email address.";
+      else msg = `Couldn't update your login email (${(e&&e.code)||"unknown error"}) \u2014 nothing was changed.`;
       showToast(msg, false);
       return;
     }
@@ -2865,7 +2878,13 @@ async function saveAccountEmail(){
     await registerLoginLookup(val, usernameVal);
     await registerUsernameLookup(usernameVal, val);
   }
-  showToast(ok ? "Saved \u2713" : "Couldn't save \u2014 check your connection");
+  if(!ok){
+    showToast("Couldn't save \u2014 check your connection");
+  } else if(emailChangePending){
+    showToast(`Saved. Check your inbox at ${val} and click the link to finish updating your login email.`);
+  } else {
+    showToast("Saved \u2713");
+  }
 }
 
 async function changePassword(){
