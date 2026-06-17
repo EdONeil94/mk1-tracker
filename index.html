@@ -297,6 +297,27 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .heat-legend-bar{display:flex;align-items:center;gap:8px;margin:10px 0 6px;font-size:11px;color:var(--mute)}
 .heat-legend-bar .bar{flex:1;height:10px;border-radius:5px;
   background:linear-gradient(to right, rgb(58,70,92), rgb(226,80,42))}
+
+.rpe-card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;
+  padding:18px;text-align:center;margin-bottom:14px}
+.rpe-display{font-size:40px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.rpe-display.unrated{font-size:15px;font-weight:700;color:var(--mute)}
+.rpe-sublabel{color:var(--mute);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;height:16px}
+.rpe-slider{width:100%;margin:14px 0 4px;-webkit-appearance:none;appearance:none;height:8px;
+  border-radius:4px;background:var(--chip);outline:none}
+.rpe-slider::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+  background:var(--accent2);cursor:pointer;border:3px solid #15181f}
+.rpe-slider::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--accent2);
+  cursor:pointer;border:3px solid #15181f}
+.rpe-scale-labels{display:flex;justify-content:space-between;color:var(--mute);font-size:10.5px}
+.rpe-comment{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:12px;padding:12px;font-size:14px;font-family:inherit;resize:vertical;min-height:64px;
+  margin-bottom:16px;-webkit-appearance:none;appearance:none}
+.rpe-comment:focus{outline:none;border-color:var(--accent)}
+.rpe-comment::placeholder{color:#5a6070}
+.session-rpe-badge{display:inline-block;background:var(--chip);border:1px solid var(--line);
+  color:var(--accent);font-size:10.5px;font-weight:800;border-radius:7px;padding:2px 7px;margin-left:6px}
+.session-comment{color:var(--mute);font-size:12px;margin-top:6px;font-style:italic;text-align:left}
 .dashboardbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
   color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
   display:flex;align-items:center;justify-content:space-between}
@@ -401,7 +422,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // ── Your Firebase project ──
 const firebaseConfig = {
@@ -1228,9 +1249,12 @@ function showHistory(){
   const html = sorted.map(w=>{
     const p = PLAN.find(x=>x.id===w.sessionId)||{name:w.sessionId};
     const rows = w.ex.map(e=>`<div class="hrow"><div class="hn">${e.n}</div><div class="hv">${e.sets.map(s=>`${s.w||"?"}×${s.r||"?"}`).join("  ")}</div></div>`).join("");
+    const rpeBadge = (w.rpe!=null) ? `<span class="session-rpe-badge">RPE ${w.rpe}</span>` : "";
+    const commentHtml = w.comment ? `<div class="session-comment">&ldquo;${w.comment}&rdquo;</div>` : "";
     return `<div class="hday">
-      <div class="hday-head"><b>${p.name}</b><span>${fmtDate(w.date)}${w.duration?` &middot; <span class="dur">${w.duration} min</span>`:""}</span></div>
+      <div class="hday-head"><div><b>${p.name}</b>${rpeBadge}</div><span>${fmtDate(w.date)}${w.duration?` &middot; <span class="dur">${w.duration} min</span>`:""}</span></div>
       ${rows}
+      ${commentHtml}
       <button class="del-btn" onclick="delEntry(${w._i})">Remove this entry</button>
     </div>`;
   }).join("");
@@ -2265,9 +2289,12 @@ async function showClientDetail(clientId){
   const recent = [...log].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6).map(s=>{
     const title = s.hiit ? (s.hiitName||"HIIT class") : (s.sessionId||"Session");
     const exLines = (s.ex||[]).map(e=>`${e.n}: ${e.sets.map(st=>`${st.w||"?"}kg&times;${st.r||"?"}`).join(", ")}`).join("<br>");
+    const rpeBadge = (s.rpe!=null) ? `<span class="session-rpe-badge">RPE ${s.rpe}</span>` : "";
+    const commentHtml = s.comment ? `<div class="session-comment">&ldquo;${s.comment}&rdquo;</div>` : "";
     return `<div class="hday">
-      <div class="hday-head"><b>${title}</b><span>${fmtDate(s.date)}${s.duration?` &middot; ${s.duration} min`:""}</span></div>
+      <div class="hday-head"><div><b>${title}</b>${rpeBadge}</div><span>${fmtDate(s.date)}${s.duration?` &middot; ${s.duration} min`:""}</span></div>
       ${exLines ? `<div class="last-updated" style="text-align:left;margin:8px 0 0">${exLines}</div>` : ""}
+      ${commentHtml}
     </div>`;
   }).join("");
 
@@ -2353,12 +2380,32 @@ function renderEditPerson(){
   app.innerHTML = `
     <div class="topbar">
       <button class="back" onclick="showAdminDashboard()">&#8592; Back</button>
-      <div class="topbar-info"><h2>${p.name}</h2><div class="focus">Edit role</div></div>
+      <div class="topbar-info"><h2>${p.name}</h2><div class="focus">Edit person</div></div>
     </div>
-    <div class="editor-field"><label>Role</label><div class="seg">${roleButtons}</div></div>
+    <div class="editor-field"><label>Name</label><input type="text" id="editPersonName" value="${p.name}"></div>
+    <div class="last-updated" style="text-align:left">Username: <b>${p.username||p.id}</b> &mdash; only they can change this, from their own Account Settings, since it's tied to their actual login. Editing it here isn't possible.</div>
+    <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="editPersonEmail" value="${p.email||""}" placeholder="you@example.com"></div>
+    <button class="save-session-btn" onclick="saveEditedPersonDetails()">Save details</button>
+
+    <div class="editor-field" style="margin-top:22px"><label>Role</label><div class="seg">${roleButtons}</div></div>
     ${linksSection}
   `;
   window.scrollTo(0,0);
+}
+
+async function saveEditedPersonDetails(){
+  const p = PEOPLE.find(x=>x.id===editPersonId);
+  if(!p) return;
+  const name = ($("editPersonName").value||"").trim();
+  const email = ($("editPersonEmail").value||"").trim();
+  if(!name){ showToast("Name can't be empty", false); return; }
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast("Enter a valid email address", false); return; }
+  p.name = name;
+  if(email) p.email = email;
+  const ok = await savePeople();
+  if(ok && email && p.username) await registerLoginLookup(email, p.username);
+  showToast(ok ? "Saved \u2713" : "Couldn't save \u2014 check your connection");
+  renderEditPerson();
 }
 
 async function setPersonRole(role){
@@ -2394,7 +2441,7 @@ function showAccountSettings(){
       <label>Username</label>
       <input type="text" id="accountUsername" value="${current.username||current.id}" placeholder="e.g. ed">
     </div>
-    <div class="last-updated" style="text-align:left;margin-top:-4px">This must exactly match what you currently type to log in &mdash; not your name or email. If you're unsure, log out and check what works before changing this.</div>
+    <div class="last-updated" style="text-align:left;margin-top:-4px">Changing this updates your actual login &mdash; you'll need to use the new username next time, not the old one.</div>
     <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="accountEmail" value="${current.email||""}" placeholder="you@example.com"></div>
     <button class="save-session-btn" onclick="saveAccountEmail()">Save</button>
   `;
@@ -2414,6 +2461,23 @@ async function saveAccountEmail(){
   }
   await loadPeople();
   const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
+  const usernameChanged = p && p.username && p.username!==usernameVal;
+
+  // Changing the username here must also change the real Firebase Auth
+  // credential, or the field would just be a label that drifts out of sync
+  // with what actually has to be typed to log in.
+  if(usernameChanged && auth.currentUser){
+    try{
+      await updateEmail(auth.currentUser, usernameToEmail(usernameVal));
+    }catch(e){
+      const msg = (e && e.code==="auth/requires-recent-login")
+        ? "For security, log out and back in, then try changing your username again."
+        : "Couldn't update your login \u2014 username unchanged.";
+      showToast(msg, false);
+      return;
+    }
+  }
+
   if(p){
     p.username = usernameVal;
     p.email = val;
@@ -2663,10 +2727,16 @@ function muscleStatsRows(totals){
   const sections = MUSCLE_SECTIONS.map(sec=>{
     const rows = sec.groups
       .map(g=>({name:g.charAt(0).toUpperCase()+g.slice(1), count:totals[g]||0}))
+      .filter(r=>r.count>0)
       .sort((a,b)=>b.count-a.count);
     const total = rows.reduce((s,r)=>s+r.count,0);
     return {label:sec.label, total, rows};
-  }).sort((a,b)=>b.total-a.total);
+  }).filter(sec=>sec.total>0)
+    .sort((a,b)=>b.total-a.total);
+
+  if(!sections.length){
+    return `<div class="chart-empty">No muscle groups logged yet.</div>`;
+  }
 
   return sections.map(sec=>{
     const rowsHtml = sec.rows.map(r=>
@@ -2677,7 +2747,30 @@ function muscleStatsRows(totals){
   }).join("");
 }
 
+let postSessionRPE = null;
+let postSessionComment = "";
+
+function rpeLabel(v){
+  if(v<=2) return "Very easy";
+  if(v<=4) return "Easy";
+  if(v<=6) return "Moderate";
+  if(v<=8) return "Hard";
+  if(v===9) return "Very hard";
+  return "Max effort";
+}
+
+function setPostSessionRPE(v){
+  postSessionRPE = parseInt(v);
+  const disp = $("rpeDisplay");
+  disp.textContent = postSessionRPE;
+  disp.classList.remove("unrated");
+  $("rpeSublabel").textContent = rpeLabel(postSessionRPE);
+}
+function setPostSessionComment(v){ postSessionComment = v; }
+
 function showPostSessionSummary(ex, prHits){
+  postSessionRPE = null;
+  postSessionComment = "";
   const totals = computeMuscleSets([{ex}]);
   const svg = buildMuscleMapSVG(totals);
   const prHtml = (prHits && prHits.length)
@@ -2690,9 +2783,30 @@ function showPostSessionSummary(ex, prHits){
     <div class="heat-legend-bar"><span>Less</span><div class="bar"></div><span>More</span></div>
     <div class="section-label">What you trained</div>
     ${muscleStatsRows(totals)}
-    <div class="savebar"><div class="inner"><button class="save-btn" onclick="home()">Done</button></div></div>
+    <div class="section-label">How did it feel? (optional)</div>
+    <div class="rpe-card">
+      <div class="rpe-display unrated" id="rpeDisplay">Tap to rate</div>
+      <div class="rpe-sublabel" id="rpeSublabel"></div>
+      <input type="range" min="1" max="10" step="1" value="5" class="rpe-slider" oninput="setPostSessionRPE(this.value)">
+      <div class="rpe-scale-labels"><span>1 &middot; Easy</span><span>10 &middot; Max effort</span></div>
+    </div>
+    <textarea class="rpe-comment" placeholder="Any notes about this session? (optional)" oninput="setPostSessionComment(this.value)"></textarea>
+    <div class="savebar"><div class="inner"><button class="save-btn" onclick="finishPostSessionSummary()">Done</button></div></div>
   `;
   window.scrollTo(0,0);
+}
+
+async function finishPostSessionSummary(){
+  const last = LOG[LOG.length-1];
+  if(last){
+    if(postSessionRPE!==null) last.rpe = postSessionRPE;
+    const trimmed = postSessionComment.trim();
+    if(trimmed) last.comment = trimmed;
+    if(postSessionRPE!==null || trimmed) await saveLog();
+  }
+  postSessionRPE = null;
+  postSessionComment = "";
+  home();
 }
 
 let muscleMapPeriod = 7;
@@ -2804,6 +2918,9 @@ async function renderDashboard(){
 
 // Expose handlers used by inline onclick="" attributes — required because
 // top-level functions in a <script type="module"> are NOT global by default.
+window.setPostSessionRPE = setPostSessionRPE;
+window.setPostSessionComment = setPostSessionComment;
+window.finishPostSessionSummary = finishPostSessionSummary;
 window.home = home;
 window.openSession = openSession;
 window.addSet = addSet;
@@ -2824,10 +2941,12 @@ window.showClientDetail = showClientDetail;
 window.showAdminDashboard = showAdminDashboard;
 window.openEditPerson = openEditPerson;
 window.setPersonRole = setPersonRole;
+window.saveEditedPersonDetails = saveEditedPersonDetails;
 window.toggleAdminClientLink = toggleAdminClientLink;
 window.showAccountSettings = showAccountSettings;
 window.saveAccountEmail = saveAccountEmail;
 window.manageClientSessions = manageClientSessions;
+window.renderTrainerClientSessions = renderTrainerClientSessions;
 window.openTrainerSessionEditor = openTrainerSessionEditor;
 window.setTrainerDraftName = setTrainerDraftName;
 window.setTrainerDraftFocus = setTrainerDraftFocus;
