@@ -170,14 +170,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   cursor:pointer;text-align:center;width:100%;padding:10px 0;text-decoration:underline}
 .auth-error{background:#2a1f1f;border:1.5px solid #5a3030;color:#e0a890;border-radius:10px;
   padding:10px 12px;font-size:12.5px;margin-bottom:12px}
-.claim-grid{display:flex;gap:8px;flex-wrap:wrap}
-.claim-card{flex:1;min-width:88px;background:var(--card);border:1.5px solid var(--line);
-  border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer}
-.claim-card.active{border-color:var(--accent)}
-.claim-card .claim-avatar{width:38px;height:38px;border-radius:50%;background:var(--accent2);color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;margin:0 auto 6px;
-  background-size:cover;background-position:center}
-.claim-card .claim-name{font-size:11.5px;font-weight:700}
+.field-hint{color:var(--mute);font-size:11px;margin-top:5px;line-height:1.35}
 
 .switch-profile{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid var(--line);
   border-radius:99px;padding:5px 12px 5px 6px;font-size:11.5px;font-weight:700;color:var(--text);
@@ -324,6 +317,21 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .heat-legend-bar{display:flex;align-items:center;gap:8px;margin:10px 0 6px;font-size:11px;color:var(--mute)}
 .heat-legend-bar .bar{flex:1;height:10px;border-radius:5px;
   background:linear-gradient(to right, rgb(58,70,92), rgb(226,80,42))}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-nav button{background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  width:36px;height:36px;border-radius:10px;font-size:18px;cursor:pointer;display:flex;
+  align-items:center;justify-content:center}
+.cal-nav button:disabled{opacity:.3;cursor:default}
+.cal-nav-title{font-size:15px;font-weight:800}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;color:var(--mute);
+  font-size:9.5px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-cell{min-height:44px;display:flex;flex-direction:column;align-items:center;padding-top:2px}
+.cal-daynum{width:22px;height:22px;display:flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:600;color:var(--text);border-radius:50%}
+.cal-cell.trained .cal-daynum{background:var(--accent);color:#fff;font-weight:800}
+.cal-label{font-size:7.5px;color:var(--mute);text-align:center;margin-top:2px;line-height:1.1;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 1px}
 
 .rpe-card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;
   padding:18px;text-align:center;margin-bottom:14px}
@@ -720,7 +728,7 @@ async function loadLog(){
     LOG = snap.exists() ? (snap.data().log || []) : [];
     WEIGHTS = snap.exists() ? (snap.data().weights || []) : [];
     MEASUREMENTS = snap.exists() ? (snap.data().measurements || []) : [];
-    PLAN = snap.exists() && snap.data().plan ? snap.data().plan : JSON.parse(JSON.stringify(DEFAULT_PLAN));
+    PLAN = snap.exists() && snap.data().plan ? snap.data().plan : [];
     HIIT_CLASSES = snap.exists() ? (snap.data().hiitClasses || []) : [];
     CARDIO_LOG = snap.exists() ? (snap.data().cardioLog || []) : [];
     STORAGE_AVAILABLE = true;
@@ -729,7 +737,7 @@ async function loadLog(){
     LOG = [];
     WEIGHTS = [];
     MEASUREMENTS = [];
-    PLAN = JSON.parse(JSON.stringify(DEFAULT_PLAN));
+    PLAN = [];
     HIIT_CLASSES = [];
     CARDIO_LOG = [];
   }
@@ -906,8 +914,8 @@ function playBeep(){
 // ── Authentication (login / sign-up) ──────────────────────
 let authMode = "login";
 let authError = "";
-let signupWho = null; // "ed" | "tara" | "new"
 let signupRole = "client";
+let signupInProgress = false; // see submitAuth's signup branch for why
 
 function renderAuthScreen(){
   const isLogin = authMode==="login";
@@ -917,24 +925,18 @@ function renderAuthScreen(){
   </div>`;
   const errorHtml = authError ? `<div class="auth-error">${authError}</div>` : "";
 
-  let claimSection = "", extraFields = "";
+  let signupFields = "";
   if(!isLogin){
-    const options = [{id:"ed",name:"Ed"},{id:"tara",name:"Tara"},{id:"new",name:"Someone new"}];
-    const cards = options.map(o=>{
-      const av = o.id==="new"
-        ? `<div class="claim-avatar">+</div>`
-        : avatarHtml({id:o.id,name:o.name}, "claim-avatar");
-      return `<div class="claim-card ${signupWho===o.id?"active":""}" onclick="setSignupWho('${o.id}')">${av}<div class="claim-name">${o.name}</div></div>`;
-    }).join("");
-    claimSection = `<div class="auth-field"><label>Who are you?</label><div class="claim-grid">${cards}</div></div>`;
-    if(signupWho==="new"){
-      extraFields = `
-        <div class="auth-field"><label>Your name</label><input type="text" id="authDisplayName" placeholder="e.g. Sarah"></div>
-        <div class="auth-field"><label>Role</label><div class="seg">
-          <button class="${signupRole==="client"?"active":""}" onclick="setSignupRole('client')">Client</button>
-          <button class="${signupRole==="trainer"?"active":""}" onclick="setSignupRole('trainer')">Trainer</button>
-        </div></div>`;
-    }
+    signupFields = `
+      <div class="auth-field">
+        <label>Your name</label>
+        <input type="text" id="authDisplayName" placeholder="e.g. Sarah Smith">
+        <div class="field-hint">Just for display &mdash; no need to be unique, plenty of people share a name.</div>
+      </div>
+      <div class="auth-field"><label>Role</label><div class="seg">
+        <button class="${signupRole==="client"?"active":""}" onclick="setSignupRole('client')">Client</button>
+        <button class="${signupRole==="trainer"?"active":""}" onclick="setSignupRole('trainer')">Trainer</button>
+      </div></div>`;
   }
 
   app.innerHTML = `
@@ -945,20 +947,26 @@ function renderAuthScreen(){
       </div>
       ${tabs}
       ${errorHtml}
-      ${claimSection}
-      <div class="auth-field"><label>${isLogin?"Username or email":"Username"}</label><input type="text" id="authUsername" autocomplete="username" placeholder="${isLogin?"e.g. ed or ed@example.com":"e.g. ed"}"></div>
-      ${!isLogin ? `<div class="auth-field"><label>Email address</label><input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com"></div>` : ""}
+      ${signupFields}
+      <div class="auth-field">
+        <label>${isLogin?"Username or email":"Username"}</label>
+        <input type="text" id="authUsername" autocomplete="username" placeholder="${isLogin?"e.g. ed or ed@example.com":"e.g. sarahsmith"}">
+        ${!isLogin ? `<div class="field-hint">Must be unique &mdash; this is the short way you'll log in, instead of typing your full email.</div>` : ""}
+      </div>
+      ${!isLogin ? `<div class="auth-field">
+        <label>Email address</label>
+        <input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com">
+        <div class="field-hint">Must be unique &mdash; this also logs you in, and is where password resets are sent.</div>
+      </div>` : ""}
       <div class="auth-field"><label>Password</label><input type="password" id="authPassword" autocomplete="${isLogin?"current-password":"new-password"}" placeholder="********"></div>
       ${isLogin ? `<button class="auth-link-btn" onclick="showForgotPasswordScreen()">Forgot password?</button>` : ""}
       ${!isLogin ? `<div class="auth-field"><label>Confirm password</label><input type="password" id="authPassword2" autocomplete="new-password" placeholder="********"></div>` : ""}
-      ${extraFields}
       <button class="auth-btn" onclick="submitAuth()">${isLogin?"Log in":"Create account"}</button>
     </div>`;
   window.scrollTo(0,0);
 }
 
 function setAuthMode(mode){ authMode=mode; authError=""; renderAuthScreen(); }
-function setSignupWho(id){ signupWho=id; renderAuthScreen(); }
 function setSignupRole(role){ signupRole=role; renderAuthScreen(); }
 
 function showForgotPasswordScreen(){
@@ -1059,10 +1067,14 @@ async function submitAuth(){
     }
   }
 
-  // signup
+  // signup - everyone goes through the same generic flow now; the original
+  // Ed/Tara "claim your existing profile" step was only needed for the
+  // one-time migration when auth was first introduced, and that's done.
   const username = input;
   const password2 = $("authPassword2") ? $("authPassword2").value : "";
   const realEmail = ($("authEmail")?.value||"").trim();
+  const displayName = ($("authDisplayName")?.value||"").trim();
+  if(!displayName){ authError="Enter your name."; renderAuthScreen(); return; }
   if(!realEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(realEmail)){
     authError = "Enter a valid email address.";
     renderAuthScreen();
@@ -1070,33 +1082,38 @@ async function submitAuth(){
   }
   if(password.length<6){ authError="Password needs to be at least 6 characters."; renderAuthScreen(); return; }
   if(password!==password2){ authError="Passwords don't match."; renderAuthScreen(); return; }
-  if(!signupWho){ authError="Choose who you are first."; renderAuthScreen(); return; }
 
   await loadPeople();
-  let profileId, displayName, role;
-  if(signupWho==="new"){
-    displayName = ($("authDisplayName")?.value||"").trim();
-    if(!displayName){ authError="Enter your name."; renderAuthScreen(); return; }
-    role = signupRole || "client";
-    profileId = uniquePersonId(displayName);
-  } else {
-    profileId = signupWho;
-    displayName = signupWho==="ed" ? "Ed" : "Tara";
-    role = "client";
+  const usernameTaken = await getEmailForUsername(username);
+  if(usernameTaken){
+    authError = "That username is already taken \u2014 please choose another.";
+    renderAuthScreen();
+    return;
   }
 
+  const role = signupRole || "client";
+  const profileId = uniquePersonId(displayName);
+
+  signupInProgress = true;
   try{
     // Registered directly under the real email now, so genuine password-reset
     // emails have somewhere real to go - no more synthetic placeholder address.
     const cred = await createUserWithEmailAndPassword(auth, realEmail, password);
     await setDoc(doc(db,"users",cred.user.uid), {profileId});
-    const existing = PEOPLE.find(p=>p.id===profileId);
-    if(existing){ existing.uid = cred.user.uid; existing.email = realEmail; existing.username = username; }
-    else{ PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail, username}); }
+    PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail, username});
     await savePeople();
     await registerLoginLookup(realEmail, username);
     await registerUsernameLookup(username, realEmail);
+    // createUserWithEmailAndPassword auto-signs the user in, which fires the
+    // auth listener immediately - before the writes just above had finished.
+    // That race used to make the very next boot fail to find the profile it
+    // hadn't been written yet, sign the user back out, and show a confusing
+    // error. Booting explicitly here, now that everything is confirmed
+    // written, avoids that entirely.
+    signupInProgress = false;
+    await bootForUser(cred.user);
   }catch(e){
+    signupInProgress = false;
     authError = (e && e.code==="auth/email-already-in-use") ? "That email is already registered." : "Couldn't create that account.";
     renderAuthScreen();
   }
@@ -1132,7 +1149,7 @@ async function bootForUser(user){
     mapping = snap.exists() ? snap.data() : null;
   }catch(e){}
   if(!mapping || !mapping.profileId){
-    authError = "Couldn't find your profile. Please contact Ed.";
+    authError = "Couldn't find your profile. Please contact your admin.";
     await signOut(auth);
     return;
   }
@@ -1781,10 +1798,72 @@ async function deleteCardioEntry(idx){
 }
 
 // ── Activity & streak ─────────────────────────────────────
+function sessionLabelForLog(entries){
+  if(!entries || !entries.length) return null;
+  const e = entries[0];
+  if(e.hiit) return e.hiitName || "HIIT";
+  const planEntry = PLAN.find(p=>p.id===e.sessionId);
+  return planEntry ? planEntry.name : (e.sessionId || "Session");
+}
+
+function trainedDaysLabelMap(log){
+  const byDay = {};
+  log.forEach(e=>{
+    const key = localDayKey(e.date);
+    if(!byDay[key]) byDay[key] = [];
+    byDay[key].push(e);
+  });
+  const labelMap = {};
+  Object.keys(byDay).forEach(key=>{ labelMap[key] = sessionLabelForLog(byDay[key]); });
+  return labelMap;
+}
+
+// Just the weekday header + day grid for one month - the month name and
+// navigation arrows are rendered by whatever calls this, since this is now
+// used for a single paged month rather than a stacked multi-month view.
+function buildMonthCalendarHTML(year, month, labelMap){
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const startDow = (firstDay.getDay()+6)%7; // Monday-start week
+
+  let cells = "";
+  for(let i=0;i<startDow;i++) cells += `<div class="cal-cell empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const key = localDayKey(new Date(year, month, d));
+    const label = labelMap[key];
+    cells += label
+      ? `<div class="cal-cell trained"><div class="cal-daynum">${d}</div><div class="cal-label">${label}</div></div>`
+      : `<div class="cal-cell"><div class="cal-daynum">${d}</div></div>`;
+  }
+  return `<div class="cal-weekdays"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+    <div class="cal-grid">${cells}</div>`;
+}
+
+let activityMonthOffset = 0; // 0 = current month, 1 = one month back, etc.
+
+function setActivityMonthOffset(delta){
+  const newOffset = activityMonthOffset + delta;
+  if(newOffset < 0) return; // can't page into the future
+  activityMonthOffset = newOffset;
+  renderActivityScreen(true);
+}
+
 function showActivity(){
+  activityMonthOffset = 0;
+  renderActivityScreen(false);
+}
+
+function renderActivityScreen(preserveScroll){
   stopTimer();
   const streak = weekStreakFor(LOG);
   const heatmap = buildHeatmap(LOG);
+
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth()-activityMonthOffset, 1);
+  const labelMap = trainedDaysLabelMap(LOG);
+  const monthGrid = buildMonthCalendarHTML(target.getFullYear(), target.getMonth(), labelMap);
+  const monthName = target.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+
   app.innerHTML = `
     <div class="topbar">
       <button class="back" onclick="home()">&#8592; Back</button>
@@ -1798,8 +1877,16 @@ function showActivity(){
     ${heatmap}
     <div class="heat-legend"><div class="heat-cell"></div> No session &nbsp; <div class="heat-cell on"></div> Trained</div>
     <div class="last-updated">${LOG.length} session${LOG.length!==1?"s":""} logged in total</div>
+
+    <div class="section-label" style="margin-top:24px">Training calendar</div>
+    <div class="cal-nav">
+      <button onclick="setActivityMonthOffset(1)" aria-label="Previous month">&#8249;</button>
+      <div class="cal-nav-title">${monthName}</div>
+      <button onclick="setActivityMonthOffset(-1)" ${activityMonthOffset===0?"disabled":""} aria-label="Next month">&#8250;</button>
+    </div>
+    ${monthGrid}
   `;
-  window.scrollTo(0,0);
+  if(!preserveScroll) window.scrollTo(0,0);
 }
 
 // ── Body measurements ─────────────────────────────────────
@@ -2987,9 +3074,9 @@ async function manageClientSessions(clientId){
   window.scrollTo(0,0);
   try{
     const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
-    trainerClientPlan = (snap.exists() && snap.data().plan) ? snap.data().plan : JSON.parse(JSON.stringify(DEFAULT_PLAN));
+    trainerClientPlan = (snap.exists() && snap.data().plan) ? snap.data().plan : [];
   }catch(e){
-    trainerClientPlan = JSON.parse(JSON.stringify(DEFAULT_PLAN));
+    trainerClientPlan = [];
   }
   renderTrainerClientSessions();
 }
@@ -3722,7 +3809,6 @@ window.delEntry = delEntry;
 window.refresh = refresh;
 window.setAuthMode = setAuthMode;
 window.renderAuthScreen = renderAuthScreen;
-window.setSignupWho = setSignupWho;
 window.setSignupRole = setSignupRole;
 window.showForgotPasswordScreen = showForgotPasswordScreen;
 window.sendPasswordReset = sendPasswordReset;
@@ -3768,6 +3854,7 @@ window.showCheckIn = showCheckIn;
 window.startRest = startRest;
 window.cancelRest = cancelRest;
 window.showActivity = showActivity;
+window.setActivityMonthOffset = setActivityMonthOffset;
 window.showMuscleMap = showMuscleMap;
 window.openDashboard = openDashboard;
 window.setDashboardPeriod = setDashboardPeriod;
@@ -3815,7 +3902,7 @@ window.moveDraftExercise = moveDraftExercise;
 window.saveDraftSession = saveDraftSession;
 window.deleteSessionFromPlan = deleteSessionFromPlan;
 
-onAuthStateChanged(auth, (user)=>{ bootForUser(user); });
+onAuthStateChanged(auth, (user)=>{ if(signupInProgress) return; bootForUser(user); });
 </script>
 </body>
 </html>
