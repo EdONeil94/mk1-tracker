@@ -471,7 +471,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, verifyBeforeUpdateEmail, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, verifyBeforeUpdateEmail, sendPasswordResetEmail, updatePassword, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // ── Your Firebase project ──
 const firebaseConfig = {
@@ -1009,6 +1009,20 @@ async function sendPasswordReset(){
   window.scrollTo(0,0);
 }
 
+// Firestore writes made in the instant right after createUserWithEmailAndPassword
+// can occasionally fail even though the account creation itself succeeded -
+// there's a brief window where the auth token isn't fully propagated yet.
+// A short retry absorbs that without masking a genuine, persistent failure.
+async function writeWithRetry(fn, attempts){
+  attempts = attempts || 3;
+  let lastErr;
+  for(let i=0;i<attempts;i++){
+    try{ return await fn(); }
+    catch(e){ lastErr = e; if(i<attempts-1) await new Promise(r=>setTimeout(r, 400)); }
+  }
+  throw lastErr;
+}
+
 function uniquePersonId(name){
   const base = slugify(name);
   let id = base, n = 2;
@@ -1095,15 +1109,16 @@ async function submitAuth(){
   const profileId = uniquePersonId(displayName);
 
   signupInProgress = true;
+  let cred = null;
   try{
     // Registered directly under the real email now, so genuine password-reset
     // emails have somewhere real to go - no more synthetic placeholder address.
-    const cred = await createUserWithEmailAndPassword(auth, realEmail, password);
-    await setDoc(doc(db,"users",cred.user.uid), {profileId});
+    cred = await createUserWithEmailAndPassword(auth, realEmail, password);
+    await writeWithRetry(()=>setDoc(doc(db,"users",cred.user.uid), {profileId}));
     PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail, username});
-    await savePeople();
-    await registerLoginLookup(realEmail, username);
-    await registerUsernameLookup(username, realEmail);
+    await writeWithRetry(()=>savePeople());
+    await writeWithRetry(()=>registerLoginLookup(realEmail, username));
+    await writeWithRetry(()=>registerUsernameLookup(username, realEmail));
     // createUserWithEmailAndPassword auto-signs the user in, which fires the
     // auth listener immediately - before the writes just above had finished.
     // That race used to make the very next boot fail to find the profile it
@@ -1114,7 +1129,18 @@ async function submitAuth(){
     await bootForUser(cred.user);
   }catch(e){
     signupInProgress = false;
-    authError = (e && e.code==="auth/email-already-in-use") ? "That email is already registered." : "Couldn't create that account.";
+    if(cred){
+      // The login was created but the profile write never completed even
+      // after retrying - roll the login back too, rather than leaving an
+      // orphaned account with no profile that silently blocks this email
+      // from ever being used to sign up again.
+      try{ await deleteUser(cred.user); }catch(rollbackErr){ /* best effort */ }
+    }
+    if(e && e.code==="auth/email-already-in-use"){
+      authError = "That email is already registered.";
+    } else {
+      authError = `Couldn't create that account (${(e&&e.code)||"unknown error"}). Please try again.`;
+    }
     renderAuthScreen();
   }
 }
@@ -1172,7 +1198,7 @@ const HOME_MODULES = [
   {id:"exercisemetrics", label:"Exercise metrics"},
   {id:"measurements", label:"Body measurements"},
   {id:"leaderboard", label:"Leaderboard"},
-  {id:"managesessions", label:"Manage sessions"}
+  {id:"managesessions", label:"Build Your Workout"}
 ];
 
 function getHomeLayoutFor(person){
@@ -1185,10 +1211,13 @@ function getHomeLayoutFor(person){
 
 function homeModuleHtml(id, ctx){
   switch(id){
-    case "sessions": return `
-      <div class="section-label">Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
+    case "sessions": return PLAN.length ? `
+      <div class="section-label">Gym Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
       <div class="grid">${ctx.cards}</div>
-      <button class="histbtn" onclick="showHistory()">📋 &nbsp;View Full History &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>`;
+      <button class="histbtn" onclick="showHistory()">📋 &nbsp;View Full History &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>` : `
+      <div class="section-label">Gym Sessions</div>
+      <div class="chart-empty">You don't have any sessions yet &mdash; create one to start logging workouts.</div>
+      <button class="addsessbtn" onclick="showSettings()">+ Create your first session</button>`;
     case "hiit": return ctx.hiitSection;
     case "cardio": return `
       <button class="weightbtn" onclick="showCardioTracker()">
@@ -1231,8 +1260,8 @@ function homeModuleHtml(id, ctx){
         <span>&rsaquo;</span>
       </button>`;
     case "managesessions": return `
-      <button class="settingsbtn" onclick="showSettings()">
-        <span class="cb-label">⚙️ Manage Sessions</span>
+      <button class="settingsbtn" onclick="showBuildWorkoutChoice()">
+        <span class="cb-label">🏗️ Build Your Workout</span>
         <span>&rsaquo;</span>
       </button>`;
     default: return "";
@@ -1273,11 +1302,7 @@ function home(){
   }).join("");
   const hiitSection = `
     <div class="section-label">HIIT Classes</div>
-    ${HIIT_CLASSES.length ? `<div class="hiit-grid">${hiitCards}</div>` : '<div class="chart-empty">No HIIT classes yet &mdash; build one below.</div>'}
-    <button class="hiitbtn" onclick="showHiitSettings()">
-      <span class="cb-label">⚡ Manage HIIT Classes</span>
-      <span>&rsaquo;</span>
-    </button>`;
+    ${HIIT_CLASSES.length ? `<div class="hiit-grid">${hiitCards}</div>` : '<div class="chart-empty">No HIIT classes yet &mdash; head to Build Your Workout to create one.</div>'}`;
 
   const adminSection = CURRENT_PROFILE.role==="admin"
     ? `<button class="trainerbtn" onclick="showAdminDashboard()">
@@ -1989,6 +2014,20 @@ function uniqueSessionId(name){
   return id;
 }
 
+function showBuildWorkoutChoice(){
+  stopTimer();
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Build Your Workout</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    <div class="last-updated" style="text-align:left">What would you like to build?</div>
+    <button class="addsessbtn" onclick="showSettings()">🏋️ Gym Session</button>
+    <button class="addsessbtn" onclick="showHiitSettings()">⚡ HIIT Class</button>
+  `;
+  window.scrollTo(0,0);
+}
+
 function showSettings(){
   stopTimer();
   const rows = PLAN.map((p,i)=>`
@@ -2005,8 +2044,8 @@ function showSettings(){
     </div>`).join("");
   app.innerHTML = `
     <div class="topbar">
-      <button class="back" onclick="home()">&#8592; Back</button>
-      <div class="topbar-info"><h2>Manage Sessions</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+      <button class="back" onclick="showBuildWorkoutChoice()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Gym Sessions</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
     </div>
     ${rows || '<div class="chart-empty">No sessions yet.</div>'}
     <button class="addsessbtn" onclick="openSessionEditor(null)">+ Create New Session</button>
@@ -2180,7 +2219,7 @@ function showHiitSettings(){
   }).join("");
   app.innerHTML = `
     <div class="topbar">
-      <button class="back" onclick="home()">&#8592; Back</button>
+      <button class="back" onclick="showBuildWorkoutChoice()">&#8592; Back</button>
       <div class="topbar-info"><h2>HIIT Classes</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
     </div>
     ${rows || '<div class="chart-empty">No HIIT classes yet.</div>'}
@@ -2650,7 +2689,9 @@ async function renderTrainerHome(){
 function showManageClients(){
   stopTimer();
   const linked = new Set(CURRENT_PROFILE.clientIds || []);
-  const candidates = PEOPLE.filter(p=>p.role!=="trainer" && p.id!==CURRENT_PROFILE.id);
+  // Strictly client-role people - not trainers, and not admin accounts like
+  // Ed's, since being an admin doesn't make someone a client to be coached.
+  const candidates = PEOPLE.filter(p=>p.role==="client");
   const rows = candidates.map(p=>`
     <div class="sess-row">
       <div class="sr-info"><b>${p.name}</b></div>
@@ -2661,7 +2702,7 @@ function showManageClients(){
       <button class="back" onclick="home()">&#8592; Back</button>
       <div class="topbar-info"><h2>Manage Clients</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
     </div>
-    ${rows || '<div class="chart-empty">No other people registered yet \u2014 they need to create an account first.</div>'}
+    ${rows || '<div class="chart-empty">No clients have signed up yet \u2014 once someone creates an account, they\u2019ll show up here to link.</div>'}
   `;
   window.scrollTo(0,0);
 }
@@ -2783,13 +2824,13 @@ function renderEditPerson(){
   let linksSection = "";
   if(p.role==="trainer"){
     const linked = new Set(p.clientIds || []);
-    const candidates = PEOPLE.filter(c=>c.role!=="trainer" && c.id!==p.id);
+    const candidates = PEOPLE.filter(c=>c.role==="client");
     const rows = candidates.map(c=>`
       <div class="sess-row">
         <div class="sr-info"><b>${c.name}</b></div>
         <input type="checkbox" ${linked.has(c.id)?"checked":""} onchange="toggleAdminClientLink('${c.id}', this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
       </div>`).join("");
-    linksSection = `<div class="section-label">Linked clients</div>${rows || '<div class="chart-empty">No other clients to link yet.</div>'}`;
+    linksSection = `<div class="section-label">Linked clients</div>${rows || '<div class="chart-empty">No clients have signed up yet.</div>'}`;
   }
 
   app.innerHTML = `
@@ -3887,6 +3928,7 @@ window.toggleHiitTimer = toggleHiitTimer;
 window.skipHiitPhase = skipHiitPhase;
 window.finishHiitEarly = finishHiitEarly;
 window.incrementAmrapRound = incrementAmrapRound;
+window.showBuildWorkoutChoice = showBuildWorkoutChoice;
 window.showSettings = showSettings;
 window.moveSessionInPlan = moveSessionInPlan;
 window.openSessionEditor = openSessionEditor;
