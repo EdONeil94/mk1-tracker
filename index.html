@@ -413,8 +413,8 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .custom-ex-input{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
   border-radius:10px;padding:11px;font-size:14px;margin:-10px 0 18px;-webkit-appearance:none;appearance:none}
 .custom-ex-input::placeholder{color:#5a6070}
-.add-ex-row select{flex:1;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
-  border-radius:10px;padding:11px;font-size:14px;font-weight:600}
+.add-ex-row select, .add-ex-row input{flex:1;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:10px;padding:11px;font-size:14px;font-weight:600;-webkit-appearance:none;appearance:none}
 .add-ex-row button{background:var(--accent2);border:none;color:#fff;border-radius:10px;
   padding:0 18px;font-weight:800;font-size:14px;cursor:pointer}
 
@@ -592,6 +592,27 @@ async function loadPeople(){
 }
 async function savePeople(){
   try{ await setDoc(peopleDocRef(), {list: PEOPLE}); return true; }catch(e){ return false; }
+}
+
+// ── Gym locations (admin-manageable, not hardcoded) ────────
+const DEFAULT_LOCATIONS = ["Selby"];
+let GYM_LOCATIONS = [];
+function locationsDocRef(){ return doc(db, "meta", "locations"); }
+async function loadLocations(){
+  try{
+    const snap = await getDoc(locationsDocRef());
+    if(snap.exists() && Array.isArray(snap.data().list) && snap.data().list.length){
+      GYM_LOCATIONS = snap.data().list;
+    } else {
+      GYM_LOCATIONS = [...DEFAULT_LOCATIONS];
+      await setDoc(locationsDocRef(), {list: GYM_LOCATIONS});
+    }
+  }catch(e){
+    GYM_LOCATIONS = [...DEFAULT_LOCATIONS];
+  }
+}
+async function saveLocations(){
+  try{ await setDoc(locationsDocRef(), {list: GYM_LOCATIONS}); return true; }catch(e){ return false; }
 }
 
 let CURRENT_PROFILE = null;
@@ -953,6 +974,7 @@ function playBeep(){
 let authMode = "login";
 let authError = "";
 let signupRole = "client";
+let signupLocations = [];
 let signupInProgress = false; // see submitAuth's signup branch for why
 
 function renderAuthScreen(){
@@ -965,6 +987,13 @@ function renderAuthScreen(){
 
   let signupFields = "";
   if(!isLogin){
+    const locationRows = GYM_LOCATIONS.map(loc=>{
+      const checked = signupLocations.includes(loc);
+      return `<div class="sess-row">
+        <div class="sr-info"><b>${loc}</b></div>
+        <input type="checkbox" ${checked?"checked":""} onchange="toggleSignupLocation('${loc}', this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
+      </div>`;
+    }).join("");
     signupFields = `
       <div class="auth-field">
         <label>Your name</label>
@@ -974,7 +1003,12 @@ function renderAuthScreen(){
       <div class="auth-field"><label>Role</label><div class="seg">
         <button class="${signupRole==="client"?"active":""}" onclick="setSignupRole('client')">Client</button>
         <button class="${signupRole==="trainer"?"active":""}" onclick="setSignupRole('trainer')">Trainer</button>
-      </div></div>`;
+      </div></div>
+      <div class="auth-field">
+        <label>Gym location${signupRole==="trainer"?"s":""}</label>
+        ${locationRows || '<div class="field-hint">No locations set up yet \u2014 ask your admin.</div>'}
+        <div class="field-hint">${signupRole==="client" ? "Pick the one gym you attend." : "Pick every location you train at \u2014 you can select more than one."}</div>
+      </div>`;
   }
 
   app.innerHTML = `
@@ -1004,8 +1038,25 @@ function renderAuthScreen(){
   window.scrollTo(0,0);
 }
 
-function setAuthMode(mode){ authMode=mode; authError=""; renderAuthScreen(); }
-function setSignupRole(role){ signupRole=role; renderAuthScreen(); }
+async function setAuthMode(mode){
+  authMode=mode; authError="";
+  if(mode==="signup" && !GYM_LOCATIONS.length) await loadLocations();
+  renderAuthScreen();
+}
+function setSignupRole(role){
+  signupRole=role;
+  if(role==="client" && signupLocations.length>1) signupLocations = signupLocations.slice(0,1);
+  renderAuthScreen();
+}
+function toggleSignupLocation(loc, checked){
+  if(signupRole==="client"){
+    signupLocations = checked ? [loc] : [];
+  } else {
+    if(checked){ if(!signupLocations.includes(loc)) signupLocations.push(loc); }
+    else{ signupLocations = signupLocations.filter(l=>l!==loc); }
+  }
+  renderAuthScreen();
+}
 
 function showForgotPasswordScreen(){
   const prefill = ($("authUsername")?.value || "").trim();
@@ -1134,6 +1185,7 @@ async function submitAuth(){
   }
   if(password.length<6){ authError="Password needs to be at least 6 characters."; renderAuthScreen(); return; }
   if(password!==password2){ authError="Passwords don't match."; renderAuthScreen(); return; }
+  if(!signupLocations.length){ authError="Pick at least one gym location."; renderAuthScreen(); return; }
 
   await loadPeople();
   const usernameTaken = await getEmailForUsername(username);
@@ -1144,6 +1196,7 @@ async function submitAuth(){
   }
 
   const role = signupRole || "client";
+  const locations = role==="client" ? signupLocations.slice(0,1) : [...signupLocations];
   const profileId = uniquePersonId(displayName);
 
   signupInProgress = true;
@@ -1153,7 +1206,7 @@ async function submitAuth(){
     // emails have somewhere real to go - no more synthetic placeholder address.
     cred = await createUserWithEmailAndPassword(auth, realEmail, password);
     await writeWithRetry(()=>setDoc(doc(db,"users",cred.user.uid), {profileId}));
-    PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail, username});
+    PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail, username, locations});
     await writeWithRetry(()=>savePeople());
     await writeWithRetry(()=>registerLoginLookup(realEmail, username));
     await writeWithRetry(()=>registerUsernameLookup(username, realEmail));
@@ -1185,6 +1238,8 @@ async function submitAuth(){
 
 function logOut(){
   cancelHiit(); cancelRest(); stopTimer();
+  signupRole = "client";
+  signupLocations = [];
   signOut(auth);
 }
 
@@ -1206,6 +1261,7 @@ async function bootForUser(user){
   }
   app.innerHTML = `<div class="loading">Loading your data&hellip;</div>`;
   await loadPeople();
+  await loadLocations();
   await ensureEdIsAdmin();
   let mapping = null;
   try{
@@ -2745,20 +2801,25 @@ async function renderTrainerHome(){
 function showManageClients(){
   stopTimer();
   const linked = new Set(CURRENT_PROFILE.clientIds || []);
-  // Strictly client-role people - not trainers, and not admin accounts like
-  // Ed's, since being an admin doesn't make someone a client to be coached.
-  const candidates = PEOPLE.filter(p=>p.role==="client");
+  const myLocations = CURRENT_PROFILE.locations || [];
+  // Strictly client-role people, sharing at least one location with this
+  // trainer - not trainers, not admin accounts like Ed's, and not clients
+  // at a different gym entirely.
+  const candidates = PEOPLE.filter(p=>p.role==="client" && p.locations && p.locations.some(loc=>myLocations.includes(loc)));
   const rows = candidates.map(p=>`
     <div class="sess-row">
-      <div class="sr-info"><b>${p.name}</b></div>
+      <div class="sr-info"><b>${p.name}</b><span>${(p.locations||[]).join(", ")}</span></div>
       <input type="checkbox" ${linked.has(p.id)?"checked":""} onchange="toggleClientLink('${p.id}', this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
     </div>`).join("");
+  const emptyMsg = myLocations.length
+    ? `No clients at ${myLocations.length>1?"your locations":"your location"} yet.`
+    : `You don't have a gym location set \u2014 add one in Account Settings first, then come back here.`;
   app.innerHTML = `
     <div class="topbar">
       <button class="back" onclick="home()">&#8592; Back</button>
       <div class="topbar-info"><h2>Manage Clients</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
     </div>
-    ${rows || '<div class="chart-empty">No clients have signed up yet \u2014 once someone creates an account, they\u2019ll show up here to link.</div>'}
+    ${rows || `<div class="chart-empty">${emptyMsg}</div>`}
   `;
   window.scrollTo(0,0);
 }
@@ -2861,9 +2922,90 @@ async function showAdminDashboard(){
       <button class="back" onclick="home()">&#8592; Back</button>
       <div class="topbar-info"><h2>Admin</h2><div class="focus">${PEOPLE.length} registered</div></div>
     </div>
+    <button class="addsessbtn" onclick="showManageLocations()">📍 Manage Gym Locations</button>
+    <div class="section-label" style="margin-top:16px">People</div>
     ${rows || '<div class="chart-empty">No one registered yet.</div>'}
   `;
   window.scrollTo(0,0);
+}
+
+function showManageLocations(){
+  stopTimer();
+  const rows = GYM_LOCATIONS.map((loc,i)=>{
+    const inUse = PEOPLE.some(p=>p.locations && p.locations.includes(loc));
+    return `<div class="sess-row">
+      <div class="sr-info"><b>${loc}</b>${inUse?'<span>In use</span>':''}</div>
+      <div class="sr-actions">
+        <button class="icon-btn" onclick="renameLocation(${i})" aria-label="Rename">&#9998;</button>
+        <button class="icon-btn" onclick="deleteLocation(${i})" aria-label="Remove">&times;</button>
+      </div>
+    </div>`;
+  }).join("");
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="showAdminDashboard()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Gym Locations</h2><div class="focus">${GYM_LOCATIONS.length} location${GYM_LOCATIONS.length!==1?"s":""}</div></div>
+    </div>
+    ${rows || '<div class="chart-empty">No locations yet \u2014 add one below.</div>'}
+    <div class="add-ex-row">
+      <input type="text" id="newLocationName" placeholder="e.g. York">
+      <button onclick="addLocation()">Add</button>
+    </div>
+  `;
+  window.scrollTo(0,0);
+}
+
+async function renameLocation(idx){
+  const oldName = GYM_LOCATIONS[idx];
+  const input = prompt(`Rename "${oldName}" to:`, oldName);
+  if(input===null) return; // cancelled
+  const newName = input.trim();
+  if(!newName){ showToast("Location name can't be empty", false); return; }
+  if(newName===oldName) return;
+  if(GYM_LOCATIONS.some((l,i)=>i!==idx && l.toLowerCase()===newName.toLowerCase())){
+    showToast("That location name is already in use", false);
+    return;
+  }
+
+  GYM_LOCATIONS[idx] = newName;
+  // Cascade the rename to everyone who had the old name - locations are
+  // stored as plain strings on each person, not stable IDs, so without
+  // this they'd silently lose their location association entirely.
+  let affected = 0;
+  PEOPLE.forEach(p=>{
+    if(p.locations && p.locations.includes(oldName)){
+      p.locations = p.locations.map(l=>l===oldName ? newName : l);
+      affected++;
+    }
+  });
+
+  await saveLocations();
+  if(affected) await savePeople();
+  showToast(`Renamed to "${newName}"${affected?` \u2014 updated for ${affected} ${affected===1?"person":"people"}`:""}`);
+  showManageLocations();
+}
+
+async function addLocation(){
+  const name = ($("newLocationName").value||"").trim();
+  if(!name){ showToast("Enter a location name", false); return; }
+  if(GYM_LOCATIONS.some(l=>l.toLowerCase()===name.toLowerCase())){ showToast("That location already exists", false); return; }
+  GYM_LOCATIONS.push(name);
+  await saveLocations();
+  showToast("Location added \u2713");
+  showManageLocations();
+}
+
+async function deleteLocation(idx){
+  const loc = GYM_LOCATIONS[idx];
+  const inUseCount = PEOPLE.filter(p=>p.locations && p.locations.includes(loc)).length;
+  const msg = inUseCount
+    ? `${inUseCount} ${inUseCount===1?"person is":"people are"} currently set to "${loc}". Remove it anyway? They'll keep showing it on their profile until you edit them individually, but it won't be selectable for anyone new.`
+    : `Remove "${loc}"?`;
+  if(!confirm(msg)) return;
+  GYM_LOCATIONS.splice(idx,1);
+  await saveLocations();
+  showToast("Location removed");
+  showManageLocations();
 }
 
 function openEditPerson(id){
@@ -2880,16 +3022,29 @@ function renderEditPerson(){
     `<button class="${p.role===r.id?"active":""}" onclick="setPersonRole('${r.id}')">${r.label}</button>`
   ).join("");
 
+  const myLocations = p.locations || [];
+  const locationRows = GYM_LOCATIONS.map(loc=>{
+    const checked = myLocations.includes(loc);
+    return `<div class="sess-row">
+      <div class="sr-info"><b>${loc}</b></div>
+      <input type="checkbox" ${checked?"checked":""} onchange="toggleAdminPersonLocation('${loc}', this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
+    </div>`;
+  }).join("");
+  const locationsSection = `<div class="section-label" style="margin-top:22px">Gym Location${p.role==="trainer"?"s":""}</div>
+    ${locationRows || '<div class="chart-empty">No locations set up yet.</div>'}`;
+
   let linksSection = "";
   if(p.role==="trainer"){
     const linked = new Set(p.clientIds || []);
-    const candidates = PEOPLE.filter(c=>c.role==="client");
+    // Only clients sharing at least one location with this trainer - the
+    // whole point of locations is to scope who's relevant to whom.
+    const candidates = PEOPLE.filter(c=>c.role==="client" && c.locations && c.locations.some(loc=>myLocations.includes(loc)));
     const rows = candidates.map(c=>`
       <div class="sess-row">
         <div class="sr-info"><b>${c.name}</b></div>
         <input type="checkbox" ${linked.has(c.id)?"checked":""} onchange="toggleAdminClientLink('${c.id}', this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
       </div>`).join("");
-    linksSection = `<div class="section-label">Linked clients</div>${rows || '<div class="chart-empty">No clients have signed up yet.</div>'}`;
+    linksSection = `<div class="section-label">Linked clients</div>${rows || '<div class="chart-empty">No clients at this trainer\u2019s location(s) yet.</div>'}`;
   }
 
   app.innerHTML = `
@@ -2903,10 +3058,25 @@ function renderEditPerson(){
     <button class="save-session-btn" onclick="saveEditedPersonDetails()">Save details</button>
 
     <div class="editor-field" style="margin-top:22px"><label>Role</label><div class="seg">${roleButtons}</div></div>
+    ${locationsSection}
     ${linksSection}
     <button class="delete-person-btn" onclick="deletePersonFromAdmin()">Remove ${p.name} from the directory</button>
   `;
   window.scrollTo(0,0);
+}
+
+async function toggleAdminPersonLocation(loc, checked){
+  const p = PEOPLE.find(x=>x.id===editPersonId);
+  if(!p) return;
+  if(!p.locations) p.locations = [];
+  if(p.role==="client"){
+    p.locations = checked ? [loc] : [];
+  } else {
+    if(checked){ if(!p.locations.includes(loc)) p.locations.push(loc); }
+    else{ p.locations = p.locations.filter(l=>l!==loc); }
+  }
+  await savePeople();
+  renderEditPerson();
 }
 
 async function saveEditedPersonDetails(){
@@ -2929,6 +3099,7 @@ async function setPersonRole(role){
   if(!p) return;
   p.role = role;
   if(role==="trainer" && !p.clientIds) p.clientIds = [];
+  if(role==="client" && p.locations && p.locations.length>1) p.locations = p.locations.slice(0,1);
   await savePeople();
   renderEditPerson();
 }
@@ -3013,6 +3184,16 @@ function showAccountSettings(preserveScroll){
     <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="accountEmail" value="${current.email||""}" placeholder="you@example.com"></div>
     <div class="last-updated" style="text-align:left;margin-top:-4px">This is your real login and where password reset emails go &mdash; keep it current.</div>
     <button class="save-session-btn" onclick="saveAccountEmail()">Save</button>
+
+    <div class="section-label" style="margin-top:24px">Gym Location${current.role==="trainer"?"s":""}</div>
+    ${GYM_LOCATIONS.map(loc=>{
+      const checked = (current.locations||[]).includes(loc);
+      return `<div class="sess-row">
+        <div class="sr-info"><b>${loc}</b></div>
+        <input type="checkbox" ${checked?"checked":""} onchange="toggleAccountLocation('${loc}', this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
+      </div>`;
+    }).join("") || '<div class="chart-empty">No locations set up yet.</div>'}
+    <div class="last-updated" style="text-align:left">${current.role==="trainer" ? "Pick every location you train at." : "Pick the one gym you attend."}</div>
 
     <div class="section-label" style="margin-top:24px">Change Password</div>
     <div class="editor-field"><label>New password</label><input type="password" id="newPassword" autocomplete="new-password" placeholder="********"></div>
@@ -3113,6 +3294,22 @@ async function saveAccountEmail(){
   } else {
     showToast("Saved \u2713");
   }
+}
+
+async function toggleAccountLocation(loc, checked){
+  const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
+  if(!p) return;
+  if(!p.locations) p.locations = [];
+  if(p.role==="client"){
+    p.locations = checked ? [loc] : [];
+  } else {
+    if(checked){ if(!p.locations.includes(loc)) p.locations.push(loc); }
+    else{ p.locations = p.locations.filter(l=>l!==loc); }
+  }
+  CURRENT_PROFILE.locations = p.locations;
+  await savePeople();
+  showToast("Updated");
+  showAccountSettings(true);
 }
 
 async function changePassword(){
@@ -3962,6 +4159,7 @@ window.refresh = refresh;
 window.setAuthMode = setAuthMode;
 window.renderAuthScreen = renderAuthScreen;
 window.setSignupRole = setSignupRole;
+window.toggleSignupLocation = toggleSignupLocation;
 window.showForgotPasswordScreen = showForgotPasswordScreen;
 window.sendPasswordReset = sendPasswordReset;
 window.submitAuth = submitAuth;
@@ -3970,13 +4168,19 @@ window.showManageClients = showManageClients;
 window.toggleClientLink = toggleClientLink;
 window.showClientDetail = showClientDetail;
 window.showAdminDashboard = showAdminDashboard;
+window.showManageLocations = showManageLocations;
+window.renameLocation = renameLocation;
+window.addLocation = addLocation;
+window.deleteLocation = deleteLocation;
 window.openEditPerson = openEditPerson;
 window.setPersonRole = setPersonRole;
 window.saveEditedPersonDetails = saveEditedPersonDetails;
 window.toggleAdminClientLink = toggleAdminClientLink;
+window.toggleAdminPersonLocation = toggleAdminPersonLocation;
 window.deletePersonFromAdmin = deletePersonFromAdmin;
 window.showAccountSettings = showAccountSettings;
 window.saveAccountEmail = saveAccountEmail;
+window.toggleAccountLocation = toggleAccountLocation;
 window.changePassword = changePassword;
 window.triggerPhotoUpload = triggerPhotoUpload;
 window.handlePhotoFileSelected = handlePhotoFileSelected;
