@@ -423,6 +423,10 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   border-radius:14px;padding:15px;font-size:15px;font-weight:800;cursor:pointer}
 .editor-actions .delete-session-btn{background:none;border:1.5px solid #5a3030;color:#c97a6a;
   border-radius:14px;padding:15px 16px;font-size:13px;font-weight:700;cursor:pointer}
+.delete-person-btn{width:100%;background:none;border:1.5px solid #5a3030;color:#c97a6a;
+  border-radius:14px;padding:14px;font-size:13px;font-weight:700;cursor:pointer;margin-top:24px}
+.restore-default-btn{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:14px;padding:14px;font-size:13px;font-weight:700;cursor:pointer;margin-top:14px}
 
 .hiit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .hiit-card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;
@@ -592,6 +596,40 @@ async function savePeople(){
 
 let CURRENT_PROFILE = null;
 function profileDocRef(){ return doc(db, "trackers", `${TRACKER_ID}-${CURRENT_PROFILE.id}`); }
+
+// ── Generic "viewing someone's data" mechanism ─────────────
+// Every per-person screen (Activity, Muscle Map, Body Measurements,
+// Dashboard, Exercise Metrics, and any future one) reads these three and
+// calls fetchPersonData - that's the whole contract. Adding a new per-person
+// view never needs bespoke self-vs-client plumbing again.
+let viewingPersonId = null;
+let viewingIsSelf = true;
+let viewingBackTarget = "home()";
+
+function startViewing(personId, backTargetCall){
+  viewingPersonId = personId || CURRENT_PROFILE.id;
+  viewingIsSelf = viewingPersonId === CURRENT_PROFILE.id;
+  viewingBackTarget = backTargetCall || "home()";
+}
+
+function viewingPersonLabel(){
+  if(viewingIsSelf) return CURRENT_PROFILE;
+  return PEOPLE.find(p=>p.id===viewingPersonId) || {id:viewingPersonId, name:viewingPersonId};
+}
+
+async function fetchPersonData(personId){
+  if(personId===CURRENT_PROFILE.id){
+    return {log:LOG, weights:WEIGHTS, measurements:MEASUREMENTS, plan:PLAN, hiitClasses:HIIT_CLASSES, cardioLog:CARDIO_LOG};
+  }
+  try{
+    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${personId}`));
+    if(snap.exists()){
+      const d = snap.data();
+      return {log:d.log||[], weights:d.weights||[], measurements:d.measurements||[], plan:d.plan||[], hiitClasses:d.hiitClasses||[], cardioLog:d.cardioLog||[]};
+    }
+  }catch(e){}
+  return {log:[], weights:[], measurements:[], plan:[], hiitClasses:[], cardioLog:[]};
+}
 
 const DEFAULT_PLAN = [
   {id:"upperA", name:"Upper A", focus:"Chest-press focus", ex:[
@@ -1188,17 +1226,17 @@ async function bootForUser(user){
 // default for anyone who hasn't customized yet; admin's own Admin button is
 // role-gated separately and isn't part of this customizable set.
 const HOME_MODULES = [
-  {id:"sessions", label:"Sessions"},
+  {id:"sessions", label:"Gym Sessions"},
   {id:"hiit", label:"HIIT Classes"},
-  {id:"cardio", label:"Cardio"},
   {id:"weight", label:"Body weight"},
+  {id:"cardio", label:"Cardio"},
+  {id:"managesessions", label:"Build Your Workout"},
   {id:"activity", label:"Activity & streak"},
-  {id:"musclemap", label:"Muscle map"},
   {id:"dashboard", label:"Dashboard"},
+  {id:"musclemap", label:"Muscle map"},
   {id:"exercisemetrics", label:"Exercise metrics"},
   {id:"measurements", label:"Body measurements"},
-  {id:"leaderboard", label:"Leaderboard"},
-  {id:"managesessions", label:"Build Your Workout"}
+  {id:"leaderboard", label:"Leaderboard"}
 ];
 
 function getHomeLayoutFor(person){
@@ -1235,7 +1273,7 @@ function homeModuleHtml(id, ctx){
         <span>&rsaquo;</span>
       </button>`;
     case "musclemap": return `
-      <button class="musclemapbtn" onclick="showMuscleMap(7)">
+      <button class="musclemapbtn" onclick="openMuscleMap()">
         <span class="cb-label">💪 Muscle Map</span>
         <span>&rsaquo;</span>
       </button>`;
@@ -1250,7 +1288,7 @@ function homeModuleHtml(id, ctx){
         <span>&rsaquo;</span>
       </button>`;
     case "measurements": return `
-      <button class="measurebtn" onclick="showMeasurements()">
+      <button class="measurebtn" onclick="openMeasurements()">
         <span class="cb-label">📏 Body Measurements</span>
         <span>&rsaquo;</span>
       </button>`;
@@ -1823,15 +1861,15 @@ async function deleteCardioEntry(idx){
 }
 
 // ── Activity & streak ─────────────────────────────────────
-function sessionLabelForLog(entries){
+function sessionLabelForLog(entries, planToUse){
   if(!entries || !entries.length) return null;
   const e = entries[0];
   if(e.hiit) return e.hiitName || "HIIT";
-  const planEntry = PLAN.find(p=>p.id===e.sessionId);
+  const planEntry = (planToUse||PLAN).find(p=>p.id===e.sessionId);
   return planEntry ? planEntry.name : (e.sessionId || "Session");
 }
 
-function trainedDaysLabelMap(log){
+function trainedDaysLabelMap(log, planToUse){
   const byDay = {};
   log.forEach(e=>{
     const key = localDayKey(e.date);
@@ -1839,7 +1877,7 @@ function trainedDaysLabelMap(log){
     byDay[key].push(e);
   });
   const labelMap = {};
-  Object.keys(byDay).forEach(key=>{ labelMap[key] = sessionLabelForLog(byDay[key]); });
+  Object.keys(byDay).forEach(key=>{ labelMap[key] = sessionLabelForLog(byDay[key], planToUse); });
   return labelMap;
 }
 
@@ -1873,26 +1911,29 @@ function setActivityMonthOffset(delta){
   renderActivityScreen(true);
 }
 
-function showActivity(){
+function showActivity(personId){
+  startViewing(personId, personId ? `showClientDetail('${personId}')` : "home()");
   activityMonthOffset = 0;
   renderActivityScreen(false);
 }
 
-function renderActivityScreen(preserveScroll){
+async function renderActivityScreen(preserveScroll){
   stopTimer();
-  const streak = weekStreakFor(LOG);
-  const heatmap = buildHeatmap(LOG);
+  const data = await fetchPersonData(viewingPersonId);
+  const person = viewingPersonLabel();
+  const streak = weekStreakFor(data.log);
+  const heatmap = buildHeatmap(data.log);
 
   const now = new Date();
   const target = new Date(now.getFullYear(), now.getMonth()-activityMonthOffset, 1);
-  const labelMap = trainedDaysLabelMap(LOG);
+  const labelMap = trainedDaysLabelMap(data.log, data.plan);
   const monthGrid = buildMonthCalendarHTML(target.getFullYear(), target.getMonth(), labelMap);
   const monthName = target.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 
   app.innerHTML = `
     <div class="topbar">
-      <button class="back" onclick="home()">&#8592; Back</button>
-      <div class="topbar-info"><h2>Activity</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+      <button class="back" onclick="${viewingBackTarget}">&#8592; Back</button>
+      <div class="topbar-info"><h2>Activity</h2><div class="focus">${person.name}</div></div>
     </div>
     <div class="streak-hero">
       <div class="num">${streak}</div>
@@ -1901,7 +1942,7 @@ function renderActivityScreen(preserveScroll){
     <div class="section-label">Last 12 weeks</div>
     ${heatmap}
     <div class="heat-legend"><div class="heat-cell"></div> No session &nbsp; <div class="heat-cell on"></div> Trained</div>
-    <div class="last-updated">${LOG.length} session${LOG.length!==1?"s":""} logged in total</div>
+    <div class="last-updated">${data.log.length} session${data.log.length!==1?"s":""} logged in total</div>
 
     <div class="section-label" style="margin-top:24px">Training calendar</div>
     <div class="cal-nav">
@@ -1915,15 +1956,26 @@ function renderActivityScreen(preserveScroll){
 }
 
 // ── Body measurements ─────────────────────────────────────
-function showMeasurements(metric){
+function openMeasurements(personId){
+  startViewing(personId, personId ? `showClientDetail('${personId}')` : "home()");
+  currentMeasureMetric = "waist";
+  renderMeasurementsScreen();
+}
+function setMeasureMetric(metric){
+  currentMeasureMetric = metric;
+  renderMeasurementsScreen();
+}
+
+async function renderMeasurementsScreen(){
   stopTimer();
-  if(metric) currentMeasureMetric = metric;
+  const data = await fetchPersonData(viewingPersonId);
+  const person = viewingPersonLabel();
   const m = currentMeasureMetric;
   const segButtons = MEASURE_METRICS.map(mm=>
-    `<button class="${mm.id===m?"active":""}" onclick="showMeasurements('${mm.id}')">${mm.label}</button>`
+    `<button class="${mm.id===m?"active":""}" onclick="setMeasureMetric('${mm.id}')">${mm.label}</button>`
   ).join("");
 
-  const sorted = [...MEASUREMENTS].filter(e=>e[m]!=null).sort((a,b)=>a.date.localeCompare(b.date));
+  const sorted = [...data.measurements].filter(e=>e[m]!=null).sort((a,b)=>a.date.localeCompare(b.date));
   const last = sorted[sorted.length-1];
   const weekChange = changeSince(sorted, 7, m);
   const monthChange = changeSince(sorted, 30, m);
@@ -1936,33 +1988,37 @@ function showMeasurements(metric){
 
   const chart = `<div class="chart-card">${buildTrendChartSVG(sorted.map(e=>({date:e.date, value:e[m]})))}</div>`;
 
-  const today = localDayKey(new Date());
-  const existingToday = MEASUREMENTS.find(e=>e.date.slice(0,10)===today) || {};
-  const form = `<div class="measure-form">
-    <div class="mrow"><input type="date" id="mDate" value="${today}" style="flex:1"></div>
-    <div class="mrow"><label>Waist</label><input type="number" inputmode="decimal" step="0.1" min="0" id="mWaist" placeholder="cm" value="${existingToday.waist??""}"></div>
-    <div class="mrow"><label>Chest</label><input type="number" inputmode="decimal" step="0.1" min="0" id="mChest" placeholder="cm" value="${existingToday.chest??""}"></div>
-    <div class="mrow"><label>Arms</label><input type="number" inputmode="decimal" step="0.1" min="0" id="mArms" placeholder="cm" value="${existingToday.arms??""}"></div>
-    <button class="save-measure" onclick="saveMeasurementEntry()">Save measurements</button>
-  </div>`;
+  let form = "";
+  if(viewingIsSelf){
+    const today = localDayKey(new Date());
+    const existingToday = data.measurements.find(e=>e.date.slice(0,10)===today) || {};
+    form = `<div class="measure-form">
+      <div class="mrow"><input type="date" id="mDate" value="${today}" style="flex:1"></div>
+      <div class="mrow"><label>Waist</label><input type="number" inputmode="decimal" step="0.1" min="0" id="mWaist" placeholder="cm" value="${existingToday.waist??""}"></div>
+      <div class="mrow"><label>Chest</label><input type="number" inputmode="decimal" step="0.1" min="0" id="mChest" placeholder="cm" value="${existingToday.chest??""}"></div>
+      <div class="mrow"><label>Arms</label><input type="number" inputmode="decimal" step="0.1" min="0" id="mArms" placeholder="cm" value="${existingToday.arms??""}"></div>
+      <button class="save-measure" onclick="saveMeasurementEntry()">Save measurements</button>
+    </div>`;
+  }
 
-  const allSorted = [...MEASUREMENTS].sort((a,b)=>b.date.localeCompare(a.date));
+  const allSorted = [...data.measurements].sort((a,b)=>b.date.localeCompare(a.date));
   const rows = allSorted.map(e=>{
-    const idx = MEASUREMENTS.indexOf(e);
+    const idx = data.measurements.indexOf(e);
     const parts = MEASURE_METRICS.filter(mm=>e[mm.id]!=null).map(mm=>`${mm.label} ${e[mm.id]}cm`).join(" &nbsp;\u00b7&nbsp; ");
+    const delBtn = viewingIsSelf ? `<button class="wdel" onclick="deleteMeasurementEntry(${idx})" aria-label="Delete">&times;</button>` : "";
     return `<div class="wrow">
       <div class="wd">${fmtDate(e.date)}</div>
-      <div class="wright"><span class="wv" style="font-size:12px;font-weight:700">${parts||"&mdash;"}</span><button class="wdel" onclick="deleteMeasurementEntry(${idx})" aria-label="Delete">&times;</button></div>
+      <div class="wright"><span class="wv" style="font-size:12px;font-weight:700">${parts||"&mdash;"}</span>${delBtn}</div>
     </div>`;
   }).join("");
   const historyBlock = allSorted.length
     ? `<div class="section-label">History</div><div class="hday">${rows}</div>`
-    : `<div class="chart-empty">No entries yet &mdash; log your first measurements below.</div>`;
+    : `<div class="chart-empty">No entries yet${viewingIsSelf?" \u2014 log your first measurements below.":"."}</div>`;
 
   app.innerHTML = `
     <div class="topbar">
-      <button class="back" onclick="home()">&#8592; Back</button>
-      <div class="topbar-info"><h2>Body Measurements</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+      <button class="back" onclick="${viewingBackTarget}">&#8592; Back</button>
+      <div class="topbar-info"><h2>Body Measurements</h2><div class="focus">${person.name}</div></div>
     </div>
     <div class="seg">${segButtons}</div>
     ${statRow}
@@ -1991,14 +2047,14 @@ async function saveMeasurementEntry(){
   if(!isNaN(arms)) entry.arms = Math.round(arms*10)/10;
   const ok = await saveLog();
   showToast(ok ? "Measurements saved & synced \u2713" : "Couldn't save \u2014 check your connection");
-  showMeasurements();
+  renderMeasurementsScreen();
 }
 
 async function deleteMeasurementEntry(idx){
   if(!confirm("Remove this measurement entry?")) return;
   MEASUREMENTS.splice(idx,1);
   await saveLog();
-  showMeasurements();
+  renderMeasurementsScreen();
 }
 
 // ── Manage sessions (custom session builder) ─────────────
@@ -2766,6 +2822,9 @@ async function showClientDetail(clientId){
     <button class="addsessbtn" onclick="manageClientSessions('${clientId}')">📋 Manage ${person.name}'s Sessions</button>
     <button class="addsessbtn" onclick="openDashboard('${clientId}')">📊 ${person.name}'s Dashboard</button>
     <button class="addsessbtn" onclick="openExercisePicker('${clientId}')">📈 ${person.name}'s Exercise Metrics</button>
+    <button class="addsessbtn" onclick="showActivity('${clientId}')">🔥 ${person.name}'s Activity &amp; Streak</button>
+    <button class="addsessbtn" onclick="openMuscleMap('${clientId}')">💪 ${person.name}'s Muscle Map</button>
+    <button class="addsessbtn" onclick="openMeasurements('${clientId}')">📏 ${person.name}'s Body Measurements</button>
     <div class="section-label" style="margin-top:16px">Weight trend</div>
     <div class="chart-card">${chart}</div>
     <div class="section-label">Recent session summaries</div>
@@ -2845,6 +2904,7 @@ function renderEditPerson(){
 
     <div class="editor-field" style="margin-top:22px"><label>Role</label><div class="seg">${roleButtons}</div></div>
     ${linksSection}
+    <button class="delete-person-btn" onclick="deletePersonFromAdmin()">Remove ${p.name} from the directory</button>
   `;
   window.scrollTo(0,0);
 }
@@ -2881,6 +2941,37 @@ async function toggleAdminClientLink(clientId, checked){
   else{ p.clientIds = p.clientIds.filter(id=>id!==clientId); }
   await savePeople();
   showToast("Updated");
+}
+
+async function removeFromLoginLookup(email){
+  if(!email) return;
+  try{
+    const snap = await getDoc(loginLookupDocRef());
+    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
+    delete map[email.trim().toLowerCase()];
+    await setDoc(loginLookupDocRef(), {map});
+  }catch(e){ /* best effort - not worth blocking the deletion over */ }
+}
+async function removeFromUsernameLookup(username){
+  if(!username) return;
+  try{
+    const snap = await getDoc(usernameLookupDocRef());
+    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
+    delete map[username.trim().toLowerCase()];
+    await setDoc(usernameLookupDocRef(), {map});
+  }catch(e){ /* best effort */ }
+}
+
+async function deletePersonFromAdmin(){
+  const p = PEOPLE.find(x=>x.id===editPersonId);
+  if(!p) return;
+  if(!confirm(`Remove ${p.name} from the people directory?\n\nThis does NOT delete their Firebase login if one still exists (do that separately in Firebase Console \u2192 Authentication), and does NOT delete any workout history they've logged \u2014 only their entry here and their place in lists like client-linking.`)) return;
+  PEOPLE = PEOPLE.filter(x=>x.id!==p.id);
+  await savePeople();
+  await removeFromLoginLookup(p.email);
+  await removeFromUsernameLookup(p.username);
+  showToast(`${p.name} removed`);
+  showAdminDashboard();
 }
 
 // ── Account settings (edit your own email) ───────────────
@@ -2931,6 +3022,7 @@ function showAccountSettings(preserveScroll){
     <div class="section-label" style="margin-top:24px">Home screen layout</div>
     <div class="last-updated" style="text-align:left">Reorder with the arrows, untick anything you don't want to see &mdash; including Sessions or HIIT Classes if you only use one. Changes save instantly.</div>
     ${layoutRows}
+    <button class="restore-default-btn" onclick="restoreDefaultHomeLayout()">Restore Default View</button>
   `;
   if(!preserveScroll) window.scrollTo(0,0);
 }
@@ -2954,6 +3046,14 @@ async function toggleHomeModuleVisibility(idx, checked){
   const layout = getHomeLayoutFor(current);
   layout[idx].hidden = !checked;
   await saveHomeLayout(layout);
+  showAccountSettings(true);
+}
+
+async function restoreDefaultHomeLayout(){
+  if(!confirm("Reset your home screen back to the default order, with everything visible? This only affects your own view, not anyone else's.")) return;
+  const defaultLayout = HOME_MODULES.map(m=>({id:m.id, hidden:false}));
+  await saveHomeLayout(defaultLayout);
+  showToast("Home screen reset to default");
   showAccountSettings(true);
 }
 
@@ -3431,21 +3531,32 @@ async function finishPostSessionSummary(){
 }
 
 let muscleMapPeriod = 7;
-function showMuscleMap(period){
-  if(period) muscleMapPeriod = period;
+function openMuscleMap(personId){
+  startViewing(personId, personId ? `showClientDetail('${personId}')` : "home()");
+  muscleMapPeriod = 7;
+  renderMuscleMapScreen();
+}
+function setMuscleMapPeriod(period){
+  muscleMapPeriod = period;
+  renderMuscleMapScreen();
+}
+
+async function renderMuscleMapScreen(){
   stopTimer();
+  const data = await fetchPersonData(viewingPersonId);
+  const person = viewingPersonLabel();
   const cutoff = new Date(Date.now() - muscleMapPeriod*86400000).toISOString();
-  const recentLogs = LOG.filter(s=>s.date>=cutoff);
+  const recentLogs = data.log.filter(s=>s.date>=cutoff);
   const totals = computeMuscleSets(recentLogs);
   const svg = buildMuscleMapSVG(totals);
   const segButtons = [7,30].map(p=>
-    `<button class="${p===muscleMapPeriod?"active":""}" onclick="showMuscleMap(${p})">${p} days</button>`
+    `<button class="${p===muscleMapPeriod?"active":""}" onclick="setMuscleMapPeriod(${p})">${p} days</button>`
   ).join("");
 
   app.innerHTML = `
     <div class="topbar">
-      <button class="back" onclick="home()">&#8592; Back</button>
-      <div class="topbar-info"><h2>Muscle Map</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+      <button class="back" onclick="${viewingBackTarget}">&#8592; Back</button>
+      <div class="topbar-info"><h2>Muscle Map</h2><div class="focus">${person.name}</div></div>
     </div>
     <div class="seg">${segButtons}</div>
     <div class="last-updated">${recentLogs.length} session${recentLogs.length!==1?"s":""} logged in the last ${muscleMapPeriod} days</div>
@@ -3863,6 +3974,7 @@ window.openEditPerson = openEditPerson;
 window.setPersonRole = setPersonRole;
 window.saveEditedPersonDetails = saveEditedPersonDetails;
 window.toggleAdminClientLink = toggleAdminClientLink;
+window.deletePersonFromAdmin = deletePersonFromAdmin;
 window.showAccountSettings = showAccountSettings;
 window.saveAccountEmail = saveAccountEmail;
 window.changePassword = changePassword;
@@ -3871,6 +3983,7 @@ window.handlePhotoFileSelected = handlePhotoFileSelected;
 window.removeProfilePhoto = removeProfilePhoto;
 window.moveHomeModule = moveHomeModule;
 window.toggleHomeModuleVisibility = toggleHomeModuleVisibility;
+window.restoreDefaultHomeLayout = restoreDefaultHomeLayout;
 window.manageClientSessions = manageClientSessions;
 window.renderTrainerClientSessions = renderTrainerClientSessions;
 window.openTrainerSessionEditor = openTrainerSessionEditor;
@@ -3896,14 +4009,16 @@ window.startRest = startRest;
 window.cancelRest = cancelRest;
 window.showActivity = showActivity;
 window.setActivityMonthOffset = setActivityMonthOffset;
-window.showMuscleMap = showMuscleMap;
+window.openMuscleMap = openMuscleMap;
+window.setMuscleMapPeriod = setMuscleMapPeriod;
 window.openDashboard = openDashboard;
 window.setDashboardPeriod = setDashboardPeriod;
 window.openExercisePicker = openExercisePicker;
 window.renderExercisePicker = renderExercisePicker;
 window.openExerciseMetrics = openExerciseMetrics;
 window.setExerciseMetricsPeriod = setExerciseMetricsPeriod;
-window.showMeasurements = showMeasurements;
+window.openMeasurements = openMeasurements;
+window.setMeasureMetric = setMeasureMetric;
 window.saveMeasurementEntry = saveMeasurementEntry;
 window.deleteMeasurementEntry = deleteMeasurementEntry;
 window.showLeaderboard = showLeaderboard;
