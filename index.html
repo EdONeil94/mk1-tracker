@@ -94,6 +94,45 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .addset-btn{background:none;border:none;color:var(--mute);font-size:12px;font-weight:700;
   padding:8px 0 2px;cursor:pointer;letter-spacing:.04em}
 
+/* ── Superset card ─────────────────────────────────────── */
+.ss-card{background:var(--card);border:1.5px solid var(--accent2);border-radius:16px;
+  padding:14px;margin-bottom:10px;transition:border-color .2s}
+.ss-card.done{border-color:var(--good)}
+.ss-badge{background:var(--accent2);color:#fff;font-size:9px;font-weight:900;letter-spacing:.1em;
+  padding:3px 7px;border-radius:20px;flex-shrink:0}
+.ss-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ss-names{flex:1;min-width:0}
+.ss-ex-label{display:flex;align-items:baseline;gap:6px;line-height:1.5}
+.ss-ex-letter{color:var(--accent2);font-size:10px;font-weight:900;flex-shrink:0;width:12px}
+.ss-ex-name{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-scheme{color:var(--mute);font-size:11px;font-weight:700;flex-shrink:0;margin-left:4px}
+.ss-sets-label{color:var(--mute);font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.ss-set-pair{display:grid;grid-template-columns:24px 1fr;gap:6px;margin-bottom:8px;align-items:start}
+.ss-set-pair:last-of-type{margin-bottom:0}
+.ss-set-n{color:var(--mute);font-size:12px;font-weight:800;text-align:center;padding-top:11px}
+.ss-set-rows{display:flex;flex-direction:column;gap:5px}
+.ss-row{display:grid;grid-template-columns:12px 1fr 1fr 42px;gap:5px;align-items:center}
+.ss-row-letter{color:var(--accent2);font-size:9px;font-weight:900;text-align:center}
+.ss-row input{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:10px;padding:8px 5px;font-size:15px;font-weight:700;text-align:center;
+  -webkit-appearance:none;appearance:none}
+.ss-row input:focus{outline:none;border-color:var(--accent2)}
+.ss-row .tick{border-radius:10px;height:36px;font-size:16px;background:var(--chip);
+  border:1.5px solid var(--line);color:var(--mute);cursor:pointer;width:100%}
+.ss-row .tick.on{background:var(--good);border-color:var(--good);color:#fff}
+/* Builder superset card */
+.ss-draft{background:var(--card);border:1.5px solid var(--accent2);border-radius:12px;
+  padding:10px 12px;margin-bottom:10px}
+.ss-draft-header{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.ss-draft-ex{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.ss-draft-ex:last-of-type{margin-bottom:0}
+.ss-draft-ex-letter{color:var(--accent2);font-size:10px;font-weight:900;width:12px;flex-shrink:0}
+.ss-draft-ex-name{flex:1;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-draft-sets-row{display:flex;align-items:center;gap:6px;margin-top:8px}
+.ss-draft-sets-label{font-size:11px;color:var(--mute);font-weight:700}
+.ss-add-btn{background:var(--accent2);border:none;color:#fff;border-radius:10px;
+  padding:0 14px;font-weight:800;font-size:13px;cursor:pointer;height:36px}
+
 .savebar{position:fixed;bottom:0;left:0;right:0;
   background:linear-gradient(transparent,var(--paper) 30%);padding:16px 14px calc(16px + var(--safe-bot));pointer-events:none}
 .savebar .inner{max-width:500px;margin:0 auto;pointer-events:all}
@@ -214,6 +253,36 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   padding:0 20px;font-weight:800;font-size:14px;cursor:pointer;flex-shrink:0}
 
 .cardio-form{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:16px}
+.checkin-banner{background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:16px;
+  padding:18px;margin-bottom:16px;color:#fff}
+.checkin-banner-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.checkin-banner-sub{font-size:12.5px;opacity:.88}
+.checkin-metrics{margin-bottom:4px}
+.checkin-textarea{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:12px;padding:12px;font-size:14px;font-family:inherit;resize:none;min-height:100px;
+  box-sizing:border-box;margin-bottom:12px}
+.checkin-comment-card{background:var(--card);border:1.5px solid var(--line);border-radius:12px;
+  padding:14px;font-size:14px;color:var(--mute);font-style:italic;margin-bottom:12px;line-height:1.5}
+.checkin-feedback-card{background:var(--card);border:1.5px solid var(--accent2);border-radius:12px;
+  padding:14px;margin-top:12px}
+.checkin-feedback-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent2);margin-bottom:6px}
+.checkin-feedback-content{font-size:15px;font-weight:700}
+.checkin-feedback-form{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px}
+.feedback-emoji-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.feedback-emoji-btn{font-size:22px;background:var(--chip);border:1.5px solid var(--line);
+  border-radius:10px;padding:6px 10px;cursor:pointer;line-height:1}
+.feedback-emoji-btn.active{border-color:var(--accent2);background:rgba(93,76,220,.15)}
+.feedback-phrase-row{display:flex;gap:6px;flex-wrap:wrap}
+.feedback-phrase-btn{background:var(--chip);border:1.5px solid var(--line);color:var(--text);
+  border-radius:20px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.feedback-phrase-btn.active{border-color:var(--accent2);color:var(--accent2);background:rgba(93,76,220,.1)}
+.checkin-due-banner{background:var(--card);border:2px solid var(--accent2);border-radius:14px;
+  padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.checkin-due-icon{font-size:24px;flex-shrink:0}
+.checkin-due-text{flex:1}
+.checkin-due-text b{display:block;font-size:14px;margin-bottom:2px}
+.checkin-due-text span{font-size:12px;color:var(--mute)}
 .cardio-form select{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
   border-radius:10px;padding:11px;font-size:14px;margin-bottom:10px;-webkit-appearance:none;appearance:none}
 .cardio-form-row{display:flex;gap:8px;margin-bottom:10px}
@@ -705,51 +774,72 @@ const EXERCISE_LIBRARY = [
 // Which body region each exercise primarily trains, for the muscle map.
 // Cardio machines intentionally map to nothing - they don't isolate a muscle group.
 const EXERCISE_MUSCLE_MAP = {
-  "Flat bench press (barbell)":"chest","Flat bench press (machine)":"chest","Incline bench press (dumbbell)":"chest",
-  "Incline chest press (machine)":"chest","Cable chest fly":"chest","Dips":"chest","Smith machine bench press":"chest","Pec deck machine":"chest",
-  "Lat pulldown (wide grip)":"back","Lat pulldown (close grip)":"back","Seated cable row":"back","Single arm dumbbell row":"back",
-  "T-bar row":"back","Back extension":"back","Pull-up":"back","Conventional deadlift":"back","Sumo deadlift":"back",
-  "Chest-supported row":"back","Reverse grip lat pulldown":"back",
-  "Overhead shoulder press (dumbbell)":"shoulders","Shoulder press (machine)":"shoulders","Lateral raise (dumbbell)":"shoulders",
-  "Lateral raise (machine)":"shoulders","Rear delt fly":"shoulders","Face pull":"shoulders","Arnold press":"shoulders",
-  "Cable lateral raise":"shoulders","Barbell shrug":"shoulders",
-  "Barbell bicep curl":"biceps","Dumbbell bicep curl":"biceps","Seated dumbbell curl":"biceps","Preacher curl":"biceps",
-  "Hammer curl":"biceps","EZ bar curl":"biceps","Cable curl":"biceps",
+  // ── CHEST ──────────────────────────────────────────────────
+  // upper_chest = incline angle work; chest = flat/decline/machine/overall pec
+  "Flat bench press (barbell)":"chest","Flat bench press (machine)":"chest",
+  "Incline bench press (dumbbell)":"upper_chest","Incline bench press (barbell)":"upper_chest","Incline chest press (machine)":"upper_chest",
+  "Cable chest fly":"chest","Flat dumbbell fly":"chest","Incline dumbbell fly":"upper_chest",
+  "Dips":"chest","Smith machine bench press":"chest","Pec deck machine":"chest",
+  "Push-up":"chest","Cable chest press":"chest","Floor press":"chest",
+  "Decline bench press (barbell)":"chest","Decline bench press (dumbbell)":"chest",
+  // ── BACK ───────────────────────────────────────────────────
+  // lats = vertical pulls (width); upper_back = rows (thickness); lower_back = deadlifts/extensions
+  "Lat pulldown (wide grip)":"lats","Lat pulldown (close grip)":"lats","Reverse grip lat pulldown":"lats",
+  "Pull-up":"lats","Chin-up":"lats","Straight arm pulldown":"lats",
+  "Seated cable row":"upper_back","Single arm dumbbell row":"upper_back","T-bar row":"upper_back",
+  "Chest-supported row":"upper_back","Cable row (wide grip)":"upper_back","Inverted row":"upper_back",
+  "Single arm cable row":"upper_back","Meadows row":"upper_back",
+  "Barbell row (bent-over)":"upper_back","Pendlay row":"upper_back",
+  "Conventional deadlift":"lower_back","Sumo deadlift":"lower_back","Rack pull":"lower_back",
+  "Deficit deadlift":"lower_back","Back extension":"lower_back","Good morning":"lower_back",
+  // ── SHOULDERS ──────────────────────────────────────────────
+  "Overhead shoulder press (dumbbell)":"front_delts","Shoulder press (machine)":"front_delts",
+  "Overhead press (barbell)":"front_delts","Push press":"front_delts","Arnold press":"front_delts",
+  "Seated dumbbell shoulder press":"front_delts","Landmine press":"front_delts",
+  "Front raise (dumbbell)":"front_delts","Cable front raise":"front_delts",
+  "Lateral raise (dumbbell)":"side_delts","Lateral raise (machine)":"side_delts",
+  "Cable lateral raise":"side_delts","Upright row":"side_delts",
+  "Rear delt fly":"rear_delts","Face pull":"rear_delts","Reverse pec deck":"rear_delts",
+  "Barbell shrug":"upper_back","Dumbbell shrug":"upper_back",
+  // ── BICEPS ─────────────────────────────────────────────────
+  "Barbell bicep curl":"biceps","Dumbbell bicep curl":"biceps","Seated dumbbell curl":"biceps",
+  "Preacher curl":"biceps","Hammer curl":"biceps","EZ bar curl":"biceps","Cable curl":"biceps",
+  "Concentration curl":"biceps","Incline dumbbell curl":"biceps","Spider curl":"biceps",
+  "Cable hammer curl":"biceps","Zottman curl":"biceps","Reverse curl":"biceps","Drag curl":"biceps",
+  // ── TRICEPS ────────────────────────────────────────────────
   "Tricep pushdown (cable)":"triceps","Overhead tricep extension (rope)":"triceps","Skull crusher":"triceps",
   "Single arm tricep extension":"triceps","Close-grip bench press":"triceps","Diamond push-up":"triceps","Cable kickback":"triceps",
-  "Barbell squat":"quads","Leg press":"quads","Leg extension":"quads","Leg curl":"hamstrings","Romanian deadlift":"hamstrings",
-  "Walking lunges":"quads","Bulgarian split squat":"quads","Hack squat":"quads","Standing calf raise":"calves",
-  "Seated calf raise":"calves","Hip thrust":"glutes","Abductor machine":"glutes","Goblet squat":"quads","Front squat":"quads",
-  "Step-ups":"quads","Glute bridge":"glutes","Single-leg leg press":"quads","Smith machine squat":"quads",
-  "Plank":"abs","Cable crunch":"abs","Hanging leg raise":"abs","Russian twist":"abs","Ab wheel rollout":"abs",
-  "Side plank":"abs","Mountain climbers":"abs","Bicycle crunch":"abs",
-  // Aliases for the original default-session exercise names (predate the
-  // exercise library's naming convention) so existing history maps correctly.
-  "Incline chest press machine":"chest","Flat chest press machine":"chest","Flat bench machine press":"chest",
-  "Incline dumbbell fly":"chest","Wide grip seated row":"back","Single arm back row machine":"back",
-  "Dumbbell lateral raises":"shoulders","Lateral raise m/c + reverse fly (SS)":"shoulders",
+  "Tricep dip machine":"triceps","Overhead tricep extension (dumbbell)":"triceps","JM press":"triceps",
+  "Tricep pushdown (V-bar)":"triceps","Bench dip":"triceps","Tricep kickback (dumbbell)":"triceps","Close-grip push-up":"triceps",
+  // ── CORE ───────────────────────────────────────────────────
+  "Plank":"abs","Cable crunch":"abs","Hanging leg raise":"abs","Ab wheel rollout":"abs",
+  "Hollow hold":"abs","Sit-up":"abs","Reverse crunch":"abs","V-up":"abs",
+  "Toe touches":"abs","Dead bug":"abs","Flutter kicks":"abs",
+  "Russian twist":"obliques","Side plank":"obliques","Mountain climbers":"obliques",
+  "Bicycle crunch":"obliques","Woodchopper (cable)":"obliques",
+  // ── LEGS ───────────────────────────────────────────────────
+  "Barbell squat":"quads","Leg press":"quads","Leg extension":"quads","Walking lunges":"quads",
+  "Bulgarian split squat":"quads","Hack squat":"quads","Goblet squat":"quads","Front squat":"quads",
+  "Step-ups":"quads","Single-leg leg press":"quads","Smith machine squat":"quads",
+  "Reverse lunge":"quads","Lateral lunge":"quads","Sissy squat":"quads","Box squat":"quads",
+  "Pistol squat":"quads","Belt squat":"quads","Sumo squat":"quads","Zercher squat":"quads",
+  "Leg curl":"hamstrings","Romanian deadlift":"hamstrings","Stiff-leg deadlift":"hamstrings",
+  "Nordic hamstring curl":"hamstrings","Single-leg Romanian deadlift":"hamstrings",
+  "Hip thrust":"glutes","Abductor machine":"glutes","Glute bridge":"glutes",
+  "Donkey kicks":"glutes","Cable pull-through":"glutes","Standing hip abduction (cable)":"glutes",
+  "Curtsy lunge":"glutes","Reverse hyperextension":"glutes",
+  "Adductor machine":"adductors","Banded lateral walk":"adductors",
+  "Standing calf raise":"calves","Seated calf raise":"calves",
+  // ── LEGACY ALIASES (original session-builder names, predate the library) ──
+  "Incline chest press machine":"upper_chest","Flat chest press machine":"chest","Flat bench machine press":"chest",
+  "Wide grip seated row":"upper_back","Single arm back row machine":"upper_back",
+  "Dumbbell lateral raises":"side_delts","Lateral raise m/c + reverse fly (SS)":"side_delts",
   "Single arm cable tricep extension":"triceps","Overhead rope tricep extension":"triceps",
   "Seated dumbbell biceps curl":"biceps","Dumbbell preacher curl":"biceps",
   "Abductor machine (warm-up)":"glutes","Abductor machine (last set to fail)":"glutes","Hip thrusts":"glutes",
-  "Seated / lying leg curl":"hamstrings","Standing calf raise machine":"calves","Seated calf raises":"calves",
-
-  // Additions for the expanded 150-exercise library
-  "Incline bench press (barbell)":"chest","Decline bench press (barbell)":"chest","Decline bench press (dumbbell)":"chest","Flat dumbbell fly":"chest","Incline dumbbell fly":"chest",
-  "Push-up":"chest","Cable chest press":"chest","Floor press":"chest","Barbell row (bent-over)":"back","Pendlay row":"back",
-  "Chin-up":"back","Straight arm pulldown":"back","Cable row (wide grip)":"back","Inverted row":"back","Rack pull":"back",
-  "Single arm cable row":"back","Meadows row":"back","Deficit deadlift":"back","Good morning":"back","Overhead press (barbell)":"shoulders",
-  "Push press":"shoulders","Front raise (dumbbell)":"shoulders","Upright row":"shoulders","Reverse pec deck":"shoulders","Cable front raise":"shoulders",
-  "Landmine press":"shoulders","Dumbbell shrug":"shoulders","Seated dumbbell shoulder press":"shoulders","Concentration curl":"biceps","Incline dumbbell curl":"biceps",
-  "Spider curl":"biceps","Cable hammer curl":"biceps","Zottman curl":"biceps","Reverse curl":"biceps","Drag curl":"biceps",
-  "Tricep dip machine":"triceps","Overhead tricep extension (dumbbell)":"triceps","JM press":"triceps","Tricep pushdown (V-bar)":"triceps","Bench dip":"triceps",
-  "Tricep kickback (dumbbell)":"triceps","Close-grip push-up":"triceps","Stiff-leg deadlift":"hamstrings","Reverse lunge":"quads","Lateral lunge":"quads",
-  "Adductor machine":"glutes","Sissy squat":"quads","Box squat":"quads","Pistol squat":"quads","Donkey kicks":"glutes",
-  "Cable pull-through":"glutes","Standing hip abduction (cable)":"glutes","Nordic hamstring curl":"hamstrings","Sumo squat":"quads","Single-leg Romanian deadlift":"hamstrings",
-  "Belt squat":"quads","Curtsy lunge":"glutes","Reverse hyperextension":"glutes","Zercher squat":"quads","Banded lateral walk":"glutes",
-  "Sit-up":"abs","Reverse crunch":"abs","V-up":"abs","Hollow hold":"abs","Toe touches":"abs",
-  "Dead bug":"abs","Woodchopper (cable)":"abs","Flutter kicks":"abs"
+  "Seated / lying leg curl":"hamstrings","Standing calf raise machine":"calves","Seated calf raises":"calves"
 };
-const MUSCLE_GROUPS = ["chest","back","shoulders","biceps","triceps","abs","quads","hamstrings","glutes","calves"];
+const MUSCLE_GROUPS = ["upper_chest","chest","lats","upper_back","lower_back","front_delts","side_delts","rear_delts","biceps","triceps","abs","obliques","quads","hamstrings","glutes","calves","adductors"];
 
 
 // Separate, bodyweight/kettlebell/dumbbell/core-focused library for HIIT classes
@@ -767,6 +857,7 @@ const HIIT_FORMATS = [
 ];
 let HIIT_CLASSES = [];
 let CARDIO_LOG = [];
+let CHECKINS = [];
 
 // Separate from the "Cardio" category inside EXERCISE_LIBRARY (which stays
 // available for people who want a machine logged as part of a gym session).
@@ -790,20 +881,17 @@ async function loadLog(){
     PLAN = snap.exists() && snap.data().plan ? snap.data().plan : [];
     HIIT_CLASSES = snap.exists() ? (snap.data().hiitClasses || []) : [];
     CARDIO_LOG = snap.exists() ? (snap.data().cardioLog || []) : [];
+    CHECKINS = snap.exists() ? (snap.data().checkIns || []) : [];
     STORAGE_AVAILABLE = true;
   }catch(e){
     STORAGE_AVAILABLE = false;
-    LOG = [];
-    WEIGHTS = [];
-    MEASUREMENTS = [];
-    PLAN = [];
-    HIIT_CLASSES = [];
-    CARDIO_LOG = [];
+    LOG = []; WEIGHTS = []; MEASUREMENTS = []; PLAN = [];
+    HIIT_CLASSES = []; CARDIO_LOG = []; CHECKINS = [];
   }
 }
 async function saveLog(){
   try{
-    await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, measurements: MEASUREMENTS, plan: PLAN, hiitClasses: HIIT_CLASSES, cardioLog: CARDIO_LOG, updatedAt: new Date().toISOString()});
+    await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, measurements: MEASUREMENTS, plan: PLAN, hiitClasses: HIIT_CLASSES, cardioLog: CARDIO_LOG, checkIns: CHECKINS, updatedAt: new Date().toISOString()});
     return true;
   }catch(e){ return false; }
 }
@@ -1416,6 +1504,17 @@ function home(){
   const layout = getHomeLayoutFor(CURRENT_PROFILE);
   const moduleHtml = layout.filter(m=>!m.hidden).map(m=>homeModuleHtml(m.id, ctx)).join("");
 
+  const checkinBanner = (CURRENT_PROFILE.weeklyCheckIn && isCheckInDue())
+    ? `<div class="checkin-due-banner" onclick="showWeeklyCheckin()">
+        <div class="checkin-due-icon">📋</div>
+        <div class="checkin-due-text">
+          <b>Your weekly check-in is ready</b>
+          <span>Tap to review your week and add a note &mdash; takes less than a minute</span>
+        </div>
+        <div style="color:var(--mute);font-size:18px">&rsaquo;</div>
+      </div>`
+    : "";
+
   app.innerHTML = `
     ${banner}
     <div class="page-header">
@@ -1426,6 +1525,7 @@ function home(){
       <div class="switch-profile" onclick="showAccountSettings()" style="margin-left:8px">&#9881; Account settings</div>
     </div>
     ${adminSection}
+    ${checkinBanner}
     ${moduleHtml}
   `;
 }
@@ -1439,13 +1539,75 @@ async function refresh(){
 function openSession(id){
   const p = PLAN.find(x=>x.id===id);
   const last = lastOf(id);
+
   const blocks = p.ex.map((e,i)=>{
+    if(e.superset){
+      // ── Superset block ──────────────────────────────────
+      const prevA = last && last.ex.find(le=>le.n===e.exA.n);
+      const prevB = last && last.ex.find(le=>le.n===e.exB.n);
+      const lastA = prevA && prevA.sets.length
+        ? prevA.sets.map(s=>`${s.w||"?"}kg×${s.r||"?"}`).join(" · ")
+        : null;
+      const lastB = prevB && prevB.sets.length
+        ? prevB.sets.map(s=>`${s.w||"?"}kg×${s.r||"?"}`).join(" · ")
+        : null;
+      const prevHtml = (lastA||lastB)
+        ? `<div class="prev">${lastA?`Last A: <b>${lastA}</b>`:""}${lastA&&lastB?" &nbsp;·&nbsp; ":""}${lastB?`Last B: <b>${lastB}</b>`:""}</div>`
+        : `<div class="prev">First time logging this superset</div>`;
+
+      const setPairs = Array.from({length:e.s},(_,si)=>{
+        const pwA = prevA&&prevA.sets[si] ? prevA.sets[si].w : "";
+        const prA = prevA&&prevA.sets[si] ? prevA.sets[si].r : "";
+        const pwB = prevB&&prevB.sets[si] ? prevB.sets[si].w : "";
+        const prB = prevB&&prevB.sets[si] ? prevB.sets[si].r : "";
+        return `<div class="ss-set-pair">
+          <div class="ss-set-n">S${si+1}</div>
+          <div class="ss-set-rows">
+            <div class="ss-row" data-pw="${pwA}" data-pr="${prA}">
+              <div class="ss-row-letter">A</div>
+              <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" placeholder="${pwA?pwA+" kg":"kg"}">
+              <input type="number" inputmode="numeric" min="0" class="r-input" placeholder="${prA?prA+" reps":"reps"}">
+              <button class="tick" onclick="tick(this)">&#10003;</button>
+            </div>
+            <div class="ss-row" data-pw="${pwB}" data-pr="${prB}">
+              <div class="ss-row-letter">B</div>
+              <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" placeholder="${pwB?pwB+" kg":"kg"}">
+              <input type="number" inputmode="numeric" min="0" class="r-input" placeholder="${prB?prB+" reps":"reps"}">
+              <button class="tick" onclick="tick(this)">&#10003;</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+
+      return `<div class="ss-card" id="ex${i}">
+        <div class="ss-header">
+          <span class="ss-badge">SS</span>
+          <div class="ss-names">
+            <div class="ss-ex-label">
+              <span class="ss-ex-letter">A</span>
+              <span class="ss-ex-name">${e.exA.n}</span>
+              <span class="ss-scheme">×${e.exA.r}</span>
+            </div>
+            <div class="ss-ex-label">
+              <span class="ss-ex-letter">B</span>
+              <span class="ss-ex-name">${e.exB.n}</span>
+              <span class="ss-scheme">×${e.exB.r}</span>
+            </div>
+          </div>
+          <span class="ss-sets-label">${e.s} set${e.s!==1?"s":""}</span>
+        </div>
+        ${prevHtml}
+        <div class="ss-sets" id="sets${i}">${setPairs}</div>
+      </div>`;
+    }
+
+    // ── Regular exercise block ─────────────────────────────
     const prev = last && last.ex.find(le=>le.n===e.n);
     const prevHtml = (prev && prev.sets.length)
-      ? `Last: <b>${prev.sets.map(s=>`${s.w||"?"}kg&times;${s.r||"?"}`).join(" &nbsp;\u00b7&nbsp; ")}</b>`
+      ? `Last: <b>${prev.sets.map(s=>`${s.w||"?"}kg×${s.r||"?"}`).join(" &nbsp;\u00b7&nbsp; ")}</b>`
       : "First time logging this exercise";
     const priorBest = allTimeBest(e.n);
-    const bestHtml = priorBest ? ` &nbsp;&middot;&nbsp; &#127942; PR: <b>${priorBest.weight}kg&times;${priorBest.reps}</b>` : "";
+    const bestHtml = priorBest ? ` &nbsp;·&nbsp; &#127942; PR: <b>${priorBest.weight}kg×${priorBest.reps}</b>` : "";
     const rows = Array.from({length:e.s},(_,si)=>{
       const pw = prev&&prev.sets[si] ? prev.sets[si].w : "";
       const pr = prev&&prev.sets[si] ? prev.sets[si].r : "";
@@ -1550,15 +1712,38 @@ function removeSet(btn){
 
 async function saveSession(id){
   const p = PLAN.find(x=>x.id===id);
-  const ex = p.ex.map((e,i)=>{
-    const c=$("sets"+i); const sets=[];
-    [...c.children].forEach(row=>{
-      const w=row.querySelector(".w-input").value.trim();
-      const r=row.querySelector(".r-input").value.trim();
-      if(w||r) sets.push({w:w?parseFloat(w):"", r:r?parseInt(r):""});
-    });
-    return {n:e.n, sets};
-  }).filter(e=>e.sets.length);
+  const ex = [];
+  p.ex.forEach((e,i)=>{
+    const c = $("sets"+i);
+    if(e.superset){
+      // Each ss-set-pair contains two ss-rows (A and B) — collect them separately
+      const setsA=[], setsB=[];
+      [...c.querySelectorAll(".ss-set-pair")].forEach(pair=>{
+        const rows = [...pair.querySelectorAll(".ss-row")];
+        const rowA = rows[0], rowB = rows[1];
+        if(rowA){
+          const w=rowA.querySelector(".w-input").value.trim();
+          const r=rowA.querySelector(".r-input").value.trim();
+          if(w||r) setsA.push({w:w?parseFloat(w):"", r:r?parseInt(r):""});
+        }
+        if(rowB){
+          const w=rowB.querySelector(".w-input").value.trim();
+          const r=rowB.querySelector(".r-input").value.trim();
+          if(w||r) setsB.push({w:w?parseFloat(w):"", r:r?parseInt(r):""});
+        }
+      });
+      if(setsA.length) ex.push({n:e.exA.n, sets:setsA, supersetGroup:i});
+      if(setsB.length) ex.push({n:e.exB.n, sets:setsB, supersetGroup:i});
+    } else {
+      const sets=[];
+      [...c.children].forEach(row=>{
+        const w=row.querySelector(".w-input").value.trim();
+        const r=row.querySelector(".r-input").value.trim();
+        if(w||r) sets.push({w:w?parseFloat(w):"", r:r?parseInt(r):""});
+      });
+      if(sets.length) ex.push({n:e.n, sets});
+    }
+  });
 
   if(!ex.length){ showToast("Log at least one set first", false); return; }
 
@@ -2011,7 +2196,356 @@ async function renderActivityScreen(preserveScroll){
   if(!preserveScroll) window.scrollTo(0,0);
 }
 
-// ── Body measurements ─────────────────────────────────────
+// ── Weekly check-in ───────────────────────────────────────
+// Week key is the Monday date string (YYYY-MM-DD) — unambiguous and timezone-safe.
+// The check-in is "due" on Sunday but can be submitted or viewed any time after.
+function weekKeyForDate(d){
+  const dt = new Date(d);
+  const day = dt.getDay(); // 0=Sun
+  const diffToMon = day===0 ? -6 : 1-day;
+  const mon = new Date(dt);
+  mon.setDate(dt.getDate() + diffToMon);
+  return localDayKey(mon);
+}
+function weekKeyForSunday(sundayDate){
+  // Sunday belongs to the week that started the previous Monday
+  const mon = new Date(sundayDate);
+  mon.setDate(sundayDate.getDate() - 6);
+  return localDayKey(mon);
+}
+function weekSunday(weekKey){
+  // Given a Monday-date week key, return the following Sunday
+  const mon = new Date(weekKey + "T12:00:00");
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  return sun;
+}
+function currentWeekKey(){
+  return weekKeyForDate(new Date());
+}
+function isCheckInDue(){
+  // Show the prompt from Sunday onwards for the current week
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun
+  if(dayOfWeek !== 0) return false;
+  const wk = currentWeekKey();
+  return !CHECKINS.some(c=>c.weekKey===wk && c.submitted);
+}
+function hasPendingCheckIn(){
+  // Also show prompt if any past week has no check-in (up to 4 weeks back)
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  if(dayOfWeek !== 0) return isCheckInDue();
+  return isCheckInDue();
+}
+
+const TRAINER_FEEDBACK_EMOJIS = ["👍","💪","🔥","❤️","👏","🙌"];
+const TRAINER_FEEDBACK_PHRASES = [
+  "Great week!","Keep it up!","Impressive consistency",
+  "You're making progress","Let's push harder next week",
+  "Rest up and recover","Brilliant effort"
+];
+
+function compileWeekMetrics(log, weights, cardioLog, weekKey){
+  const monDate = new Date(weekKey + "T00:00:00");
+  const sunDate = weekSunday(new Date(weekKey + "T00:00:00"));
+  const sunEnd = new Date(sunDate); sunEnd.setHours(23,59,59,999);
+  const wLog = log.filter(s=>{ const d=new Date(s.date); return d>=monDate && d<=sunEnd; });
+  const sessions = wLog.length;
+  const duration = wLog.reduce((s,e)=>s+(e.duration||0), 0);
+  const volume = wLog.reduce((s,e)=>s+(e.ex||[]).reduce((s2,x)=>s2+(x.sets||[]).reduce((s3,st)=>s3+(parseFloat(st.w)||0)*(parseInt(st.r)||0),0),0), 0);
+  const sets = wLog.reduce((s,e)=>s+(e.ex||[]).reduce((s2,x)=>s2+(x.sets||[]).length,0), 0);
+  const muscleVols = computeMuscleVolume(wLog);
+  const topMuscle = Object.entries(muscleVols).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0];
+  const topMuscleLabel = topMuscle ? (MUSCLE_GROUP_LABELS[topMuscle[0]]||topMuscle[0]) : null;
+  const wWeights = weights.filter(w=>{ const d=new Date(w.date); return d>=monDate && d<=sunEnd; });
+  const lastWeight = wWeights.length ? wWeights[wWeights.length-1].w : null;
+  const wCardio = cardioLog.filter(c=>{ const d=new Date(c.date); return d>=monDate && d<=sunEnd; });
+  const cardioDist = wCardio.reduce((s,c)=>s+(c.distance||0), 0);
+  const cardioDur = wCardio.reduce((s,c)=>s+(c.duration||0), 0);
+  const streak = weekStreakFor(log);
+  return {sessions, duration, volume: Math.round(volume), sets, topMuscleLabel,
+          lastWeight, cardioDist, cardioDur, streak, weekKey,
+          monday: monDate.toLocaleDateString("en-GB",{day:"numeric",month:"short"}),
+          sunday: sunDate.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})};
+}
+
+function renderCheckInMetricSummary(m){
+  return `<div class="checkin-metrics">
+    <div class="stat-row">
+      <div class="stat-card"><div class="label">Sessions</div><div class="value">${m.sessions}</div></div>
+      <div class="stat-card"><div class="label">Duration</div><div class="value">${fmtDuration(m.duration)}</div></div>
+      <div class="stat-card"><div class="label">Streak</div><div class="value">${m.streak}w</div></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="label">Volume</div><div class="value">${fmtVolume(m.volume)}</div></div>
+      <div class="stat-card"><div class="label">Sets</div><div class="value">${m.sets}</div></div>
+      ${m.topMuscleLabel ? `<div class="stat-card"><div class="label">Top muscle</div><div class="value" style="font-size:13px">${m.topMuscleLabel}</div></div>` : ""}
+    </div>
+    ${m.cardioDist>0||m.cardioDur>0 ? `<div class="stat-row">
+      ${m.cardioDist>0?`<div class="stat-card"><div class="label">Cardio dist</div><div class="value">${m.cardioDist.toFixed(1)}km</div></div>`:""}
+      ${m.cardioDur>0?`<div class="stat-card"><div class="label">Cardio time</div><div class="value">${fmtDuration(m.cardioDur)}</div></div>`:""}
+    </div>`:""}
+  </div>`;
+}
+
+function showWeeklyCheckin(weekKey){
+  stopTimer();
+  weekKey = weekKey || currentWeekKey();
+  const existing = CHECKINS.find(c=>c.weekKey===weekKey);
+  const m = compileWeekMetrics(LOG, WEIGHTS, CARDIO_LOG, weekKey);
+  const lastWeightSuggestion = (WEIGHTS.length
+    ? [...WEIGHTS].sort((a,b)=>a.date.localeCompare(b.date)).slice(-1)[0].w
+    : "");
+
+  if(existing && existing.submitted){
+    renderCheckinView(existing, m, false);
+  } else {
+    app.innerHTML = `
+      <div class="topbar">
+        <button class="back" onclick="home()">&#8592; Back</button>
+        <div class="topbar-info"><h2>Weekly Check-In</h2><div class="focus">${m.monday} &ndash; ${m.sunday}</div></div>
+      </div>
+      <div class="checkin-banner">
+        <div class="checkin-banner-title">📋 Week in review</div>
+        <div class="checkin-banner-sub">Here's what your data says — add your weight and a note to complete this week's check-in.</div>
+      </div>
+      ${renderCheckInMetricSummary(m)}
+      <div class="section-label" style="margin-top:20px">Body weight this week</div>
+      <div class="weight-form">
+        <input type="number" inputmode="decimal" step="0.1" id="ciWeight" value="${existing?.bodyWeight||lastWeightSuggestion||""}" placeholder="kg">
+      </div>
+      <div class="section-label">How was your week?</div>
+      <textarea id="ciComment" class="checkin-textarea" maxlength="500" placeholder="How did you feel? Anything that helped or held you back this week?">${existing?.comment||""}</textarea>
+      <button class="save-session-btn" onclick="submitWeeklyCheckin('${weekKey}')">Submit check-in</button>
+      <button class="auth-link-btn" style="margin-top:8px" onclick="home()">Skip for now</button>
+    `;
+    window.scrollTo(0,0);
+  }
+}
+
+function renderCheckinView(ci, m, isTrainerView){
+  const feedbackSection = isTrainerView
+    ? renderTrainerFeedbackForm(ci)
+    : (ci.trainerFeedback
+        ? `<div class="checkin-feedback-card">
+            <div class="checkin-feedback-label">Trainer feedback</div>
+            <div class="checkin-feedback-content">${ci.trainerFeedback.emoji||""} ${ci.trainerFeedback.phrase||""}</div>
+          </div>`
+        : "");
+  const backFn = isTrainerView ? `showClientCheckins('${ci.clientId||""}')` : "showCheckinHistory()";
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="${backFn}">&#8592; Back</button>
+      <div class="topbar-info"><h2>Check-In</h2><div class="focus">${m.monday} &ndash; ${m.sunday}</div></div>
+    </div>
+    <div class="checkin-banner">
+      <div class="checkin-banner-title">✅ Submitted</div>
+      <div class="checkin-banner-sub">Submitted ${fmtDate(ci.submittedAt||ci.weekKey)}</div>
+    </div>
+    ${renderCheckInMetricSummary(m)}
+    ${ci.bodyWeight ? `<div class="section-label" style="margin-top:16px">Body weight</div>
+      <div class="streak-hero" style="padding:14px"><div class="num">${ci.bodyWeight}kg</div></div>` : ""}
+    ${ci.comment ? `<div class="section-label">Note</div>
+      <div class="checkin-comment-card">&ldquo;${ci.comment}&rdquo;</div>` : ""}
+    ${feedbackSection}
+  `;
+  window.scrollTo(0,0);
+}
+
+function renderTrainerFeedbackForm(ci){
+  const current = ci.trainerFeedback || {};
+  const emojiButtons = TRAINER_FEEDBACK_EMOJIS.map(e=>
+    `<button class="feedback-emoji-btn ${current.emoji===e?"active":""}" onclick="setFeedbackEmoji('${e}')">${e}</button>`
+  ).join("");
+  const phraseButtons = TRAINER_FEEDBACK_PHRASES.map((p,i)=>
+    `<button class="feedback-phrase-btn ${current.phrase===p?"active":""}" onclick="setFeedbackPhrase(${i})">${p}</button>`
+  ).join("");
+  return `<div class="section-label" style="margin-top:20px">Trainer Feedback</div>
+    <div class="checkin-feedback-form" id="feedbackForm" data-checkin-key="${ci.weekKey}" data-client-id="${ci.clientId||""}">
+      <div class="feedback-emoji-row">${emojiButtons}</div>
+      <div class="feedback-phrase-row">${phraseButtons}</div>
+      <button class="save-session-btn" style="margin-top:12px" onclick="submitTrainerFeedback()">Send feedback</button>
+    </div>`;
+}
+
+let pendingFeedbackEmoji = "";
+let pendingFeedbackPhrase = "";
+function setFeedbackEmoji(e){
+  pendingFeedbackEmoji = e;
+  document.querySelectorAll(".feedback-emoji-btn").forEach(b=>b.classList.toggle("active", b.textContent===e));
+}
+function setFeedbackPhrase(idx){
+  pendingFeedbackPhrase = TRAINER_FEEDBACK_PHRASES[idx]||"";
+  document.querySelectorAll(".feedback-phrase-btn").forEach((b,i)=>b.classList.toggle("active", i===idx));
+}
+
+async function submitTrainerFeedback(){
+  const form = document.getElementById("feedbackForm");
+  if(!form){ showToast("Something went wrong", false); return; }
+  if(!pendingFeedbackEmoji && !pendingFeedbackPhrase){ showToast("Pick an emoji or a phrase first", false); return; }
+  const weekKey = form.dataset.checkinKey;
+  const clientId = form.dataset.clientId;
+  if(!clientId){ showToast("Couldn't identify the client", false); return; }
+
+  try{
+    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
+    const clientData = snap.exists() ? snap.data() : {};
+    const checkIns = clientData.checkIns || [];
+    const ci = checkIns.find(c=>c.weekKey===weekKey);
+    if(!ci){ showToast("Check-in not found", false); return; }
+    ci.trainerFeedback = {
+      emoji: pendingFeedbackEmoji,
+      phrase: pendingFeedbackPhrase,
+      trainerId: CURRENT_PROFILE.id,
+      trainerName: CURRENT_PROFILE.name,
+      sentAt: new Date().toISOString()
+    };
+    await setDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`), {checkIns}, {merge:true});
+    showToast("Feedback sent \u2713");
+    pendingFeedbackEmoji = ""; pendingFeedbackPhrase = "";
+    showClientCheckins(clientId);
+  }catch(e){
+    showToast("Couldn't send feedback \u2014 check your connection", false);
+  }
+}
+
+async function submitWeeklyCheckin(weekKey){
+  const weight = parseFloat(document.getElementById("ciWeight")?.value)||null;
+  const comment = (document.getElementById("ciComment")?.value||"").trim();
+  const existing = CHECKINS.findIndex(c=>c.weekKey===weekKey);
+  const ci = {
+    weekKey,
+    submitted: true,
+    submittedAt: new Date().toISOString(),
+    bodyWeight: weight,
+    comment,
+  };
+  if(existing>=0) CHECKINS[existing] = {...CHECKINS[existing], ...ci};
+  else CHECKINS.push(ci);
+  if(weight) WEIGHTS.push({date: new Date().toISOString(), w: weight});
+  const ok = await saveLog();
+  showToast(ok ? "Check-in submitted \u2713" : "Couldn't save \u2014 check your connection");
+  if(ok) showCheckinHistory();
+}
+
+function showCheckinHistory(){
+  stopTimer();
+  const sorted = [...CHECKINS].filter(c=>c.submitted).sort((a,b)=>b.weekKey.localeCompare(a.weekKey));
+  const rows = sorted.map(ci=>{
+    const m = compileWeekMetrics(LOG, WEIGHTS, CARDIO_LOG, ci.weekKey);
+    const feedbackBadge = ci.trainerFeedback
+      ? `<span style="font-size:16px">${ci.trainerFeedback.emoji||""}</span>`
+      : "";
+    return `<div class="sess-row" style="cursor:pointer" onclick="viewCheckinEntry('${ci.weekKey}')">
+      <div class="sr-info">
+        <b>${m.monday} &ndash; ${m.sunday}</b>
+        <span>${m.sessions} session${m.sessions!==1?"s":""} &middot; ${fmtDuration(m.duration)} &middot; ${fmtVolume(m.volume)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${feedbackBadge}
+        <div style="color:var(--mute);font-size:18px">&rsaquo;</div>
+      </div>
+    </div>`;
+  }).join("");
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>Check-In History</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    ${rows || '<div class="chart-empty">No check-ins submitted yet.</div>'}
+  `;
+  window.scrollTo(0,0);
+}
+
+function viewCheckinEntry(weekKey){
+  const ci = CHECKINS.find(c=>c.weekKey===weekKey);
+  if(!ci) return;
+  const m = compileWeekMetrics(LOG, WEIGHTS, CARDIO_LOG, weekKey);
+  renderCheckinView(ci, m, false);
+}
+
+async function showClientCheckins(clientId){
+  stopTimer();
+  pendingFeedbackEmoji = ""; pendingFeedbackPhrase = "";
+  app.innerHTML = `<div class="topbar"><button class="back" onclick="showClientDetail('${clientId}')">&#8592; Back</button>
+    <div class="topbar-info"><h2>Check-Ins</h2></div></div><div class="lb-loading">Loading&hellip;</div>`;
+  window.scrollTo(0,0);
+
+  const person = PEOPLE.find(p=>p.id===clientId)||{id:clientId,name:clientId};
+  let clientLog=[], clientWeights=[], clientCardio=[], clientCheckins=[];
+  try{
+    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
+    if(snap.exists()){
+      clientLog = snap.data().log||[];
+      clientWeights = snap.data().weights||[];
+      clientCardio = snap.data().cardioLog||[];
+      clientCheckins = snap.data().checkIns||[];
+    }
+  }catch(e){}
+
+  const sorted = clientCheckins.filter(c=>c.submitted).sort((a,b)=>b.weekKey.localeCompare(a.weekKey));
+  const rows = sorted.map(ci=>{
+    const m = compileWeekMetrics(clientLog, clientWeights, clientCardio, ci.weekKey);
+    ci.clientId = clientId;
+    const feedbackBadge = ci.trainerFeedback
+      ? `<span style="font-size:16px">${ci.trainerFeedback.emoji||""} <span style="font-size:11px;color:var(--mute)">${ci.trainerFeedback.phrase||""}</span></span>`
+      : `<span style="font-size:11px;color:var(--mute)">No feedback yet</span>`;
+    return `<div class="sess-row" style="cursor:pointer" onclick="viewClientCheckinEntry('${clientId}','${ci.weekKey}')">
+      <div class="sr-info">
+        <b>${m.monday} &ndash; ${m.sunday}</b>
+        <span>${m.sessions} session${m.sessions!==1?"s":""} &middot; ${fmtDuration(m.duration)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        ${feedbackBadge}
+        <div style="color:var(--mute);font-size:18px">&rsaquo;</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="showClientDetail('${clientId}')">&#8592; Back</button>
+      <div class="topbar-info"><h2>${person.name}'s Check-Ins</h2><div class="focus">Tap any week to leave feedback</div></div>
+    </div>
+    ${rows || '<div class="chart-empty">${person.name} hasn\'t submitted any check-ins yet.</div>'}
+  `;
+  window.scrollTo(0,0);
+}
+
+async function viewClientCheckinEntry(clientId, weekKey){
+  let clientLog=[], clientWeights=[], clientCardio=[], clientCheckins=[];
+  try{
+    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
+    if(snap.exists()){
+      clientLog = snap.data().log||[];
+      clientWeights = snap.data().weights||[];
+      clientCardio = snap.data().cardioLog||[];
+      clientCheckins = snap.data().checkIns||[];
+    }
+  }catch(e){}
+  pendingFeedbackEmoji = ""; pendingFeedbackPhrase = "";
+  const ci = clientCheckins.find(c=>c.weekKey===weekKey);
+  if(!ci){ showToast("Couldn't load that check-in", false); return; }
+  ci.clientId = clientId;
+  if(ci.trainerFeedback){
+    pendingFeedbackEmoji = ci.trainerFeedback.emoji||"";
+    pendingFeedbackPhrase = ci.trainerFeedback.phrase||"";
+  }
+  const m = compileWeekMetrics(clientLog, clientWeights, clientCardio, weekKey);
+  renderCheckinView(ci, m, true);
+}
+
+async function toggleWeeklyCheckinOptIn(checked){
+  const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
+  if(p){ p.weeklyCheckIn = checked; CURRENT_PROFILE.weeklyCheckIn = checked; }
+  await savePeople();
+  showToast(checked ? "Weekly check-in enabled" : "Weekly check-in turned off");
+  showAccountSettings(true);
+}
+
+
 function openMeasurements(personId){
   startViewing(personId, personId ? `showClientDetail('${personId}')` : "home()");
   currentMeasureMetric = "waist";
@@ -2202,7 +2736,31 @@ function openSessionEditor(id){
 }
 
 function renderSessionEditor(){
-  const exRows = draftSession.ex.map((e,i)=>`
+  const exRows = draftSession.ex.map((e,i)=>{
+    if(e.superset){
+      return `<div class="ss-draft">
+        <div class="ss-draft-header">
+          <span class="ss-badge">SS</span>
+          <span style="flex:1;font-size:11px;color:var(--mute);font-weight:700">Superset</span>
+          <button class="dx-remove" onclick="removeDraftExercise(${i})" aria-label="Remove superset">&times;</button>
+        </div>
+        <div class="ss-draft-ex">
+          <span class="ss-draft-ex-letter">A</span>
+          <span class="ss-draft-ex-name">${e.exA.n}</span>
+          <input class="dx-reps" type="text" value="${e.exA.r}" oninput="setDraftSupersetReps(${i},'A',this.value)" style="width:64px">
+        </div>
+        <div class="ss-draft-ex">
+          <span class="ss-draft-ex-letter">B</span>
+          <span class="ss-draft-ex-name">${e.exB.n}</span>
+          <input class="dx-reps" type="text" value="${e.exB.r}" oninput="setDraftSupersetReps(${i},'B',this.value)" style="width:64px">
+        </div>
+        <div class="ss-draft-sets-row">
+          <span class="ss-draft-sets-label">Sets:</span>
+          <input class="dx-sets" type="text" inputmode="numeric" value="${e.s}" oninput="setDraftExSets(${i},this.value)">
+        </div>
+      </div>`;
+    }
+    return `
     <div class="draft-ex">
       <div class="dx-main-row">
         <div class="dx-reorder">
@@ -2215,7 +2773,7 @@ function renderSessionEditor(){
         <button class="dx-remove" onclick="removeDraftExercise(${i})" aria-label="Remove">&times;</button>
       </div>
       <div class="dx-note-row"><input type="text" value="${(e.note||"").replace(/"/g,"&quot;")}" placeholder="Add a note for this exercise (optional)" oninput="setDraftExNote(${i},this.value)"></div>
-    </div>`).join("");
+    </div>`}).join("");
 
   const isNew = !draftSession.id;
   const deleteBtn = !isNew
@@ -2242,6 +2800,14 @@ function renderSessionEditor(){
       <button onclick="addDraftExercise()">Add</button>
     </div>
     <input type="text" id="customExerciseName" class="custom-ex-input" style="display:none" placeholder="Type the exercise name" maxlength="60">
+    <div class="add-ex-row" style="margin-top:-4px">
+      <select id="ssPickerA" onchange="toggleCustomExerciseInput('ssPickerA','ssCustomA')">${exercisePickerOptions()}</select>
+      <span style="flex-shrink:0;font-size:11px;font-weight:700;color:var(--mute)">+</span>
+      <select id="ssPickerB" onchange="toggleCustomExerciseInput('ssPickerB','ssCustomB')">${exercisePickerOptions()}</select>
+      <button class="ss-add-btn" onclick="addDraftSuperset()">SS</button>
+    </div>
+    <input type="text" id="ssCustomA" class="custom-ex-input" style="display:none" placeholder="Superset exercise A" maxlength="60">
+    <input type="text" id="ssCustomB" class="custom-ex-input" style="display:none" placeholder="Superset exercise B" maxlength="60">
     <div class="editor-actions">
       <button class="save-session-btn" onclick="saveDraftSession()">Save session</button>
       ${deleteBtn}
@@ -2258,6 +2824,23 @@ function setDraftFocus(v){ draftSession.focus = v; }
 function setDraftExSets(i,v){ draftSession.ex[i].s = parseInt(v)||1; }
 function setDraftExReps(i,v){ draftSession.ex[i].r = v; }
 function setDraftExNote(i,v){ draftSession.ex[i].note = v; }
+function setDraftSupersetReps(i,side,v){
+  if(side==="A") draftSession.ex[i].exA.r = v;
+  else draftSession.ex[i].exB.r = v;
+}
+
+function addDraftSuperset(){
+  const selA = $("ssPickerA"), selB = $("ssPickerB");
+  const customA = $("ssCustomA"), customB = $("ssCustomB");
+  let nameA = selA ? selA.value : "";
+  let nameB = selB ? selB.value : "";
+  if(nameA==="__custom__") nameA = (customA?.value||"").trim();
+  if(nameB==="__custom__") nameB = (customB?.value||"").trim();
+  if(!nameA || !nameB){ showToast("Choose both exercises for the superset", false); return; }
+  if(nameA===nameB){ showToast("The two exercises in a superset should be different", false); return; }
+  draftSession.ex.push({superset:true, s:3, exA:{n:nameA, r:"10-12"}, exB:{n:nameB, r:"10-12"}});
+  renderSessionEditor();
+}
 
 function addDraftExercise(){
   const sel = $("exercisePicker");
@@ -2681,8 +3264,16 @@ async function showLeaderboard(){
   window.scrollTo(0,0);
 
   await loadPeople();
-  const clients = PEOPLE.filter(p=>p.role!=="trainer");
-  const results = await Promise.all(clients.map(async p=>{
+  const myLocations = CURRENT_PROFILE.locations || [];
+  // Only include people who share at least one location with the current user
+  // - trainers are excluded since they don't log sessions against themselves.
+  const candidates = PEOPLE.filter(p=>
+    p.role !== "trainer" &&
+    p.locations && p.locations.some(loc=>myLocations.includes(loc))
+  );
+  const locationLabel = myLocations.length ? myLocations.join(" & ") : "your gym";
+
+  const results = await Promise.all(candidates.map(async p=>{
     try{
       const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${p.id}`));
       const log = snap.exists() ? (snap.data().log || []) : [];
@@ -2719,10 +3310,10 @@ async function showLeaderboard(){
   app.innerHTML = `
     <div class="topbar">
       <button class="back" onclick="home()">&#8592; Back</button>
-      <div class="topbar-info"><h2>Leaderboard</h2><div class="focus">Consistency, not weights</div></div>
+      <div class="topbar-info"><h2>Leaderboard</h2><div class="focus">${locationLabel}</div></div>
     </div>
     ${offlineNote}
-    ${rows || '<div class="chart-empty">No one to compare yet.</div>'}
+    ${rows || `<div class="chart-empty">No one else at ${locationLabel} yet.</div>`}
     <div class="last-updated">Ranked by sessions this week, then streak, then all-time total &mdash; not weight lifted.</div>
   `;
   window.scrollTo(0,0);
@@ -2881,6 +3472,7 @@ async function showClientDetail(clientId){
       <div class="stat-card"><div class="label">Streak</div><div class="value">${streak}</div></div>
     </div>
     <button class="addsessbtn" onclick="manageClientSessions('${clientId}')">📋 Manage ${person.name}'s Sessions</button>
+    <button class="addsessbtn" onclick="showClientCheckins('${clientId}')">📋 ${person.name}'s Check-Ins</button>
     <button class="addsessbtn" onclick="openDashboard('${clientId}')">📊 ${person.name}'s Dashboard</button>
     <button class="addsessbtn" onclick="openExercisePicker('${clientId}')">📈 ${person.name}'s Exercise Metrics</button>
     <button class="addsessbtn" onclick="showActivity('${clientId}')">🔥 ${person.name}'s Activity &amp; Streak</button>
@@ -3149,6 +3741,10 @@ async function deletePersonFromAdmin(){
 function showAccountSettings(preserveScroll){
   stopTimer();
   const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
+  // For legacy accounts (created before email was stored on the PEOPLE entry),
+  // auth.currentUser.email is the ground truth — fall back to it so the field
+  // pre-populates correctly rather than showing blank every time.
+  const displayEmail = current.email || (auth.currentUser && auth.currentUser.email) || "";
   const layout = getHomeLayoutFor(current);
   const layoutRows = layout.map((m,i)=>{
     const mod = HOME_MODULES.find(h=>h.id===m.id);
@@ -3181,7 +3777,7 @@ function showAccountSettings(preserveScroll){
       <input type="text" id="accountUsername" value="${current.username||current.id}" placeholder="e.g. ed">
     </div>
     <div class="last-updated" style="text-align:left;margin-top:-4px">A quick way to log in instead of typing your full email &mdash; safe to change any time.</div>
-    <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="accountEmail" value="${current.email||""}" placeholder="you@example.com"></div>
+    <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="accountEmail" value="${displayEmail}" placeholder="you@example.com"></div>
     <div class="last-updated" style="text-align:left;margin-top:-4px">This is your real login and where password reset emails go &mdash; keep it current.</div>
     <button class="save-session-btn" onclick="saveAccountEmail()">Save</button>
 
@@ -3204,6 +3800,13 @@ function showAccountSettings(preserveScroll){
     <div class="last-updated" style="text-align:left">Reorder with the arrows, untick anything you don't want to see &mdash; including Sessions or HIIT Classes if you only use one. Changes save instantly.</div>
     ${layoutRows}
     <button class="restore-default-btn" onclick="restoreDefaultHomeLayout()">Restore Default View</button>
+
+    <div class="section-label" style="margin-top:24px">Weekly Check-In</div>
+    <div class="sess-row">
+      <div class="sr-info"><b>Enable weekly check-in</b><span>Get a summary every Sunday with space to add your weight and a note. Your trainer can leave feedback.</span></div>
+      <input type="checkbox" ${current.weeklyCheckIn?"checked":""} onchange="toggleWeeklyCheckinOptIn(this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
+    </div>
+    ${current.weeklyCheckIn ? `<button class="restore-default-btn" style="margin-top:8px" onclick="showCheckinHistory()">View Check-In History</button>` : ""}
   `;
   if(!preserveScroll) window.scrollTo(0,0);
 }
@@ -3278,7 +3881,7 @@ async function saveAccountEmail(){
 
   if(p){
     p.username = usernameVal;
-    p.email = val;
+    p.email = val;  // always persist to PEOPLE even if no Firebase Auth change was needed
     CURRENT_PROFILE.email = val;
     CURRENT_PROFILE.username = usernameVal;
   }
@@ -3593,15 +4196,30 @@ function heatColor(sets, cap){
 
 function buildMuscleMapSVG(totals){
   const cap = Math.max(...MUSCLE_GROUPS.map(g=>totals[g]||0), 1);
-  const C = {};
-  MUSCLE_GROUPS.forEach(g=>C[g]=heatColor(totals[g]||0, cap));
+  const sum = (...gs) => gs.reduce((s,g)=>s+(totals[g]||0),0);
+  // Combine related sub-groups per visual body region
+  const C = {
+    upper_chest: heatColor(totals["upper_chest"]||0, cap),
+    chest:       heatColor(sum("chest","upper_chest"), cap),
+    shoulders:   heatColor(sum("front_delts","side_delts","rear_delts"), cap),
+    back:        heatColor(sum("lats","upper_back"), cap),
+    lower_back:  heatColor(totals["lower_back"]||0, cap),
+    biceps:      heatColor(totals["biceps"]||0, cap),
+    triceps:     heatColor(totals["triceps"]||0, cap),
+    abs:         heatColor(sum("abs","obliques"), cap),
+    quads:       heatColor(totals["quads"]||0, cap),
+    hamstrings:  heatColor(totals["hamstrings"]||0, cap),
+    glutes:      heatColor(totals["glutes"]||0, cap),
+    calves:      heatColor(totals["calves"]||0, cap),
+  };
   const O = "#3a4050";
   return `<svg viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg">
   <g transform="translate(40,5)">
     <circle cx="75" cy="20" r="16" fill="none" stroke="${O}" stroke-width="2"/>
     <ellipse cx="40" cy="52" rx="14" ry="11" fill="${C.shoulders}" stroke="#15181f" stroke-width="2"/>
     <ellipse cx="110" cy="52" rx="14" ry="11" fill="${C.shoulders}" stroke="#15181f" stroke-width="2"/>
-    <rect x="48" y="46" width="54" height="36" rx="14" fill="${C.chest}" stroke="#15181f" stroke-width="2"/>
+    <rect x="48" y="46" width="54" height="18" rx="9" fill="${C.upper_chest}" stroke="#15181f" stroke-width="2"/>
+    <rect x="48" y="62" width="54" height="20" rx="8" fill="${C.chest}" stroke="#15181f" stroke-width="2"/>
     <rect x="55" y="83" width="40" height="42" rx="8" fill="${C.abs}" stroke="#15181f" stroke-width="2"/>
     <rect x="22" y="60" width="14" height="38" rx="7" fill="${C.biceps}" stroke="#15181f" stroke-width="2"/>
     <rect x="114" y="60" width="14" height="38" rx="7" fill="${C.biceps}" stroke="#15181f" stroke-width="2"/>
@@ -3616,7 +4234,8 @@ function buildMuscleMapSVG(totals){
   <g transform="translate(255,5)">
     <circle cx="75" cy="20" r="16" fill="none" stroke="${O}" stroke-width="2"/>
     <path d="M 50 38 L 100 38 L 110 56 L 75 50 L 40 56 Z" fill="${C.shoulders}" stroke="#15181f" stroke-width="2"/>
-    <rect x="48" y="55" width="54" height="50" rx="12" fill="${C.back}" stroke="#15181f" stroke-width="2"/>
+    <rect x="48" y="55" width="54" height="28" rx="10" fill="${C.back}" stroke="#15181f" stroke-width="2"/>
+    <rect x="52" y="80" width="46" height="24" rx="8" fill="${C.lower_back}" stroke="#15181f" stroke-width="2"/>
     <rect x="22" y="60" width="14" height="38" rx="7" fill="${C.triceps}" stroke="#15181f" stroke-width="2"/>
     <rect x="114" y="60" width="14" height="38" rx="7" fill="${C.triceps}" stroke="#15181f" stroke-width="2"/>
     <rect x="18" y="100" width="12" height="34" rx="6" fill="none" stroke="${O}" stroke-width="2"/>
@@ -3632,19 +4251,27 @@ function buildMuscleMapSVG(totals){
 }
 
 const MUSCLE_SECTIONS = [
-  {label:"Chest", groups:["chest"]},
-  {label:"Back", groups:["back"]},
-  {label:"Shoulders", groups:["shoulders"]},
+  {label:"Chest", groups:["chest","upper_chest"]},
+  {label:"Back", groups:["lats","upper_back","lower_back"]},
+  {label:"Shoulders", groups:["front_delts","side_delts","rear_delts"]},
   {label:"Biceps", groups:["biceps"]},
   {label:"Triceps", groups:["triceps"]},
-  {label:"Legs", groups:["quads","hamstrings","glutes","calves"]},
-  {label:"Core", groups:["abs"]}
+  {label:"Core", groups:["abs","obliques"]},
+  {label:"Legs", groups:["quads","hamstrings","glutes","calves","adductors"]}
 ];
+
+const MUSCLE_GROUP_LABELS = {
+  "upper_chest":"Upper Chest","chest":"Chest","lats":"Lats","upper_back":"Upper Back",
+  "lower_back":"Lower Back","front_delts":"Front Delts","side_delts":"Side Delts",
+  "rear_delts":"Rear Delts","biceps":"Biceps","triceps":"Triceps",
+  "abs":"Abs","obliques":"Obliques","quads":"Quads","hamstrings":"Hamstrings",
+  "glutes":"Glutes","calves":"Calves","adductors":"Adductors"
+};
 
 function muscleStatsRows(totals){
   const sections = MUSCLE_SECTIONS.map(sec=>{
     const rows = sec.groups
-      .map(g=>({name:g.charAt(0).toUpperCase()+g.slice(1), count:totals[g]||0}))
+      .map(g=>({name:MUSCLE_GROUP_LABELS[g]||g, count:totals[g]||0}))
       .filter(r=>r.count>0)
       .sort((a,b)=>b.count-a.count);
     const total = rows.reduce((s,r)=>s+r.count,0);
@@ -3784,12 +4411,12 @@ function setDashboardPeriod(period){
 // "Arms" here specifically, unlike the more granular MUSCLE_SECTIONS used
 // elsewhere - matches how most fitness apps present a distribution chart).
 const RADAR_CATEGORIES = [
-  {label:"Chest", groups:["chest"]},
-  {label:"Shoulders", groups:["shoulders"]},
+  {label:"Chest", groups:["chest","upper_chest"]},
+  {label:"Shoulders", groups:["front_delts","side_delts","rear_delts"]},
   {label:"Arms", groups:["biceps","triceps"]},
-  {label:"Legs", groups:["quads","hamstrings","glutes","calves"]},
-  {label:"Core", groups:["abs"]},
-  {label:"Back", groups:["back"]}
+  {label:"Legs", groups:["quads","hamstrings","glutes","calves","adductors"]},
+  {label:"Core", groups:["abs","obliques"]},
+  {label:"Back", groups:["lats","upper_back","lower_back"]}
 ];
 
 function computeMuscleVolume(logEntries){
@@ -4205,6 +4832,16 @@ window.showWeightTracker = showWeightTracker;
 window.saveWeightEntry = saveWeightEntry;
 window.deleteWeightEntry = deleteWeightEntry;
 window.showCardioTracker = showCardioTracker;
+window.showWeeklyCheckin = showWeeklyCheckin;
+window.submitWeeklyCheckin = submitWeeklyCheckin;
+window.showCheckinHistory = showCheckinHistory;
+window.viewCheckinEntry = viewCheckinEntry;
+window.showClientCheckins = showClientCheckins;
+window.viewClientCheckinEntry = viewClientCheckinEntry;
+window.submitTrainerFeedback = submitTrainerFeedback;
+window.setFeedbackEmoji = setFeedbackEmoji;
+window.setFeedbackPhrase = setFeedbackPhrase;
+window.toggleWeeklyCheckinOptIn = toggleWeeklyCheckinOptIn;
 window.saveCardioEntry = saveCardioEntry;
 window.deleteCardioEntry = deleteCardioEntry;
 window.updateSetIndicator = updateSetIndicator;
@@ -4257,6 +4894,8 @@ window.setDraftExSets = setDraftExSets;
 window.setDraftExReps = setDraftExReps;
 window.setDraftExNote = setDraftExNote;
 window.addDraftExercise = addDraftExercise;
+window.addDraftSuperset = addDraftSuperset;
+window.setDraftSupersetReps = setDraftSupersetReps;
 window.toggleCustomExerciseInput = toggleCustomExerciseInput;
 window.removeDraftExercise = removeDraftExercise;
 window.moveDraftExercise = moveDraftExercise;
