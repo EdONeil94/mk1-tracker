@@ -71,7 +71,31 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 
 .sets{display:flex;flex-direction:column;gap:7px}
 .setrow{display:grid;grid-template-columns:24px 1fr 1fr 42px 26px;gap:6px;align-items:center}
-.setn{color:var(--mute);font-size:12px;font-weight:800;text-align:center}
+.setn{color:var(--mute);font-size:12px;font-weight:800;text-align:center;cursor:pointer;
+  width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  background:var(--chip);border:1.5px solid var(--line);position:relative;user-select:none;
+  -webkit-user-select:none;transition:border-color .15s;flex-shrink:0}
+.setn[data-type="warmup"]{background:#2a1e10;border-color:#c97a20;color:#e89540}
+.setn[data-type="dropset"]{background:#1e1a2a;border-color:#7c5ccc;color:#a07ee8}
+.setn[data-type="failure"]{background:#2a1414;border-color:#aa3030;color:#e06060}
+.set-type-popup{position:absolute;left:0;top:34px;z-index:200;
+  background:#1a1d28;border:1.5px solid var(--line);border-radius:12px;
+  padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.6);min-width:148px}
+.set-type-popup button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;
+  color:var(--text);padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;text-align:left}
+.set-type-popup button:active{background:var(--chip)}
+.stp-badge{width:22px;height:22px;border-radius:6px;font-size:11px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stp-normal{background:var(--chip);color:var(--mute);border:1px solid var(--line)}
+.stp-warmup{background:#2a1e10;color:#e89540;border:1px solid #c97a20}
+.stp-dropset{background:#1e1a2a;color:#a07ee8;border:1px solid #7c5ccc}
+.stp-failure{background:#2a1414;color:#e06060;border:1px solid #aa3030}
+/* Inline set-type badge used in history/reports */
+.set-type-tag{display:inline-block;font-size:9px;font-weight:900;padding:1px 4px;
+  border-radius:4px;vertical-align:middle;margin-right:2px}
+.set-type-tag.warmup{background:#2a1e10;color:#e89540;border:1px solid #c97a20}
+.set-type-tag.dropset{background:#1e1a2a;color:#a07ee8;border:1px solid #7c5ccc}
+.set-type-tag.failure{background:#2a1414;color:#e06060;border:1px solid #aa3030}
 .field{position:relative}
 .setrow input{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
   border-radius:10px;padding:10px 6px;font-size:17px;font-weight:700;text-align:center;
@@ -283,6 +307,17 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .checkin-due-text{flex:1}
 .checkin-due-text b{display:block;font-size:14px;margin-bottom:2px}
 .checkin-due-text span{font-size:12px;color:var(--mute)}
+.checkin-vol-fun{background:var(--chip);border:1.5px solid var(--line);border-radius:10px;
+  padding:10px 12px;font-size:13px;font-weight:700;color:var(--text);margin-top:6px;text-align:center}
+.checkin-pbs{background:var(--chip);border:1.5px solid var(--line);border-radius:12px;
+  padding:10px 12px;margin-top:8px}
+.checkin-pb-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent);margin-bottom:8px}
+.checkin-pb-row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:4px 0;border-bottom:1px solid var(--line)}
+.checkin-pb-row:last-child{border-bottom:none}
+.checkin-pb-name{font-size:13px;font-weight:700;color:var(--text)}
+.checkin-pb-val{font-size:12px;font-weight:800;color:var(--accent)}
 .cardio-form select{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
   border-radius:10px;padding:11px;font-size:14px;margin-bottom:10px;-webkit-appearance:none;appearance:none}
 .cardio-form-row{display:flex;gap:8px;margin-bottom:10px}
@@ -290,6 +325,9 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   border-radius:10px;padding:10px;font-size:14px;text-align:center;-webkit-appearance:none;appearance:none}
 .cardio-form button{width:100%;background:var(--accent2);border:none;color:#fff;border-radius:10px;
   padding:12px;font-size:14px;font-weight:800;cursor:pointer}
+.wedit{background:none;border:none;color:var(--mute);font-size:15px;cursor:pointer;padding:0 4px}
+.wedit:active{color:var(--accent2)}
+.wrow-editing{border-left:3px solid var(--accent2);padding-left:10px}
 
 .wrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;
   padding:9px 0;border-top:1px solid var(--line)}
@@ -1546,10 +1584,10 @@ function openSession(id){
       const prevA = last && last.ex.find(le=>le.n===e.exA.n);
       const prevB = last && last.ex.find(le=>le.n===e.exB.n);
       const lastA = prevA && prevA.sets.length
-        ? prevA.sets.map(s=>`${s.w||"?"}kg×${s.r||"?"}`).join(" · ")
+        ? prevA.sets.map(s=>fmtSet(s)).join(" · ")
         : null;
       const lastB = prevB && prevB.sets.length
-        ? prevB.sets.map(s=>`${s.w||"?"}kg×${s.r||"?"}`).join(" · ")
+        ? prevB.sets.map(s=>fmtSet(s)).join(" · ")
         : null;
       const prevHtml = (lastA||lastB)
         ? `<div class="prev">${lastA?`Last A: <b>${lastA}</b>`:""}${lastA&&lastB?" &nbsp;·&nbsp; ":""}${lastB?`Last B: <b>${lastB}</b>`:""}</div>`
@@ -1604,14 +1642,15 @@ function openSession(id){
     // ── Regular exercise block ─────────────────────────────
     const prev = last && last.ex.find(le=>le.n===e.n);
     const prevHtml = (prev && prev.sets.length)
-      ? `Last: <b>${prev.sets.map(s=>`${s.w||"?"}kg×${s.r||"?"}`).join(" &nbsp;\u00b7&nbsp; ")}</b>`
+      ? `Last: <b>${prev.sets.map(s=>fmtSet(s)).join(" &nbsp;\u00b7&nbsp; ")}</b>`
       : "First time logging this exercise";
     const priorBest = allTimeBest(e.n);
     const bestHtml = priorBest ? ` &nbsp;·&nbsp; &#127942; PR: <b>${priorBest.weight}kg×${priorBest.reps}</b>` : "";
     const rows = Array.from({length:e.s},(_,si)=>{
       const pw = prev&&prev.sets[si] ? prev.sets[si].w : "";
       const pr = prev&&prev.sets[si] ? prev.sets[si].r : "";
-      return makeSetRow(si,pw,pr);
+      const pt = prev&&prev.sets[si] ? (prev.sets[si].type||"") : "";
+      return makeSetRow(si,pw,pr,pt);
     }).join("");
     return `<div class="ex" id="ex${i}">
       <div class="ex-head"><div class="ex-name">${i+1}. ${e.n}</div><div class="scheme">${e.s}&times;${e.r}</div></div>
@@ -1645,9 +1684,61 @@ function openSession(id){
   startTimer();
 }
 
-function makeSetRow(si, pw, pr){
+// ── Set-type system (Warm-up / Drop Set / Failure) ────────
+const SET_TYPE_META = {
+  normal:  {label:"Normal",   badge:"S#", dataType:"",        cls:"stp-normal"},
+  warmup:  {label:"Warm-up",  badge:"W",  dataType:"warmup",  cls:"stp-warmup"},
+  dropset: {label:"Drop Set", badge:"D",  dataType:"dropset", cls:"stp-dropset"},
+  failure: {label:"Failure",  badge:"F",  dataType:"failure", cls:"stp-failure"},
+};
+let _activeSetTypeRow = null;
+
+function openSetTypePopup(setn){
+  closeSetTypePopup();
+  _activeSetTypeRow = setn;
+  const popup = document.createElement("div");
+  popup.className = "set-type-popup";
+  popup.innerHTML = Object.entries(SET_TYPE_META).map(([key,m])=>
+    `<button onmousedown="applySetType(event,'${key}')"><span class="stp-badge ${m.cls}">${m.badge}</span>${m.label}</button>`
+  ).join("");
+  setn.appendChild(popup);
+}
+
+function applySetType(e, type){
+  e.preventDefault(); e.stopPropagation();
+  const setn = _activeSetTypeRow;
+  if(!setn) return;
+  const m = SET_TYPE_META[type];
+  if(type==="normal"){
+    // Restore the S# count from the row's position in the sets container
+    const row = setn.closest(".setrow");
+    const setsEl = row && row.parentElement;
+    const idx = setsEl ? [...setsEl.children].indexOf(row) : 0;
+    setn.textContent = "S"+(idx+1);
+  } else {
+    setn.textContent = m.badge;
+  }
+  setn.dataset.type = m.dataType;
+  closeSetTypePopup();
+}
+
+function closeSetTypePopup(){
+  document.querySelectorAll(".set-type-popup").forEach(p=>p.remove());
+  _activeSetTypeRow = null;
+}
+
+function setnLabel(si, type){
+  if(type==="warmup") return "<span data-type=\"warmup\">W</span>";
+  if(type==="dropset") return "<span data-type=\"dropset\">D</span>";
+  if(type==="failure") return "<span data-type=\"failure\">F</span>";
+  return "S"+(si+1);
+}
+
+function makeSetRow(si, pw, pr, type){
+  const badge = type||"";
+  const label = badge==="warmup"?"W" : badge==="dropset"?"D" : badge==="failure"?"F" : "S"+(si+1);
   return `<div class="setrow" data-pw="${pw}" data-pr="${pr}">
-    <div class="setn">S${si+1}</div>
+    <div class="setn" data-type="${badge}" onclick="openSetTypePopup(this)">${label}</div>
     <div class="field">
       <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" placeholder="${pw!==''?pw+' kg':'kg'}" oninput="updateSetIndicator(this)">
       <span class="trend-ind"></span>
@@ -1660,7 +1751,19 @@ function makeSetRow(si, pw, pr){
     <button class="remove-set" onclick="removeSet(this)" aria-label="Remove set">&times;</button>
   </div>`;
 }
-function renumber(setsEl){ [...setsEl.children].forEach((row,idx)=>{ row.querySelector(".setn").textContent="S"+(idx+1); }); }
+function renumber(setsEl){ [...setsEl.children].forEach((row,idx)=>{ const setn=row.querySelector(".setn"); if(setn&&!setn.dataset.type) setn.textContent="S"+(idx+1); }); }
+
+// Shared set formatter for history/reports — shows W/D/F badge inline
+function fmtSet(s){
+  const tag = s.type==="warmup" ? `<span class="set-type-tag warmup">W</span>` :
+              s.type==="dropset" ? `<span class="set-type-tag dropset">D</span>` :
+              s.type==="failure" ? `<span class="set-type-tag failure">F</span>` : "";
+  return `${tag}${s.w||"?"}kg×${s.r||"?"}`;
+}
+function fmtSetPlain(s){
+  const prefix = s.type==="warmup"?"[W] " : s.type==="dropset"?"[D] " : s.type==="failure"?"[F] " : "";
+  return `${prefix}${s.w||"?"}kg×${s.r||"?"}`;
+}
 
 function updateSetIndicator(inputEl){
   const row = inputEl.closest(".setrow");
@@ -1739,7 +1842,12 @@ async function saveSession(id){
       [...c.children].forEach(row=>{
         const w=row.querySelector(".w-input").value.trim();
         const r=row.querySelector(".r-input").value.trim();
-        if(w||r) sets.push({w:w?parseFloat(w):"", r:r?parseInt(r):""});
+        if(w||r){
+          const type = row.querySelector(".setn")?.dataset?.type||"";
+          const entry = {w:w?parseFloat(w):"", r:r?parseInt(r):""};
+          if(type) entry.type = type;
+          sets.push(entry);
+        }
       });
       if(sets.length) ex.push({n:e.n, sets});
     }
@@ -1790,7 +1898,7 @@ function showHistory(){
   const sorted = [...LOG].map((w,i)=>({...w,_i:i})).sort((a,b)=>b.date.localeCompare(a.date));
   const html = sorted.map(w=>{
     const p = PLAN.find(x=>x.id===w.sessionId)||{name:w.sessionId};
-    const rows = w.ex.map(e=>`<div class="hrow"><div class="hn">${e.n}</div><div class="hv">${e.sets.map(s=>`${s.w||"?"}×${s.r||"?"}`).join("  ")}</div></div>`).join("");
+    const rows = w.ex.map(e=>`<div class="hrow"><div class="hn">${e.n}</div><div class="hv">${e.sets.map(s=>fmtSet(s)).join("  ")}</div></div>`).join("");
     const rpeBadge = (w.rpe!=null) ? `<span class="session-rpe-badge">RPE ${w.rpe}</span>` : "";
     const commentHtml = w.comment ? `<div class="session-comment">&ldquo;${w.comment}&rdquo;</div>` : "";
     return `<div class="hday">
@@ -2029,7 +2137,7 @@ async function deleteWeightEntry(idx){
 }
 
 // ── Cardio tracker (distance + time, separate from gym sessions) ──
-function showCardioTracker(){
+function showCardioTracker(editIdx){
   stopTimer();
   const sorted = [...CARDIO_LOG].sort((a,b)=>a.date.localeCompare(b.date));
   const weekStart = startOfWeekISO(), now = new Date().toISOString();
@@ -2047,20 +2155,35 @@ function showCardioTracker(){
 
   const today = localDayKey(new Date());
   const options = CARDIO_ACTIVITIES.map(a=>`<option value="${a}">${a}</option>`).join("");
-  const form = `<div class="cardio-form">
-    <select id="cActivity">${options}</select>
+
+  const editing = editIdx!=null && CARDIO_LOG[editIdx];
+  const prefill = editing ? CARDIO_LOG[editIdx] : null;
+  const prefillDate = prefill ? localDayKey(prefill.date) : today;
+  const prefillOptions = CARDIO_ACTIVITIES.map(a=>`<option value="${a}" ${prefill&&prefill.activity===a?"selected":""}>${a}</option>`).join("");
+
+  const form = `<div class="cardio-form" ${editing?'style="border-color:var(--accent2)"':""}>
+    ${editing?`<div class="section-label" style="margin:0 0 8px;color:var(--accent2)">Editing \u2014 make changes then tap Update</div>`:""}
+    <select id="cActivity">${editing?prefillOptions:options}</select>
     <div class="cardio-form-row">
-      <input type="date" id="cDate" value="${today}">
-      <input type="number" inputmode="decimal" step="0.1" min="0" id="cDistance" placeholder="km">
-      <input type="number" inputmode="numeric" min="0" id="cDuration" placeholder="mins">
+      <input type="date" id="cDate" value="${editing?prefillDate:today}">
+      <input type="number" inputmode="decimal" step="0.1" min="0" id="cDistance" placeholder="km" value="${prefill&&prefill.distance?prefill.distance:""}">
+      <input type="number" inputmode="numeric" min="0" id="cDuration" placeholder="mins" value="${prefill&&prefill.duration?prefill.duration:""}">
     </div>
-    <button onclick="saveCardioEntry()">Log cardio</button>
+    ${editing
+      ? `<button onclick="updateCardioEntry(${editIdx})">Update</button>
+         <button class="auth-link-btn" style="margin-top:4px" onclick="showCardioTracker()">Cancel</button>`
+      : `<button onclick="saveCardioEntry()">Log cardio</button>`
+    }
   </div>`;
 
   const rows = CARDIO_LOG.map((c,i)=>({...c,_i:i})).sort((a,b)=>b.date.localeCompare(a.date)).map(c=>`
-    <div class="wrow">
+    <div class="wrow${c._i===editIdx?" wrow-editing":""}">
       <div class="wd">${c.activity} &middot; ${fmtDate(c.date)}</div>
-      <div class="wright"><span class="wv" style="font-size:13px">${c.distance>0?`${c.distance}km &middot; `:""}${fmtDuration(c.duration)}</span><button class="wdel" onclick="deleteCardioEntry(${c._i})" aria-label="Delete">&times;</button></div>
+      <div class="wright">
+        <span class="wv" style="font-size:13px">${c.distance>0?`${c.distance}km &middot; `:""}${fmtDuration(c.duration)}</span>
+        <button class="wedit" onclick="showCardioTracker(${c._i})" aria-label="Edit">&#9998;</button>
+        <button class="wdel" onclick="deleteCardioEntry(${c._i})" aria-label="Delete">&times;</button>
+      </div>
     </div>`).join("");
 
   const historyBlock = CARDIO_LOG.length
@@ -2077,7 +2200,8 @@ function showCardioTracker(){
     ${form}
     ${historyBlock}
   `;
-  window.scrollTo(0,0);
+  if(editing) document.querySelector(".cardio-form")?.scrollIntoView({behavior:"smooth",block:"center"});
+  else window.scrollTo(0,0);
 }
 
 async function saveCardioEntry(){
@@ -2091,6 +2215,20 @@ async function saveCardioEntry(){
   CARDIO_LOG.push({date: iso, activity, distance: distance||0, duration: duration||0});
   const ok = await saveLog();
   showToast(ok ? "Cardio logged & synced \u2713" : "Couldn't save \u2014 check your connection");
+  showCardioTracker();
+}
+
+async function updateCardioEntry(idx){
+  const activity = $("cActivity").value;
+  const dateVal = $("cDate").value;
+  const distance = parseFloat($("cDistance").value);
+  const duration = parseInt($("cDuration").value);
+  if(!dateVal){ showToast("Pick a date", false); return; }
+  if(!distance && !duration){ showToast("Enter a distance or a time", false); return; }
+  const iso = new Date(dateVal+"T12:00:00").toISOString();
+  CARDIO_LOG[idx] = {date: iso, activity, distance: distance||0, duration: duration||0};
+  const ok = await saveLog();
+  showToast(ok ? "Updated \u2713" : "Couldn't save \u2014 check your connection");
   showCardioTracker();
 }
 
@@ -2246,6 +2384,63 @@ const TRAINER_FEEDBACK_PHRASES = [
   "Rest up and recover","Brilliant effort"
 ];
 
+const VOLUME_COMPARISONS = [
+  {label:"African elephants",    emoji:"🐘", kg:6000},
+  {label:"Mini Coopers",         emoji:"🚗", kg:1160},
+  {label:"Smart cars",           emoji:"🚙", kg:750},
+  {label:"grizzly bears",        emoji:"🐻", kg:270},
+  {label:"male lions",           emoji:"🦁", kg:190},
+  {label:"washing machines",     emoji:"🫧", kg:75},
+  {label:"golden retrievers",    emoji:"🐕", kg:32},
+  {label:"grand pianos",         emoji:"🎹", kg:480},
+  {label:"vending machines",     emoji:"📦", kg:340},
+  {label:"Fiat 500s",            emoji:"🏎️", kg:1020},
+];
+
+function volumeComparison(volumeKg, weekKey){
+  if(volumeKg < 10) return null;
+  // Seed from weekKey so the same week always shows the same comparison,
+  // but different weeks rotate through the list naturally
+  const seed = weekKey.replace(/-/g,"").split("").reduce((s,c)=>s+c.charCodeAt(0),0);
+  const good = VOLUME_COMPARISONS.filter(c=>{ const n=volumeKg/c.kg; return n>=0.3&&n<=25; });
+  const pool = good.length ? good : VOLUME_COMPARISONS;
+  const pick = pool[seed % pool.length];
+  const n = volumeKg / pick.kg;
+  const nStr = n < 2 ? n.toFixed(1) : Math.round(n).toString();
+  return `${pick.emoji} That's the weight of ${nStr} ${pick.label}`;
+}
+
+function weekPBs(log, weekKey){
+  const monDate = new Date(weekKey + "T00:00:00");
+  const sunDate = new Date(weekKey + "T00:00:00");
+  sunDate.setDate(sunDate.getDate()+6); sunDate.setHours(23,59,59,999);
+  const wLog = log.filter(s=>{ const d=new Date(s.date); return d>=monDate&&d<=sunDate; });
+  const beforeLog = log.filter(s=>new Date(s.date)<monDate);
+  const priorBest = {};
+  beforeLog.forEach(session=>{
+    (session.ex||[]).forEach(e=>{
+      (e.sets||[]).forEach(s=>{
+        const w=parseFloat(s.w)||0, r=parseInt(s.r)||0;
+        if(w>0 && (!priorBest[e.n]||w>priorBest[e.n].w||(w===priorBest[e.n].w&&r>priorBest[e.n].r)))
+          priorBest[e.n]={w,r};
+      });
+    });
+  });
+  const weekBest = {};
+  wLog.forEach(session=>{
+    (session.ex||[]).forEach(e=>{
+      (e.sets||[]).forEach(s=>{
+        const w=parseFloat(s.w)||0, r=parseInt(s.r)||0;
+        if(w>0 && (!weekBest[e.n]||w>weekBest[e.n].w||(w===weekBest[e.n].w&&r>weekBest[e.n].r)))
+          weekBest[e.n]={w,r};
+      });
+    });
+  });
+  return Object.entries(weekBest)
+    .filter(([name,best])=>!priorBest[name]||best.w>priorBest[name].w||(best.w===priorBest[name].w&&best.r>priorBest[name].r))
+    .map(([name,best])=>({name:name.replace(/\(.*?\)/g,"").trim(), weight:best.w, reps:best.r}));
+}
+
 function compileWeekMetrics(log, weights, cardioLog, weekKey){
   const monDate = new Date(weekKey + "T00:00:00");
   const sunDate = weekSunday(new Date(weekKey + "T00:00:00"));
@@ -2264,18 +2459,29 @@ function compileWeekMetrics(log, weights, cardioLog, weekKey){
   const cardioDist = wCardio.reduce((s,c)=>s+(c.distance||0), 0);
   const cardioDur = wCardio.reduce((s,c)=>s+(c.duration||0), 0);
   const streak = weekStreakFor(log);
+  const pbs = weekPBs(log, weekKey);
+  const volComparison = volumeComparison(Math.round(volume), weekKey);
   return {sessions, duration, volume: Math.round(volume), sets, topMuscleLabel,
-          lastWeight, cardioDist, cardioDur, streak, weekKey,
+          lastWeight, cardioDist, cardioDur, streak, pbs, volComparison, weekKey,
           monday: monDate.toLocaleDateString("en-GB",{day:"numeric",month:"short"}),
           sunday: sunDate.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})};
 }
 
 function renderCheckInMetricSummary(m){
+  const pbSection = m.pbs && m.pbs.length
+    ? `<div class="checkin-pbs">
+        <div class="checkin-pb-label">🏆 PBs this week</div>
+        ${m.pbs.map(p=>`<div class="checkin-pb-row"><span class="checkin-pb-name">${p.name}</span><span class="checkin-pb-val">${p.weight}kg &times; ${p.reps}</span></div>`).join("")}
+      </div>`
+    : "";
+  const volFunSection = m.volComparison && m.volume > 0
+    ? `<div class="checkin-vol-fun">${m.volComparison}</div>`
+    : "";
   return `<div class="checkin-metrics">
     <div class="stat-row">
       <div class="stat-card"><div class="label">Sessions</div><div class="value">${m.sessions}</div></div>
       <div class="stat-card"><div class="label">Duration</div><div class="value">${fmtDuration(m.duration)}</div></div>
-      <div class="stat-card"><div class="label">Streak</div><div class="value">${m.streak}w</div></div>
+      <div class="stat-card"><div class="label">Streak</div><div class="value">${m.streak}w 🔥</div></div>
     </div>
     <div class="stat-row">
       <div class="stat-card"><div class="label">Volume</div><div class="value">${fmtVolume(m.volume)}</div></div>
@@ -2286,6 +2492,8 @@ function renderCheckInMetricSummary(m){
       ${m.cardioDist>0?`<div class="stat-card"><div class="label">Cardio dist</div><div class="value">${m.cardioDist.toFixed(1)}km</div></div>`:""}
       ${m.cardioDur>0?`<div class="stat-card"><div class="label">Cardio time</div><div class="value">${fmtDuration(m.cardioDur)}</div></div>`:""}
     </div>`:""}
+    ${volFunSection}
+    ${pbSection}
   </div>`;
 }
 
@@ -3451,7 +3659,7 @@ async function showClientDetail(clientId){
   const chart = buildWeightChartSVG(sortedW);
   const recent = [...log].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6).map(s=>{
     const title = s.hiit ? (s.hiitName||"HIIT class") : (s.sessionId||"Session");
-    const exLines = (s.ex||[]).map(e=>`${e.n}: ${e.sets.map(st=>`${st.w||"?"}kg&times;${st.r||"?"}`).join(", ")}`).join("<br>");
+    const exLines = (s.ex||[]).map(e=>`${e.n}: ${e.sets.map(st=>fmtSetPlain(st)).join(", ")}`).join("<br>");
     const rpeBadge = (s.rpe!=null) ? `<span class="session-rpe-badge">RPE ${s.rpe}</span>` : "";
     const commentHtml = s.comment ? `<div class="session-comment">&ldquo;${s.comment}&rdquo;</div>` : "";
     return `<div class="hday">
@@ -4778,6 +4986,8 @@ window.home = home;
 window.openSession = openSession;
 window.addSet = addSet;
 window.tick = tick;
+window.openSetTypePopup = openSetTypePopup;
+window.applySetType = applySetType;
 window.removeSet = removeSet;
 window.saveSession = saveSession;
 window.showHistory = showHistory;
@@ -4843,6 +5053,7 @@ window.setFeedbackEmoji = setFeedbackEmoji;
 window.setFeedbackPhrase = setFeedbackPhrase;
 window.toggleWeeklyCheckinOptIn = toggleWeeklyCheckinOptIn;
 window.saveCardioEntry = saveCardioEntry;
+window.updateCardioEntry = updateCardioEntry;
 window.deleteCardioEntry = deleteCardioEntry;
 window.updateSetIndicator = updateSetIndicator;
 window.showCheckIn = showCheckIn;
@@ -4903,6 +5114,13 @@ window.saveDraftSession = saveDraftSession;
 window.deleteSessionFromPlan = deleteSessionFromPlan;
 
 onAuthStateChanged(auth, (user)=>{ if(signupInProgress) return; bootForUser(user); });
+
+// Close set-type popup when tapping anywhere outside it
+document.addEventListener("click", e=>{
+  if(_activeSetTypeRow && !e.target.closest(".set-type-popup") && !e.target.closest(".setn")){
+    closeSetTypePopup();
+  }
+});
 </script>
 </body>
 </html>
