@@ -2719,13 +2719,19 @@ function showWeeklyCheckin(weekKey){
   stopTimer();
   weekKey = weekKey || pendingCheckInWeekKey() || currentWeekKey();
 
-  // Build last 12 weeks as picker options (only weeks whose Sunday has passed)
   const today = new Date();
+  // Only show weeks from the user's first ever logged session — no point
+  // reviewing empty weeks before they started using the app.
+  const firstSessionDate = LOG.length
+    ? new Date(LOG.reduce((e,s)=>s.date<e?s.date:e, LOG[0].date))
+    : today;
+  const firstWeekKey = weekKeyForDate(firstSessionDate);
   const weekOptions = [];
-  for(let i=1; i<=12; i++){
+  for(let i=1; i<=52; i++){
     const d = new Date(today);
     d.setDate(today.getDate() - i*7);
     const wk = weekKeyForDate(d);
+    if(wk < firstWeekKey) break;
     const sun = weekSunday(wk);
     if(sun > today) continue;
     const mon = new Date(wk + "T12:00:00");
