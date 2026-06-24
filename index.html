@@ -2569,16 +2569,20 @@ function currentWeekKey(){
   return weekKeyForDate(new Date());
 }
 function pendingCheckInWeekKey(){
-  // Returns the most recent week key (Mon YYYY-MM-DD) that has ended (Sunday
-  // has passed) but has no submitted check-in — going back up to 4 weeks.
-  // Returns null if everything is up to date.
+  // Returns the most recent week key that has ended and has no submitted
+  // check-in. Only looks back to the user's first ever session — no point
+  // flagging empty weeks before they started using the app.
   const today = new Date();
-  for(let weeksBack = 1; weeksBack <= 4; weeksBack++){
+  const firstSessionDate = LOG.length
+    ? new Date(LOG.reduce((e,s)=>s.date<e?s.date:e, LOG[0].date))
+    : today;
+  const firstWeekKey = weekKeyForDate(firstSessionDate);
+  for(let weeksBack = 1; weeksBack <= 52; weeksBack++){
     const candidate = new Date(today);
     candidate.setDate(today.getDate() - weeksBack * 7);
     const wk = weekKeyForDate(candidate);
-    const sun = weekSunday(new Date(wk + "T12:00:00"));
-    // Only include weeks whose Sunday has actually passed
+    if(wk < firstWeekKey) break; // don't go back before first session
+    const sun = weekSunday(wk); // pass string, not Date
     if(sun > today) continue;
     if(!CHECKINS.some(c=>c.weekKey===wk && c.submitted)) return wk;
   }
@@ -2777,7 +2781,7 @@ function showWeeklyCheckin(weekKey){
       <div class="section-label">How was your week?</div>
       <textarea id="ciComment" class="checkin-textarea" maxlength="500" placeholder="How did you feel? Anything that helped or held you back this week?">${existing?.comment||""}</textarea>
       <button class="save-session-btn" onclick="submitWeeklyCheckin('${weekKey}')">Submit check-in</button>
-      <button class="auth-link-btn" style="margin-top:8px" onclick="home()">Skip for now</button>
+      <button class="auth-link-btn" style="margin-top:8px" onclick="skipWeeklyCheckin('${weekKey}')">Skip this week</button>
     `;
     window.scrollTo(0,0);
   }
@@ -2869,6 +2873,17 @@ async function submitTrainerFeedback(){
   }catch(e){
     showToast("Couldn't send feedback \u2014 check your connection", false);
   }
+}
+
+async function skipWeeklyCheckin(weekKey){
+  // Mark as submitted with skipped:true so it stops appearing as overdue.
+  // The week stays accessible in history via the picker but won't nag again.
+  const existing = CHECKINS.findIndex(c=>c.weekKey===weekKey);
+  const ci = {weekKey, submitted:true, skipped:true, submittedAt:new Date().toISOString()};
+  if(existing>=0) CHECKINS[existing]={...CHECKINS[existing],...ci};
+  else CHECKINS.push(ci);
+  await saveLog();
+  home();
 }
 
 async function submitWeeklyCheckin(weekKey){
@@ -5359,6 +5374,7 @@ window.saveWeightEntry = saveWeightEntry;
 window.deleteWeightEntry = deleteWeightEntry;
 window.showCardioTracker = showCardioTracker;
 window.showWeeklyCheckin = showWeeklyCheckin;
+window.skipWeeklyCheckin = skipWeeklyCheckin;
 window.submitWeeklyCheckin = submitWeeklyCheckin;
 window.showCheckinHistory = showCheckinHistory;
 window.viewCheckinEntry = viewCheckinEntry;
