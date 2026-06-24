@@ -1658,8 +1658,11 @@ function home(){
       </button>`
     : "";
 
-  const cardioWeekStart = startOfWeekISO();
-  const cardioThisWeek = CARDIO_LOG.filter(c=>c.date>=cardioWeekStart);
+  const _cwsd = new Date(); const _cdow = _cwsd.getDay();
+  _cwsd.setDate(_cwsd.getDate()-(_cdow===0?6:_cdow-1));
+  const _cardioWeekStartKey = localDayKey(_cwsd);
+  const _cardioTodayKey = localDayKey(new Date());
+  const cardioThisWeek = CARDIO_LOG.filter(c=>{ const dk=localDayKey(c.date); return dk>=_cardioWeekStartKey&&dk<=_cardioTodayKey; });
   const cardioDistThisWeek = cardioThisWeek.reduce((s,c)=>s+(c.distance||0),0);
   const cardioLabel = cardioThisWeek.length
     ? `${cardioDistThisWeek.toFixed(1)}km this week`
@@ -2267,8 +2270,21 @@ async function deleteWeightEntry(idx){
 function showCardioTracker(editIdx){
   stopTimer();
   const sorted = [...CARDIO_LOG].sort((a,b)=>a.date.localeCompare(b.date));
-  const weekStart = startOfWeekISO(), now = new Date().toISOString();
-  const thisWeek = CARDIO_LOG.filter(c=>c.date>=weekStart && c.date<now);
+
+  // Use localDayKey comparisons (YYYY-MM-DD) rather than full ISO timestamps —
+  // cardio entries are stored with a noon local-time stamp which in BST becomes
+  // 11:00 UTC, so a moment-based `< now` check excludes same-day entries logged
+  // before noon if the user is checking earlier in the morning.
+  const todayKey = localDayKey(new Date());
+  const weekStartDate = new Date();
+  const dow = weekStartDate.getDay();
+  weekStartDate.setDate(weekStartDate.getDate() - (dow===0?6:dow-1));
+  const weekStartKey = localDayKey(weekStartDate);
+
+  const thisWeek = CARDIO_LOG.filter(c=>{
+    const dk = localDayKey(c.date);
+    return dk >= weekStartKey && dk <= todayKey;
+  });
   const weekDist = thisWeek.reduce((s,c)=>s+(c.distance||0),0);
   const weekDur = thisWeek.reduce((s,c)=>s+(c.duration||0),0);
 
