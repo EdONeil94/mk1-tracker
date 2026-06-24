@@ -231,6 +231,11 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   padding:15px;font-size:15px;font-weight:800;cursor:pointer;margin-top:6px}
 .auth-link-btn{background:none;border:none;color:var(--mute);font-size:12.5px;font-weight:700;
   cursor:pointer;text-align:center;width:100%;padding:10px 0;text-decoration:underline}
+.auth-divider{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--mute);font-size:12px;font-weight:700}
+.auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--line)}
+.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  background:#fff;border:1.5px solid #dadce0;color:#3c4043;border-radius:14px;
+  padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
 .auth-error{background:#2a1f1f;border:1.5px solid #5a3030;color:#e0a890;border-radius:10px;
   padding:10px 12px;font-size:12.5px;margin-bottom:12px}
 .field-hint{color:var(--mute);font-size:11px;margin-top:5px;line-height:1.35}
@@ -582,7 +587,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, verifyBeforeUpdateEmail, sendPasswordResetEmail, updatePassword, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, verifyBeforeUpdateEmail, sendPasswordResetEmail, updatePassword, deleteUser, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // ── Your Firebase project ──
 const firebaseConfig = {
@@ -1160,6 +1165,13 @@ function renderAuthScreen(){
       ${isLogin ? `<button class="auth-link-btn" onclick="showForgotPasswordScreen()">Forgot password?</button>` : ""}
       ${!isLogin ? `<div class="auth-field"><label>Confirm password</label><input type="password" id="authPassword2" autocomplete="new-password" placeholder="********"></div>` : ""}
       <button class="auth-btn" onclick="submitAuth()">${isLogin?"Log in":"Create account"}</button>
+      ${isLogin ? `<div class="auth-divider"><span>or</span></div>
+      <button class="google-btn" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.25-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+        </svg>
+        Sign in with Google
+      </button>` : ""}
     </div>`;
   window.scrollTo(0,0);
 }
@@ -1182,6 +1194,96 @@ function toggleSignupLocation(loc, checked){
     else{ signupLocations = signupLocations.filter(l=>l!==loc); }
   }
   renderAuthScreen();
+}
+
+async function signInWithGoogle(){
+  try{
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+    // bootForUser fires automatically via onAuthStateChanged
+  }catch(e){
+    if(e && e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request"){
+      authError = "Google sign-in failed. Please try again.";
+      renderAuthScreen();
+    }
+  }
+}
+
+// Shown to a brand-new Google user who has no existing profile yet.
+// Collects a username and gym location, then creates the profile and boots.
+let _googleUser = null;
+function showGoogleFinishSetup(user){
+  _googleUser = user;
+  if(!GYM_LOCATIONS.length) loadLocations().then(()=>renderGoogleFinishSetup());
+  else renderGoogleFinishSetup();
+}
+function renderGoogleFinishSetup(){
+  const user = _googleUser;
+  const googleName = user.displayName || "";
+  const googleEmail = user.email || "";
+  const locationRows = GYM_LOCATIONS.map(loc=>
+    `<div class="sess-row">
+      <div class="sr-info"><b>${loc}</b></div>
+      <input type="checkbox" onchange="toggleSignupLocation('${loc}', this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
+    </div>`
+  ).join("");
+  app.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-title">
+        <div class="kicker">MK1 Gym &middot; Selby</div>
+        <h1>One last step</h1>
+      </div>
+      <div class="last-updated" style="text-align:left;margin-bottom:16px">
+        You're signed in as <b>${googleEmail}</b>. Just pick a username and your gym location to finish setting up.
+      </div>
+      <div class="auth-field">
+        <label>Your name</label>
+        <input type="text" id="gSetupName" value="${googleName}" placeholder="Your name">
+        <div class="field-hint">Pre-filled from your Google account — change it if you'd like.</div>
+      </div>
+      <div class="auth-field">
+        <label>Username</label>
+        <input type="text" id="gSetupUsername" placeholder="e.g. edsmith">
+        <div class="field-hint">A short way to log in instead of typing your full email.</div>
+      </div>
+      <div class="auth-field">
+        <label>Gym location</label>
+        ${locationRows || '<div class="field-hint">No locations set up yet — ask your admin.</div>'}
+      </div>
+      <button class="auth-btn" onclick="completeGoogleSetup()">Finish setup</button>
+      <button class="auth-link-btn" onclick="cancelGoogleSetup()">Cancel &amp; sign out</button>
+    </div>`;
+  signupLocations = [];
+}
+
+async function completeGoogleSetup(){
+  const user = _googleUser;
+  if(!user){ renderAuthScreen(); return; }
+  const displayName = ($("gSetupName")?.value||"").trim() || user.displayName || "New User";
+  const username = ($("gSetupUsername")?.value||"").trim();
+  if(!username){ showToast("Choose a username", false); return; }
+  if(!signupLocations.length){ showToast("Pick at least one gym location", false); return; }
+
+  const existing = await getEmailForUsername(username);
+  if(existing){ showToast("That username is already taken — please choose another", false); return; }
+
+  await loadPeople();
+  const profileId = uniquePersonId(displayName);
+  const locations = signupRole==="trainer" ? [...signupLocations] : signupLocations.slice(0,1);
+
+  try{
+    await writeWithRetry(()=>setDoc(doc(db,"users",user.uid),{profileId}));
+    PEOPLE.push({id:profileId, name:displayName, role:"client", clientIds:[],
+      uid:user.uid, email:user.email||"", username, locations});
+    await writeWithRetry(()=>savePeople());
+    await writeWithRetry(()=>registerLoginLookup(user.email||"", username));
+    await writeWithRetry(()=>registerUsernameLookup(username, user.email||""));
+    _googleUser = null;
+    signupLocations = [];
+    await bootForUser(user);
+  }catch(e){
+    showToast("Couldn't complete setup — please try again", false);
+  }
 }
 
 function showForgotPasswordScreen(){
@@ -1389,16 +1491,41 @@ async function bootForUser(user){
   await loadPeople();
   await loadLocations();
   await ensureEdIsAdmin();
+
   let mapping = null;
   try{
     const snap = await getDoc(doc(db,"users",user.uid));
     mapping = snap.exists() ? snap.data() : null;
   }catch(e){}
+
+  // If no UID mapping exists yet, check whether this Google account's email
+  // is already linked to a profile from a prior email/password signup —
+  // if so, reuse that profile rather than creating a duplicate.
   if(!mapping || !mapping.profileId){
-    authError = "Couldn't find your profile. Please contact your admin.";
-    await signOut(auth);
-    return;
+    const isGoogle = user.providerData && user.providerData.some(p=>p.providerId==="google.com");
+    if(isGoogle && user.email){
+      const username = await getUsernameForEmail(user.email);
+      if(username){
+        const existing = PEOPLE.find(p=>p.username===username || p.email===user.email);
+        if(existing){
+          await writeWithRetry(()=>setDoc(doc(db,"users",user.uid),{profileId:existing.id}));
+          if(!existing.uid){ existing.uid = user.uid; await savePeople(); }
+          mapping = {profileId: existing.id};
+        }
+      }
+    }
+    if(!mapping || !mapping.profileId){
+      if(isGoogle){
+        // Brand new Google user — show the lightweight finish-setup screen
+        showGoogleFinishSetup(user);
+        return;
+      }
+      authError = "Couldn't find your profile. Please contact your admin.";
+      await signOut(auth);
+      return;
+    }
   }
+
   CURRENT_PROFILE = PEOPLE.find(p=>p.id===mapping.profileId) || {id:mapping.profileId, name:mapping.profileId, role:"client", clientIds:[]};
   await loadLog();
   home();
@@ -3953,6 +4080,8 @@ function showAccountSettings(preserveScroll){
   // auth.currentUser.email is the ground truth — fall back to it so the field
   // pre-populates correctly rather than showing blank every time.
   const displayEmail = current.email || (auth.currentUser && auth.currentUser.email) || "";
+  const isGoogleAccount = auth.currentUser && auth.currentUser.providerData &&
+    auth.currentUser.providerData.some(p=>p.providerId==="google.com");
   const layout = getHomeLayoutFor(current);
   const layoutRows = layout.map((m,i)=>{
     const mod = HOME_MODULES.find(h=>h.id===m.id);
@@ -3985,8 +4114,8 @@ function showAccountSettings(preserveScroll){
       <input type="text" id="accountUsername" value="${current.username||current.id}" placeholder="e.g. ed">
     </div>
     <div class="last-updated" style="text-align:left;margin-top:-4px">A quick way to log in instead of typing your full email &mdash; safe to change any time.</div>
-    <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="accountEmail" value="${displayEmail}" placeholder="you@example.com"></div>
-    <div class="last-updated" style="text-align:left;margin-top:-4px">This is your real login and where password reset emails go &mdash; keep it current.</div>
+    <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="accountEmail" value="${displayEmail}" placeholder="you@example.com" ${isGoogleAccount?"readonly style=\"opacity:.6\"":{}}></div>
+    <div class="last-updated" style="text-align:left;margin-top:-4px">${isGoogleAccount ? "Signed in with Google &mdash; your email is managed by your Google account." : "This is your real login and where password reset emails go &mdash; keep it current."}</div>
     <button class="save-session-btn" onclick="saveAccountEmail()">Save</button>
 
     <div class="section-label" style="margin-top:24px">Gym Location${current.role==="trainer"?"s":""}</div>
@@ -4072,7 +4201,17 @@ async function saveAccountEmail(){
   // immediately, so the actual Firebase Auth email only updates once that
   // link is clicked.
   let emailChangePending = false;
-  if(auth.currentUser && auth.currentUser.email !== val){
+  const isGoogleUser = auth.currentUser && auth.currentUser.providerData &&
+    auth.currentUser.providerData.some(p=>p.providerId==="google.com");
+  if(isGoogleUser){
+    // Google manages the email address for Google sign-in accounts — it can't
+    // be changed here. The value is saved to the profile for display purposes
+    // but the actual Google account email is not affected.
+    if(auth.currentUser.email && auth.currentUser.email !== val){
+      showToast("Your email is managed by Google and can\u2019t be changed here.", false);
+      return;
+    }
+  } else if(auth.currentUser && auth.currentUser.email !== val){
     try{
       await verifyBeforeUpdateEmail(auth.currentUser, val);
       emailChangePending = true;
@@ -4996,6 +5135,11 @@ window.refresh = refresh;
 window.setAuthMode = setAuthMode;
 window.renderAuthScreen = renderAuthScreen;
 window.setSignupRole = setSignupRole;
+window.signInWithGoogle = signInWithGoogle;
+async function cancelGoogleSetup(){ _googleUser=null; signupLocations=[]; await signOut(auth); }
+
+window.completeGoogleSetup = completeGoogleSetup;
+window.cancelGoogleSetup = cancelGoogleSetup;
 window.toggleSignupLocation = toggleSignupLocation;
 window.showForgotPasswordScreen = showForgotPasswordScreen;
 window.sendPasswordReset = sendPasswordReset;
