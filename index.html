@@ -2654,7 +2654,7 @@ function weekPBs(log, weekKey){
 
 function compileWeekMetrics(log, weights, cardioLog, weekKey){
   const monDate = new Date(weekKey + "T00:00:00");
-  const sunDate = weekSunday(new Date(weekKey + "T00:00:00"));
+  const sunDate = weekSunday(weekKey); // string, not Date object — weekSunday does new Date(weekKey+"T12:00:00") internally
   const sunEnd = new Date(sunDate); sunEnd.setHours(23,59,59,999);
   const wLog = log.filter(s=>{ const d=new Date(s.date); return d>=monDate && d<=sunEnd; });
   const sessions = wLog.length;
@@ -2688,6 +2688,16 @@ function renderCheckInMetricSummary(m){
   const volFunSection = m.volComparison && m.volume > 0
     ? `<div class="checkin-vol-fun">${m.volComparison}</div>`
     : "";
+  const cardioSection = (m.cardioDist>0||m.cardioDur>0)
+    ? `<div class="stat-row">
+        <div class="stat-card" style="grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center">
+          <div class="label">🏃 Cardio</div>
+          <div style="font-size:14px;font-weight:800;color:var(--text)">
+            ${m.cardioDist>0?`${m.cardioDist.toFixed(1)}km`:""}${m.cardioDist>0&&m.cardioDur>0?" &middot; ":""}${m.cardioDur>0?fmtDuration(m.cardioDur):""}
+          </div>
+        </div>
+      </div>`
+    : "";
   return `<div class="checkin-metrics">
     <div class="stat-row">
       <div class="stat-card"><div class="label">Sessions</div><div class="value">${m.sessions}</div></div>
@@ -2699,10 +2709,7 @@ function renderCheckInMetricSummary(m){
       <div class="stat-card"><div class="label">Sets</div><div class="value">${m.sets}</div></div>
       ${m.topMuscleLabel ? `<div class="stat-card"><div class="label">Top muscle</div><div class="value" style="font-size:13px">${m.topMuscleLabel}</div></div>` : ""}
     </div>
-    ${m.cardioDist>0||m.cardioDur>0 ? `<div class="stat-row">
-      ${m.cardioDist>0?`<div class="stat-card"><div class="label">Cardio dist</div><div class="value">${m.cardioDist.toFixed(1)}km</div></div>`:""}
-      ${m.cardioDur>0?`<div class="stat-card"><div class="label">Cardio time</div><div class="value">${fmtDuration(m.cardioDur)}</div></div>`:""}
-    </div>`:""}
+    ${cardioSection}
     ${volFunSection}
     ${pbSection}
   </div>`;
@@ -2711,20 +2718,47 @@ function renderCheckInMetricSummary(m){
 function showWeeklyCheckin(weekKey){
   stopTimer();
   weekKey = weekKey || pendingCheckInWeekKey() || currentWeekKey();
+
+  // Build last 12 weeks as picker options (only weeks whose Sunday has passed)
+  const today = new Date();
+  const weekOptions = [];
+  for(let i=1; i<=12; i++){
+    const d = new Date(today);
+    d.setDate(today.getDate() - i*7);
+    const wk = weekKeyForDate(d);
+    const sun = weekSunday(wk);
+    if(sun > today) continue;
+    const mon = new Date(wk + "T12:00:00");
+    const submitted = CHECKINS.some(c=>c.weekKey===wk&&c.submitted);
+    const label = `${mon.toLocaleDateString("en-GB",{day:"numeric",month:"short"})} – ${sun.toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${submitted?" ✓":""}`;
+    weekOptions.push({wk, label, submitted});
+  }
+  const pickerOptions = weekOptions.map(o=>
+    `<option value="${o.wk}" ${o.wk===weekKey?"selected":""}>${o.label}</option>`
+  ).join("");
+
   const existing = CHECKINS.find(c=>c.weekKey===weekKey);
   const m = compileWeekMetrics(LOG, WEIGHTS, CARDIO_LOG, weekKey);
-  const lastWeightSuggestion = (WEIGHTS.length
+  const lastWeightSuggestion = WEIGHTS.length
     ? [...WEIGHTS].sort((a,b)=>a.date.localeCompare(b.date)).slice(-1)[0].w
-    : "");
+    : "";
+
+  const pickerHtml = `<div class="editor-field" style="margin-bottom:16px">
+    <label>Week</label>
+    <select onchange="showWeeklyCheckin(this.value)" style="width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);border-radius:12px;padding:11px;font-size:14px;font-weight:600">
+      ${pickerOptions}
+    </select>
+  </div>`;
 
   if(existing && existing.submitted){
-    renderCheckinView(existing, m, false);
+    renderCheckinView(existing, m, false, pickerHtml);
   } else {
     app.innerHTML = `
       <div class="topbar">
         <button class="back" onclick="home()">&#8592; Back</button>
         <div class="topbar-info"><h2>Weekly Check-In</h2><div class="focus">${m.monday} &ndash; ${m.sunday}</div></div>
       </div>
+      ${pickerHtml}
       <div class="checkin-banner">
         <div class="checkin-banner-title">📋 Week in review</div>
         <div class="checkin-banner-sub">Here's what your data says — add your weight and a note to complete this week's check-in.</div>
@@ -2743,7 +2777,7 @@ function showWeeklyCheckin(weekKey){
   }
 }
 
-function renderCheckinView(ci, m, isTrainerView){
+function renderCheckinView(ci, m, isTrainerView, pickerHtml){
   const feedbackSection = isTrainerView
     ? renderTrainerFeedbackForm(ci)
     : (ci.trainerFeedback
@@ -2759,6 +2793,7 @@ function renderCheckinView(ci, m, isTrainerView){
       <button class="back" onclick="${backFn}">&#8592; Back</button>
       <div class="topbar-info"><h2>Check-In</h2><div class="focus">${m.monday} &ndash; ${m.sunday}</div></div>
     </div>
+    ${pickerHtml||""}
     <div class="checkin-banner">
       <div class="checkin-banner-title">✅ Submitted</div>
       <div class="checkin-banner-sub">Submitted ${fmtDate(ci.submittedAt||ci.weekKey)}</div>
