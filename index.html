@@ -309,6 +309,10 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .feedback-phrase-btn.active{border-color:var(--accent2);color:var(--accent2);background:rgba(93,76,220,.1)}
 .checkin-due-banner{background:var(--card);border:2px solid var(--accent2);border-radius:14px;
   padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.checkin-module-due{background:var(--card);border:2px solid var(--accent);border-radius:14px;
+  padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;animation:pulse-border 2s ease-in-out infinite}
+@keyframes pulse-border{0%,100%{border-color:var(--accent)}50%{border-color:#c04020}}
 .checkin-due-icon{font-size:24px;flex-shrink:0}
 .checkin-due-text{flex:1}
 .checkin-due-text b{display:block;font-size:14px;margin-bottom:2px}
@@ -1555,7 +1559,8 @@ const HOME_MODULES = [
   {id:"musclemap", label:"Muscle map"},
   {id:"exercisemetrics", label:"Exercise metrics"},
   {id:"measurements", label:"Body measurements"},
-  {id:"leaderboard", label:"Leaderboard"}
+  {id:"leaderboard", label:"Leaderboard"},
+  {id:"checkin", label:"Weekly Check-In"}
 ];
 
 function getHomeLayoutFor(person){
@@ -1621,6 +1626,27 @@ function homeModuleHtml(id, ctx){
         <span class="cb-label">🏗️ Build Your Workout</span>
         <span>&rsaquo;</span>
       </button>`;
+    case "checkin":{
+      if(!CURRENT_PROFILE.weeklyCheckIn) return "";
+      const due = isCheckInDue();
+      const lastCheckin = [...CHECKINS].filter(c=>c.submitted).sort((a,b)=>b.weekKey.localeCompare(a.weekKey))[0];
+      const lastText = lastCheckin ? `Last submitted ${fmtDate(lastCheckin.weekKey)}` : "No check-ins yet";
+      return due
+        ? `<div class="checkin-module-due" onclick="showWeeklyCheckin()">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:22px">📋</span>
+              <div>
+                <div style="font-weight:800;font-size:14px">Check-in overdue</div>
+                <div style="font-size:12px;color:var(--mute);margin-top:2px">You have an unsubmitted week — tap to complete it</div>
+              </div>
+            </div>
+            <span style="color:var(--accent);font-size:18px">&rsaquo;</span>
+          </div>`
+        : `<button class="settingsbtn" onclick="showCheckinHistory()">
+            <span class="cb-label">📋 Weekly Check-In &nbsp;<span style="font-size:11px;font-weight:600;color:var(--mute)">${lastText}</span></span>
+            <span>&rsaquo;</span>
+          </button>`;
+    }
     default: return "";
   }
 }
@@ -1694,17 +1720,6 @@ function home(){
   const layout = getHomeLayoutFor(CURRENT_PROFILE);
   const moduleHtml = layout.filter(m=>!m.hidden).map(m=>homeModuleHtml(m.id, ctx)).join("");
 
-  const checkinBanner = (CURRENT_PROFILE.weeklyCheckIn && isCheckInDue())
-    ? `<div class="checkin-due-banner" onclick="showWeeklyCheckin()">
-        <div class="checkin-due-icon">📋</div>
-        <div class="checkin-due-text">
-          <b>Your weekly check-in is ready</b>
-          <span>Tap to review your week and add a note &mdash; takes less than a minute</span>
-        </div>
-        <div style="color:var(--mute);font-size:18px">&rsaquo;</div>
-      </div>`
-    : "";
-
   app.innerHTML = `
     ${banner}
     <div class="page-header">
@@ -1715,7 +1730,6 @@ function home(){
       <div class="switch-profile" onclick="showAccountSettings()" style="margin-left:8px">&#9881; Account settings</div>
     </div>
     ${adminSection}
-    ${checkinBanner}
     ${moduleHtml}
   `;
 }
@@ -2554,20 +2568,24 @@ function weekSunday(weekKey){
 function currentWeekKey(){
   return weekKeyForDate(new Date());
 }
-function isCheckInDue(){
-  // Show the prompt from Sunday onwards for the current week
+function pendingCheckInWeekKey(){
+  // Returns the most recent week key (Mon YYYY-MM-DD) that has ended (Sunday
+  // has passed) but has no submitted check-in — going back up to 4 weeks.
+  // Returns null if everything is up to date.
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun
-  if(dayOfWeek !== 0) return false;
-  const wk = currentWeekKey();
-  return !CHECKINS.some(c=>c.weekKey===wk && c.submitted);
+  for(let weeksBack = 1; weeksBack <= 4; weeksBack++){
+    const candidate = new Date(today);
+    candidate.setDate(today.getDate() - weeksBack * 7);
+    const wk = weekKeyForDate(candidate);
+    const sun = weekSunday(new Date(wk + "T12:00:00"));
+    // Only include weeks whose Sunday has actually passed
+    if(sun > today) continue;
+    if(!CHECKINS.some(c=>c.weekKey===wk && c.submitted)) return wk;
+  }
+  return null;
 }
-function hasPendingCheckIn(){
-  // Also show prompt if any past week has no check-in (up to 4 weeks back)
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  if(dayOfWeek !== 0) return isCheckInDue();
-  return isCheckInDue();
+function isCheckInDue(){
+  return !!pendingCheckInWeekKey();
 }
 
 const TRAINER_FEEDBACK_EMOJIS = ["👍","💪","🔥","❤️","👏","🙌"];
@@ -2692,7 +2710,7 @@ function renderCheckInMetricSummary(m){
 
 function showWeeklyCheckin(weekKey){
   stopTimer();
-  weekKey = weekKey || currentWeekKey();
+  weekKey = weekKey || pendingCheckInWeekKey() || currentWeekKey();
   const existing = CHECKINS.find(c=>c.weekKey===weekKey);
   const m = compileWeekMetrics(LOG, WEIGHTS, CARDIO_LOG, weekKey);
   const lastWeightSuggestion = (WEIGHTS.length
@@ -4249,7 +4267,7 @@ function showAccountSettings(preserveScroll){
 
     <div class="section-label" style="margin-top:24px">Weekly Check-In</div>
     <div class="sess-row">
-      <div class="sr-info"><b>Enable weekly check-in</b><span>Get a summary every Sunday with space to add your weight and a note. Your trainer can leave feedback.</span></div>
+      <div class="sr-info"><b>Enable weekly check-in</b><span>Adds a Check-In tile to your home screen. It pulses orange when you have an unsubmitted week — you can complete past weeks any time, not just on Sunday.</span></div>
       <input type="checkbox" ${current.weeklyCheckIn?"checked":""} onchange="toggleWeeklyCheckinOptIn(this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
     </div>
     ${current.weeklyCheckIn ? `<button class="restore-default-btn" style="margin-top:8px" onclick="showCheckinHistory()">View Check-In History</button>` : ""}
