@@ -541,6 +541,13 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   border-radius:14px;padding:14px;font-size:13px;font-weight:700;cursor:pointer;margin-top:14px}
 
 .hiit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.hiit-recent-label{color:var(--mute);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px}
+.hiit-recent-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px;
+  background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:6px}
+.hiit-recent-name{font-size:13px;font-weight:700}
+.hiit-recent-meta{font-size:11px;color:var(--mute);font-weight:600}
+.hiit-history-btn{background:none;border:none;color:var(--mute);font-size:12px;font-weight:700;
+  cursor:pointer;padding:6px 0;text-align:left;width:100%}
 .hiit-card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;
   padding:14px;cursor:pointer;position:relative;overflow:hidden;transition:transform .08s}
 .hiit-card:active{transform:scale(.97)}
@@ -1647,9 +1654,21 @@ function home(){
       <div class="hc-meta">${c.ex.length} exercise${c.ex.length!==1?"s":""}</div>
     </div>`;
   }).join("");
+
+  // Last 2 completed HIIT sessions from LOG history
+  const hiitHistory = LOG.filter(s=>s.hiit).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,2);
+  const hiitHistoryHtml = hiitHistory.length ? `
+    <div class="hiit-recent-label">Recent</div>
+    ${hiitHistory.map(s=>`<div class="hiit-recent-row">
+      <span class="hiit-recent-name">${s.hiitName||"HIIT"}</span>
+      <span class="hiit-recent-meta">${fmtDate(s.date)}${s.duration?" &middot; "+fmtDuration(s.duration):""}</span>
+    </div>`).join("")}
+    <button class="hiit-history-btn" onclick="showHiitHistory()">📋 View full history</button>` : "";
+
   const hiitSection = `
     <div class="section-label">HIIT Classes</div>
-    ${HIIT_CLASSES.length ? `<div class="hiit-grid">${hiitCards}</div>` : '<div class="chart-empty">No HIIT classes yet &mdash; head to Build Your Workout to create one.</div>'}`;
+    ${HIIT_CLASSES.length ? `<div class="hiit-grid">${hiitCards}</div>` : '<div class="chart-empty">No HIIT classes yet &mdash; head to Build Your Workout to create one.</div>'}
+    ${hiitHistoryHtml}`;
 
   const adminSection = CURRENT_PROFILE.role==="admin"
     ? `<button class="trainerbtn" onclick="showAdminDashboard()">
@@ -3350,6 +3369,11 @@ function renderHiitEditor(){
       <input type="text" value="${draftHiit.name}" placeholder="e.g. Friday Burner" oninput="setHiitName(this.value)">
     </div>
     <div class="editor-field">
+      <label>Class length (optional)</label>
+      <input type="number" inputmode="numeric" min="1" value="${draftHiit.durationMin||""}" placeholder="mins — fill in if logging after the fact" oninput="setHiitDuration(this.value)">
+      <div class="field-hint">Set this if you're logging a class you already did. Leave blank to use the live timer instead.</div>
+    </div>
+    <div class="editor-field">
       <label>Format</label>
       <div class="seg">${fmtButtons}</div>
       ${fieldsHtml}
@@ -3369,6 +3393,7 @@ function renderHiitEditor(){
 }
 
 function setHiitName(v){ draftHiit.name = v; }
+function setHiitDuration(v){ draftHiit.durationMin = parseInt(v)||null; }
 function setHiitFormat(f){ draftHiit.format = f; renderHiitEditor(); }
 function setHiitWork(v){ draftHiit.workSec = parseInt(v)||45; }
 function setHiitRest(v){ draftHiit.restSec = parseInt(v)||0; }
@@ -3400,13 +3425,21 @@ async function saveDraftHiit(){
   const name = (draftHiit.name||"").trim();
   if(!name){ showToast("Give the class a name", false); return; }
   if(!draftHiit.ex.length){ showToast("Add at least one exercise", false); return; }
-  if(!draftHiit.id){
+  const isNew = !draftHiit.id;
+  if(isNew){
     draftHiit.id = uniqueHiitId(name);
     HIIT_CLASSES.push({...draftHiit, name});
   } else {
     const idx = HIIT_CLASSES.findIndex(c=>c.id===draftHiit.id);
     const updated = {...draftHiit, name};
     if(idx>=0) HIIT_CLASSES[idx] = updated; else HIIT_CLASSES.push(updated);
+  }
+  // If a duration was filled in on a new class, log a completed session entry
+  // so it counts toward activity, streak and leaderboard without needing the
+  // live runner — for people logging a class they already did.
+  if(isNew && draftHiit.durationMin){
+    LOG.push({sessionId:`hiit-${draftHiit.id}`, date:new Date().toISOString(),
+      duration:draftHiit.durationMin, ex:[], hiit:true, hiitName:name});
   }
   const ok = await saveLog();
   showToast(ok ? "HIIT class saved & synced \u2713" : "Couldn't save \u2014 check your connection");
@@ -3418,6 +3451,24 @@ async function deleteHiitClass(id){
   HIIT_CLASSES = HIIT_CLASSES.filter(c=>c.id!==id);
   await saveLog();
   showHiitSettings();
+}
+
+function showHiitHistory(){
+  stopTimer();
+  const hiitLog = LOG.filter(s=>s.hiit).sort((a,b)=>b.date.localeCompare(a.date));
+  const rows = hiitLog.map(s=>`
+    <div class="wrow">
+      <div class="wd">${s.hiitName||"HIIT"} &middot; ${fmtDate(s.date)}</div>
+      <div class="wright"><span class="wv">${s.duration?fmtDuration(s.duration):"&mdash;"}</span></div>
+    </div>`).join("");
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="home()">&#8592; Back</button>
+      <div class="topbar-info"><h2>HIIT History</h2><div class="focus">${CURRENT_PROFILE.name}</div></div>
+    </div>
+    ${rows ? `<div class="hday">${rows}</div>` : '<div class="chart-empty">No HIIT sessions logged yet.</div>'}
+  `;
+  window.scrollTo(0,0);
 }
 
 // ── HIIT class runner (countdown engine) ──────────────────
@@ -5237,6 +5288,8 @@ window.showLeaderboard = showLeaderboard;
 window.showHiitSettings = showHiitSettings;
 window.openHiitEditor = openHiitEditor;
 window.setHiitName = setHiitName;
+window.setHiitDuration = setHiitDuration;
+window.showHiitHistory = showHiitHistory;
 window.setHiitFormat = setHiitFormat;
 window.setHiitWork = setHiitWork;
 window.setHiitRest = setHiitRest;
