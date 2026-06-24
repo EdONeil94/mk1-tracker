@@ -1537,6 +1537,7 @@ async function bootForUser(user){
 
   CURRENT_PROFILE = PEOPLE.find(p=>p.id===mapping.profileId) || {id:mapping.profileId, name:mapping.profileId, role:"client", clientIds:[]};
   await loadLog();
+  await deduplicateHiitLog();
   home();
 }
 
@@ -2067,6 +2068,34 @@ async function delEntry(i){
   LOG.splice(i,1);
   await saveLog();
   showHistory();
+}
+
+async function deduplicateHiitLog(){
+  // For each HIIT class on each calendar day, keep only the longest entry.
+  // Runs once at boot to fix any duplicates already in Firestore, and is a
+  // no-op when there's nothing to clean up so it costs nothing on repeat logins.
+  const hiitEntries = LOG.filter(s=>s.hiit);
+  if(hiitEntries.length < 2) return;
+  const seen = {};
+  const toRemove = new Set();
+  hiitEntries.forEach(s=>{
+    const key = `${s.sessionId}::${localDayKey(s.date)}`;
+    const idx = LOG.indexOf(s);
+    if(seen[key]===undefined){
+      seen[key] = idx;
+    } else {
+      const prevIdx = seen[key];
+      if((s.duration||0) > (LOG[prevIdx].duration||0)){
+        toRemove.add(prevIdx);
+        seen[key] = idx;
+      } else {
+        toRemove.add(idx);
+      }
+    }
+  });
+  if(toRemove.size===0) return;
+  LOG = LOG.filter((_,i)=>!toRemove.has(i));
+  await saveLog();
 }
 
 // ── Body weight tracker ──────────────────────────────────
