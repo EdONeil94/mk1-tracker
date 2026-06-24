@@ -25,10 +25,10 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 #app{max-width:500px;margin:0 auto;padding:14px 14px 100px}
 
 .sync-banner{background:#2a1f1f;border:1.5px solid #5a3030;color:#e0a890;border-radius:14px;
-  padding:12px 14px;font-size:12.5px;line-height:1.5;margin-bottom:14px}
-.sync-ok{background:var(--chip);border:1.5px solid var(--line);color:var(--mute);border-radius:14px;
-  padding:10px 14px;font-size:12px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.sync-ok .dot{width:7px;height:7px;border-radius:50%;background:var(--good);flex-shrink:0}
+  padding:12px 14px;font-size:12.5px;line-height:1.5;margin-bottom:14px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.sync-banner-dismiss{background:none;border:none;color:#e0a890;font-size:18px;cursor:pointer;
+  padding:0;line-height:1;flex-shrink:0;opacity:.7}
 
 .page-header{padding:6px 0 4px}
 .kicker{color:var(--accent);font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
@@ -1657,8 +1657,11 @@ function home(){
   cancelHiit();
   if(CURRENT_PROFILE.role==="trainer"){ renderTrainerHome(); return; }
   const banner = STORAGE_AVAILABLE
-    ? `<div class="sync-ok"><div class="dot"></div>Synced &mdash; same data on every device</div>`
-    : `<div class="sync-banner">Couldn't reach the database. Check your internet connection and tap Refresh.</div>`;
+    ? ""
+    : `<div class="sync-banner">
+        <span>&#9888;&#65039; Couldn\'t reach Firebase — your data is loaded locally but changes won\'t sync until your connection is restored.</span>
+        <button class="sync-banner-dismiss" onclick="this.closest(\'.sync-banner\').remove()" aria-label="Dismiss">&times;</button>
+      </div>`;
 
   const cards = PLAN.map(p=>{
     const last = lastOf(p.id);
