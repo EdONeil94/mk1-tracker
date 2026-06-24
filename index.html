@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MK1 Tracker">
@@ -3559,7 +3560,18 @@ function finishHiit(){
   try{ if(navigator.vibrate) navigator.vibrate([200,100,200,100,200]); }catch(e){}
   playBeep();
   const durationMin = Math.max(1, Math.round(hiitState.elapsedSec/60));
-  LOG.push({sessionId:`hiit-${hiitState.cls.id}`, date:new Date().toISOString(), duration:durationMin, ex:[], hiit:true, hiitName:hiitState.cls.name});
+  const sessionId = `hiit-${hiitState.cls.id}`;
+  const todayKey = localDayKey(new Date());
+  // If there's already an entry for this class today, only keep the longer one
+  const existingIdx = LOG.findIndex(s=>s.sessionId===sessionId && localDayKey(s.date)===todayKey);
+  if(existingIdx>=0){
+    if(durationMin > (LOG[existingIdx].duration||0)){
+      LOG[existingIdx].duration = durationMin;
+    }
+    // shorter or equal — discard the new one, keep the existing
+  } else {
+    LOG.push({sessionId, date:new Date().toISOString(), duration:durationMin, ex:[], hiit:true, hiitName:hiitState.cls.name});
+  }
   saveLog().then(ok=>{ showToast(ok ? "Class complete! Logged \u2713" : "Class complete (sync failed)"); });
 }
 
@@ -4942,11 +4954,15 @@ async function renderDashboard(){
   const visitsThisWeek = sessionsInRange(log, weekStart, now);
   const minsThisWeek = log.filter(s=>s.date>=weekStart && s.date<now).reduce((sum,s)=>sum+(s.duration||0),0);
 
-  // Current vs previous equivalent period, for the radar chart and trend badges
+  // Current vs previous equivalent period, for the radar chart and trend badges.
+  // Using computeMuscleSets (count of sets per group) rather than volume (w×r)
+  // so isolation work like curls isn't dwarfed by heavy compound lifts — a set
+  // of curls at 15kg looks proportional to a set of squats at 100kg, which is
+  // the right way to represent training balance.
   const curStats = periodLogStats(log, dashboardTimePeriod, 0);
   const prevStats = periodLogStats(log, dashboardTimePeriod, dashboardTimePeriod);
-  const curRadar = radarCategoryVolumes(computeMuscleVolume(curStats.log));
-  const prevRadar = radarCategoryVolumes(computeMuscleVolume(prevStats.log));
+  const curRadar = radarCategoryVolumes(computeMuscleSets(curStats.log));
+  const prevRadar = radarCategoryVolumes(computeMuscleSets(prevStats.log));
   const radarLabels = RADAR_CATEGORIES.map(c=>c.label);
   const radarSvg = buildRadarChartSVG(curRadar, prevRadar, radarLabels);
   const radarHasData = curRadar.some(v=>v>0) || prevRadar.some(v=>v>0);
@@ -4979,7 +4995,7 @@ async function renderDashboard(){
 
     ${periodToggle}
 
-    <div class="section-label">Muscle distribution &mdash; last ${dashboardTimePeriod} days</div>
+    <div class="section-label">Muscle distribution &mdash; sets, last ${dashboardTimePeriod} days</div>
     <div class="chart-card">
       ${radarHasData ? radarSvg : '<div class="chart-empty">No volume logged yet in this window.</div>'}
       <div class="radar-legend"><span><span class="dot" style="background:var(--accent)"></span>Current</span><span><span class="dot" style="background:var(--mute)"></span>Previous ${dashboardTimePeriod} days</span></div>
