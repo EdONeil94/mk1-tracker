@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -186,6 +189,13 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .exit-prompt-btn.danger .exit-prompt-sub{color:#c98a78}
 
 .template-change-card{margin-top:16px}
+
+.app-update-banner{position:fixed;left:14px;right:14px;bottom:calc(14px + var(--safe-bot));
+  z-index:500;background:var(--accent2);color:#fff;border-radius:14px;padding:13px 14px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.app-update-banner button{background:#fff;color:var(--accent2);border:none;border-radius:10px;
+  padding:8px 14px;font-size:12.5px;font-weight:800;cursor:pointer;flex-shrink:0}
 
 .toast{position:fixed;top:calc(16px + var(--safe-top));left:50%;transform:translateX(-50%);
   background:var(--good);color:#fff;padding:11px 20px;border-radius:99px;
@@ -635,6 +645,10 @@ const firebaseConfig = {
 };
 // Address your log is stored at. Change this string for a more private/unique address if you ever want to.
 const TRACKER_ID = "ed-mk1-tracker";
+// Bumped on every deploy so the running page can detect when a newer version
+// has been published and prompt for a refresh, rather than silently serving
+// a stale cached copy from a home-screen icon.
+const APP_VERSION = "2026-06-24.1";
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
@@ -5794,6 +5808,39 @@ document.addEventListener("click", e=>{
     closeSetTypePopup();
   }
 });
+
+// ── Update checker ──────────────────────────────────────────
+// Fetches the live page with cache bypassed and compares its APP_VERSION to
+// the one currently running. If they differ, a new release has gone out
+// since this copy was loaded — show a small banner to refresh. This matters
+// most for a home-screen icon, which can otherwise keep opening a cached
+// copy indefinitely rather than fetching the latest release.
+let _updateBannerShown = false;
+async function checkForAppUpdate(){
+  if(_updateBannerShown) return;
+  try{
+    const res = await fetch(location.pathname + "?_v=" + Date.now(), {cache:"no-store"});
+    if(!res.ok) return;
+    const text = await res.text();
+    const match = text.match(/const APP_VERSION\s*=\s*"([^"]+)"/);
+    if(match && match[1] && match[1] !== APP_VERSION){
+      showUpdateBanner();
+    }
+  }catch(e){ /* offline or blocked - silently skip, will retry next check */ }
+}
+function showUpdateBanner(){
+  if(_updateBannerShown) return;
+  _updateBannerShown = true;
+  const banner = document.createElement("div");
+  banner.className = "app-update-banner";
+  banner.innerHTML = `<span>&#128260; A new version is available</span><button onclick="location.reload(true)">Refresh</button>`;
+  document.body.appendChild(banner);
+}
+// Check shortly after load (let the initial boot settle first), whenever the
+// app is brought back to the foreground, and every 5 minutes while it stays open.
+setTimeout(checkForAppUpdate, 4000);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) checkForAppUpdate(); });
+setInterval(checkForAppUpdate, 5*60*1000);
 </script>
 </body>
 </html>
