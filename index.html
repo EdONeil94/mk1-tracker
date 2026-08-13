@@ -1501,15 +1501,19 @@ async function bootForUser(user){
     return;
   }
   app.innerHTML = `<div class="loading">Loading your data&hellip;</div>`;
-  await loadPeople();
-  await loadLocations();
-  await ensureEdIsAdmin();
 
-  let mapping = null;
-  try{
-    const snap = await getDoc(doc(db,"users",user.uid));
-    mapping = snap.exists() ? snap.data() : null;
-  }catch(e){}
+  // loadPeople, loadLocations, and the user->profile mapping lookup are all
+  // independent of each other, so run them concurrently rather than one
+  // after another — this is the main lever on cold-start time, since each
+  // round trip to Firestore was previously blocking the next.
+  const [, , mappingSnap] = await Promise.all([
+    loadPeople(),
+    loadLocations(),
+    getDoc(doc(db,"users",user.uid)).catch(()=>null)
+  ]);
+  let mapping = (mappingSnap && mappingSnap.exists && mappingSnap.exists()) ? mappingSnap.data() : null;
+
+  await ensureEdIsAdmin(); // needs PEOPLE, which just resolved above
 
   // If no UID mapping exists yet, check whether this Google account's email
   // is already linked to a profile from a prior email/password signup —
@@ -1772,14 +1776,14 @@ function openSession(id){
           <div class="ss-set-rows">
             <div class="ss-row" data-pw="${pwA}" data-pr="${prA}">
               <div class="ss-row-letter">A</div>
-              <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" placeholder="${pwA?pwA+" kg":"kg"}">
-              <input type="number" inputmode="numeric" min="0" class="r-input" placeholder="${prA?prA+" reps":"reps"}">
+              <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" value="${pwA!==''?pwA:''}" placeholder="kg">
+              <input type="number" inputmode="numeric" min="0" class="r-input" value="${prA!==''?prA:''}" placeholder="reps">
               <button class="tick" onclick="tick(this)">&#10003;</button>
             </div>
             <div class="ss-row" data-pw="${pwB}" data-pr="${prB}">
               <div class="ss-row-letter">B</div>
-              <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" placeholder="${pwB?pwB+" kg":"kg"}">
-              <input type="number" inputmode="numeric" min="0" class="r-input" placeholder="${prB?prB+" reps":"reps"}">
+              <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" value="${pwB!==''?pwB:''}" placeholder="kg">
+              <input type="number" inputmode="numeric" min="0" class="r-input" value="${prB!==''?prB:''}" placeholder="reps">
               <button class="tick" onclick="tick(this)">&#10003;</button>
             </div>
           </div>
@@ -1909,11 +1913,11 @@ function makeSetRow(si, pw, pr, type){
   return `<div class="setrow" data-pw="${pw}" data-pr="${pr}">
     <div class="setn" data-type="${badge}" onclick="openSetTypePopup(this)">${label}</div>
     <div class="field">
-      <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" placeholder="${pw!==''?pw+' kg':'kg'}" oninput="updateSetIndicator(this)">
+      <input type="number" inputmode="decimal" step="0.5" min="0" class="w-input" value="${pw!==''?pw:''}" placeholder="kg" oninput="updateSetIndicator(this)">
       <span class="trend-ind"></span>
     </div>
     <div class="field">
-      <input type="number" inputmode="numeric" min="0" class="r-input" placeholder="${pr!==''?pr+' reps':'reps'}" oninput="updateSetIndicator(this)">
+      <input type="number" inputmode="numeric" min="0" class="r-input" value="${pr!==''?pr:''}" placeholder="reps" oninput="updateSetIndicator(this)">
       <span class="trend-ind"></span>
     </div>
     <button class="tick" onclick="tick(this)">&#10003;</button>
