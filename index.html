@@ -651,7 +651,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-06-24.3";
+const APP_VERSION = "2026-06-24.4";
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
@@ -1590,6 +1590,11 @@ async function bootForUser(user){
   await loadLog();
   await deduplicateHiitLog();
   home();
+  // Firebase remembers the session, so most future opens skip the login
+  // screen entirely and land here directly — this is the one point every
+  // user actually reaches, so it's the right place to check for updates
+  // rather than relying only on the passive background timers.
+  checkForAppUpdate();
 }
 
 // The optional, user-customizable home screen blocks. Order here is the
@@ -5860,8 +5865,12 @@ document.addEventListener("click", e=>{
 // most for a home-screen icon, which can otherwise keep opening a cached
 // copy indefinitely rather than fetching the latest release.
 let _updateBannerShown = false;
+let _lastUpdateCheckAt = 0;
 async function checkForAppUpdate(){
   if(_updateBannerShown) return;
+  const now = Date.now();
+  if(now - _lastUpdateCheckAt < 10000) return; // avoid duplicate checks firing within 10s of each other
+  _lastUpdateCheckAt = now;
   try{
     const res = await fetch(location.pathname + "?_v=" + Date.now(), {cache:"no-store"});
     if(!res.ok) return;
