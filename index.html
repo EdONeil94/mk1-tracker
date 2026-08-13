@@ -651,7 +651,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-06-24.1";
+const APP_VERSION = "2026-06-24.3";
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
@@ -1624,7 +1624,7 @@ function homeModuleHtml(id, ctx){
       const blankBtnLabel = DRAFTS["adhoc"] ? "&#9203; Resume Freestyle Session" : "&#65291; Start Freestyle Session";
       const blankBtn = `<button class="blank-session-btn" onclick="startBlankSession()">${blankBtnLabel}</button>`;
       return PLAN.length ? `
-      <div class="section-label">Gym Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
+      <div class="section-label">Gym Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Sync data">🔄</button></div></div>
       <div class="grid">${ctx.cards}</div>
       ${blankBtn}
       <button class="histbtn" onclick="showHistory()">📋 &nbsp;View Full History &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>` : `
@@ -1793,7 +1793,7 @@ function home(){
 }
 
 async function refresh(){
-  showToast("Checking for updates\u2026");
+  showToast("Syncing your data\u2026");
   await loadLog();
   home();
 }
@@ -5877,7 +5877,7 @@ function showUpdateBanner(){
   _updateBannerShown = true;
   const banner = document.createElement("div");
   banner.className = "app-update-banner";
-  banner.innerHTML = `<span>&#128260; A new version is available</span><button onclick="location.reload(true)">Refresh</button>`;
+  banner.innerHTML = `<span>&#128260; A new version is available</span><button onclick="location.href=location.pathname+'?_v='+Date.now()">Refresh</button>`;
   document.body.appendChild(banner);
 }
 // Check shortly after load (let the initial boot settle first), whenever the
