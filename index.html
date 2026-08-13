@@ -165,6 +165,28 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   padding:17px;font-size:17px;font-weight:800;cursor:pointer}
 .save-btn:disabled{opacity:.4}
 
+/* ── Session lifecycle (Phase 2) ─────────────────────────── */
+.start-session-btn{background:var(--good);border:none;color:#fff;border-radius:12px;
+  padding:10px 18px;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px}
+.draft-badge{display:inline-block;background:var(--accent2);color:#fff;font-size:10px;font-weight:800;
+  padding:4px 9px;border-radius:20px;margin-bottom:8px}
+.add-mid-session-btn{width:100%;background:none;border:1.5px dashed var(--line);color:var(--mute);
+  border-radius:14px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;margin:4px 0 16px}
+.ex-swap-btn{background:var(--chip);border:1.5px solid var(--line);color:var(--mute);
+  border-radius:8px;width:30px;height:30px;font-size:15px;cursor:pointer;flex-shrink:0}
+
+.exit-prompt-card{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.exit-prompt-title{font-size:14px;color:var(--mute);font-weight:700;margin-bottom:4px;text-align:center}
+.exit-prompt-btn{display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+  background:var(--card);border:1.5px solid var(--line);color:var(--text);
+  border-radius:14px;padding:14px 16px;font-size:15px;font-weight:800;cursor:pointer;text-align:left}
+.exit-prompt-btn.primary{border-color:var(--good);background:rgba(47,184,110,.08)}
+.exit-prompt-btn.danger{border-color:#5a3030;color:#e0a890}
+.exit-prompt-sub{font-size:11.5px;font-weight:600;color:var(--mute)}
+.exit-prompt-btn.danger .exit-prompt-sub{color:#c98a78}
+
+.template-change-card{margin-top:16px}
+
 .toast{position:fixed;top:calc(16px + var(--safe-top));left:50%;transform:translateX(-50%);
   background:var(--good);color:#fff;padding:11px 20px;border-radius:99px;
   font-weight:700;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;white-space:nowrap}
@@ -914,6 +936,7 @@ const HIIT_FORMATS = [
 let HIIT_CLASSES = [];
 let CARDIO_LOG = [];
 let CHECKINS = [];
+let DRAFTS = {}; // {sessionId: {savedAt, elapsedSec, workingEx, setsData}} — resumable in-progress sessions
 
 // Separate from the "Cardio" category inside EXERCISE_LIBRARY (which stays
 // available for people who want a machine logged as part of a gym session).
@@ -938,16 +961,17 @@ async function loadLog(){
     HIIT_CLASSES = snap.exists() ? (snap.data().hiitClasses || []) : [];
     CARDIO_LOG = snap.exists() ? (snap.data().cardioLog || []) : [];
     CHECKINS = snap.exists() ? (snap.data().checkIns || []) : [];
+    DRAFTS = snap.exists() ? (snap.data().drafts || {}) : {};
     STORAGE_AVAILABLE = true;
   }catch(e){
     STORAGE_AVAILABLE = false;
     LOG = []; WEIGHTS = []; MEASUREMENTS = []; PLAN = [];
-    HIIT_CLASSES = []; CARDIO_LOG = []; CHECKINS = [];
+    HIIT_CLASSES = []; CARDIO_LOG = []; CHECKINS = []; DRAFTS = {};
   }
 }
 async function saveLog(){
   try{
-    await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, measurements: MEASUREMENTS, plan: PLAN, hiitClasses: HIIT_CLASSES, cardioLog: CARDIO_LOG, checkIns: CHECKINS, updatedAt: new Date().toISOString()});
+    await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, measurements: MEASUREMENTS, plan: PLAN, hiitClasses: HIIT_CLASSES, cardioLog: CARDIO_LOG, checkIns: CHECKINS, drafts: DRAFTS, updatedAt: new Date().toISOString()});
     return true;
   }catch(e){ return false; }
 }
@@ -1060,12 +1084,14 @@ function showToast(msg, ok=true){
 
 let timerStart=null, timerInterval=null;
 function fmtElapsed(ms){ const s=Math.floor(ms/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
-function startTimer(){
-  stopTimer(); timerStart=Date.now();
+function startTimer(resumeElapsedSec){
+  stopTimer();
+  timerStart = Date.now() - (resumeElapsedSec ? resumeElapsedSec*1000 : 0);
   timerInterval=setInterval(()=>{ const el=$("sessionTimer"); if(!el){stopTimer();return;} el.textContent=fmtElapsed(Date.now()-timerStart); },1000);
 }
 function stopTimer(){ if(timerInterval){clearInterval(timerInterval); timerInterval=null;} }
 function elapsedMinutes(){ return timerStart ? Math.round((Date.now()-timerStart)/60000) : 0; }
+function elapsedSeconds(){ return timerStart ? Math.round((Date.now()-timerStart)/1000) : 0; }
 
 let restInterval=null, restRemaining=0;
 function fmtRest(sec){ return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`; }
@@ -1674,7 +1700,9 @@ function home(){
       const topSet = last.ex.flatMap(e=>e.sets).filter(s=>s.w).sort((a,b)=>b.w-a.w)[0];
       lastHtml = `Last: <b>${fmtDate(last.date)}</b>` + (topSet ? `<br>Top weight: <b>${topSet.w}kg</b>` : "");
     }
+    const draftBadge = DRAFTS[p.id] ? `<div class="draft-badge">&#9203; Resume in-progress</div>` : "";
     return `<div class="scard${last?" has-data":""}" onclick="openSession('${p.id}')">
+      ${draftBadge}
       <h2>${p.name}</h2><div class="focus">${p.focus}</div><div class="last">${lastHtml}</div>
     </div>`;
   }).join("");
@@ -1747,30 +1775,57 @@ async function refresh(){
   home();
 }
 
+// ── Session lifecycle state machine ────────────────────────
+// sessionState tracks the in-progress session independent of the saved PLAN
+// template, so exercises can be added/swapped mid-session without touching
+// the template until the user explicitly chooses to at save time.
+let sessionState = null; // {id, started, workingEx, originalEx}
+
 function openSession(id){
   const p = PLAN.find(x=>x.id===id);
-  const last = lastOf(id);
+  if(!p) return;
+  const draft = DRAFTS[id];
 
-  const blocks = p.ex.map((e,i)=>{
+  if(draft){
+    sessionState = {id, started:true, workingEx: draft.workingEx, originalEx: JSON.parse(JSON.stringify(p.ex))};
+    renderActiveSessionScreen(draft.setsData);
+    startTimer(draft.elapsedSec||0);
+    showToast("Resumed your in-progress session \u2713");
+  } else {
+    sessionState = {id, started:false, workingEx: JSON.parse(JSON.stringify(p.ex)), originalEx: JSON.parse(JSON.stringify(p.ex))};
+    renderActiveSessionScreen(null);
+  }
+}
+
+function sessionTemplateChanged(){
+  if(!sessionState) return false;
+  return JSON.stringify(sessionState.workingEx) !== JSON.stringify(sessionState.originalEx);
+}
+
+function renderActiveSessionScreen(resumeSetsData){
+  const p = PLAN.find(x=>x.id===sessionState.id);
+  const last = lastOf(sessionState.id);
+  const workingEx = sessionState.workingEx;
+
+  const blocks = workingEx.map((e,i)=>{
+    const resumeBlock = resumeSetsData && resumeSetsData[i] ? resumeSetsData[i] : null;
+
     if(e.superset){
-      // ── Superset block ──────────────────────────────────
       const prevA = last && last.ex.find(le=>le.n===e.exA.n);
       const prevB = last && last.ex.find(le=>le.n===e.exB.n);
-      const lastA = prevA && prevA.sets.length
-        ? prevA.sets.map(s=>fmtSet(s)).join(" · ")
-        : null;
-      const lastB = prevB && prevB.sets.length
-        ? prevB.sets.map(s=>fmtSet(s)).join(" · ")
-        : null;
+      const lastA = prevA && prevA.sets.length ? prevA.sets.map(s=>fmtSet(s)).join(" · ") : null;
+      const lastB = prevB && prevB.sets.length ? prevB.sets.map(s=>fmtSet(s)).join(" · ") : null;
       const prevHtml = (lastA||lastB)
         ? `<div class="prev">${lastA?`Last A: <b>${lastA}</b>`:""}${lastA&&lastB?" &nbsp;·&nbsp; ":""}${lastB?`Last B: <b>${lastB}</b>`:""}</div>`
         : `<div class="prev">First time logging this superset</div>`;
 
       const setPairs = Array.from({length:e.s},(_,si)=>{
-        const pwA = prevA&&prevA.sets[si] ? prevA.sets[si].w : "";
-        const prA = prevA&&prevA.sets[si] ? prevA.sets[si].r : "";
-        const pwB = prevB&&prevB.sets[si] ? prevB.sets[si].w : "";
-        const prB = prevB&&prevB.sets[si] ? prevB.sets[si].r : "";
+        const resumeA = resumeBlock && resumeBlock.A && resumeBlock.A[si];
+        const resumeB = resumeBlock && resumeBlock.B && resumeBlock.B[si];
+        const pwA = resumeA ? resumeA.w : (prevA&&prevA.sets[si] ? prevA.sets[si].w : "");
+        const prA = resumeA ? resumeA.r : (prevA&&prevA.sets[si] ? prevA.sets[si].r : "");
+        const pwB = resumeB ? resumeB.w : (prevB&&prevB.sets[si] ? prevB.sets[si].w : "");
+        const prB = resumeB ? resumeB.r : (prevB&&prevB.sets[si] ? prevB.sets[si].r : "");
         return `<div class="ss-set-pair">
           <div class="ss-set-n">S${si+1}</div>
           <div class="ss-set-rows">
@@ -1812,7 +1867,6 @@ function openSession(id){
       </div>`;
     }
 
-    // ── Regular exercise block ─────────────────────────────
     const prev = last && last.ex.find(le=>le.n===e.n);
     const prevHtml = (prev && prev.sets.length)
       ? `Last: <b>${prev.sets.map(s=>fmtSet(s)).join(" &nbsp;\u00b7&nbsp; ")}</b>`
@@ -1820,13 +1874,15 @@ function openSession(id){
     const priorBest = allTimeBest(e.n);
     const bestHtml = priorBest ? ` &nbsp;·&nbsp; &#127942; PR: <b>${priorBest.weight}kg×${priorBest.reps}</b>` : "";
     const rows = Array.from({length:e.s},(_,si)=>{
-      const pw = prev&&prev.sets[si] ? prev.sets[si].w : "";
-      const pr = prev&&prev.sets[si] ? prev.sets[si].r : "";
-      const pt = prev&&prev.sets[si] ? (prev.sets[si].type||"") : "";
+      const resumeSet = resumeBlock && resumeBlock[si];
+      const pw = resumeSet ? resumeSet.w : (prev&&prev.sets[si] ? prev.sets[si].w : "");
+      const pr = resumeSet ? resumeSet.r : (prev&&prev.sets[si] ? prev.sets[si].r : "");
+      const pt = resumeSet ? (resumeSet.type||"") : (prev&&prev.sets[si] ? (prev.sets[si].type||"") : "");
       return makeSetRow(si,pw,pr,pt);
     }).join("");
+    const swapBtn = `<button class="ex-swap-btn" onclick="swapSessionExercise(${i})" aria-label="Swap exercise">&#8646;</button>`;
     return `<div class="ex" id="ex${i}">
-      <div class="ex-head"><div class="ex-name">${i+1}. ${e.n}</div><div class="scheme">${e.s}&times;${e.r}</div></div>
+      <div class="ex-head"><div class="ex-name">${i+1}. ${e.n}</div><div style="display:flex;align-items:center;gap:8px"><div class="scheme">${e.s}&times;${e.r}</div>${swapBtn}</div></div>
       ${e.note ? `<div class="ex-note">${e.note}</div>` : ""}
       <div class="prev">${prevHtml}${bestHtml}</div>
       <div class="sets" id="sets${i}">${rows}</div>
@@ -1838,23 +1894,202 @@ function openSession(id){
     ? `<div class="last-updated">Last workout: <b>${fmtDate(last.date)}</b> &middot; ${timeAgo(last.date)}</div>`
     : `<div class="last-updated">No previous workout logged for this session yet</div>`;
 
+  const addExBtn = `<button class="add-mid-session-btn" onclick="showAddExerciseToSession()">&#65291; Add Exercise</button>`;
+
+  const timerArea = sessionState.started
+    ? `<div class="timer-chip"><div class="tlabel">Time</div><div class="tval" id="sessionTimer">0:00</div></div>`
+    : `<button class="start-session-btn" onclick="startActiveSession()">&#9654; Start Session</button>`;
+
+  const bottomBar = sessionState.started
+    ? `<div class="rest-bar">
+        <button class="rest-chip" onclick="startRest(60)">60s</button>
+        <button class="rest-chip" onclick="startRest(90)">90s</button>
+        <button class="rest-chip" onclick="startRest(120)">120s</button>
+        <div class="rest-display" id="restDisplay" onclick="cancelRest()">Rest</div>
+      </div>
+      <div class="savebar"><div class="inner"><button class="save-btn" onclick="saveSession('${sessionState.id}')">Save session</button></div></div>`
+    : "";
+
   app.innerHTML = `
     <div class="topbar">
-      <button class="back" onclick="home()">&#8592; Back</button>
+      <button class="back" onclick="handleSessionBack()">&#8592; Back</button>
       <div class="topbar-info"><h2>${p.name}</h2><div class="focus">${p.focus}</div></div>
-      <div class="timer-chip"><div class="tlabel">Time</div><div class="tval" id="sessionTimer">0:00</div></div>
+      ${timerArea}
     </div>
     ${blocks}
+    ${addExBtn}
     ${footer}
-    <div class="rest-bar">
-      <button class="rest-chip" onclick="startRest(60)">60s</button>
-      <button class="rest-chip" onclick="startRest(90)">90s</button>
-      <button class="rest-chip" onclick="startRest(120)">120s</button>
-      <div class="rest-display" id="restDisplay" onclick="cancelRest()">Rest</div>
-    </div>
-    <div class="savebar"><div class="inner"><button class="save-btn" onclick="saveSession('${id}')">Save session</button></div></div>`;
+    ${bottomBar}`;
   window.scrollTo(0,0);
+}
+
+function startActiveSession(){
+  if(!sessionState) return;
+  sessionState.started = true;
   startTimer();
+  renderActiveSessionScreen(null);
+}
+
+// Back button behaviour: nothing started yet -> just go home, nothing to lose.
+// Started -> show the three-way exit prompt (Save Draft / Cancel / Save & Finish).
+function handleSessionBack(){
+  if(!sessionState || !sessionState.started){
+    sessionState = null;
+    home();
+    return;
+  }
+  showSessionExitPrompt();
+}
+
+function showSessionExitPrompt(){
+  const p = PLAN.find(x=>x.id===sessionState.id);
+  app.innerHTML = `
+    <div class="topbar">
+      <div class="topbar-info"><h2>Pause Session</h2><div class="focus">${p?p.name:""}</div></div>
+    </div>
+    <div class="exit-prompt-card">
+      <div class="exit-prompt-title">What would you like to do?</div>
+      <button class="exit-prompt-btn primary" onclick="saveSessionDraft()">
+        <span>&#128190; Save Draft</span>
+        <span class="exit-prompt-sub">Keep your progress and resume later</span>
+      </button>
+      <button class="exit-prompt-btn" onclick="saveSession('${sessionState.id}')">
+        <span>&#9989; Save &amp; Finish</span>
+        <span class="exit-prompt-sub">Log this session as complete now</span>
+      </button>
+      <button class="exit-prompt-btn danger" onclick="cancelActiveSession()">
+        <span>&#128465;&#65039; Cancel Session</span>
+        <span class="exit-prompt-sub">Discard everything from this session</span>
+      </button>
+      <button class="auth-link-btn" style="margin-top:6px" onclick="resumeExitPrompt()">Keep logging</button>
+    </div>`;
+  window.scrollTo(0,0);
+}
+
+function resumeExitPrompt(){
+  renderActiveSessionScreen(null);
+  // Re-hydrate whatever was typed before the prompt opened is already lost
+  // since we swapped app.innerHTML — acceptable, since Save Draft is the
+  // one-tap safe path and is presented first for exactly this reason.
+}
+
+function serializeSessionSets(){
+  // Captures exactly what's currently typed into the DOM, per exercise block.
+  const setsData = [];
+  sessionState.workingEx.forEach((e,i)=>{
+    const c = $("sets"+i);
+    if(!c){ setsData.push(null); return; }
+    if(e.superset){
+      const A=[], B=[];
+      [...c.querySelectorAll(".ss-set-pair")].forEach(pair=>{
+        const rows = [...pair.querySelectorAll(".ss-row")];
+        const rowA=rows[0], rowB=rows[1];
+        A.push(rowA ? {w:rowA.querySelector(".w-input").value.trim(), r:rowA.querySelector(".r-input").value.trim()} : {w:"",r:""});
+        B.push(rowB ? {w:rowB.querySelector(".w-input").value.trim(), r:rowB.querySelector(".r-input").value.trim()} : {w:"",r:""});
+      });
+      setsData.push({A,B});
+    } else {
+      const sets = [...c.children].map(row=>({
+        w: row.querySelector(".w-input").value.trim(),
+        r: row.querySelector(".r-input").value.trim(),
+        type: row.querySelector(".setn")?.dataset?.type||""
+      }));
+      setsData.push(sets);
+    }
+  });
+  return setsData;
+}
+
+async function saveSessionDraft(){
+  if(!sessionState) return;
+  const setsData = serializeSessionSets();
+  DRAFTS[sessionState.id] = {
+    savedAt: new Date().toISOString(),
+    elapsedSec: elapsedSeconds(),
+    workingEx: sessionState.workingEx,
+    setsData
+  };
+  const ok = await saveLog();
+  stopTimer(); cancelRest();
+  sessionState = null;
+  showToast(ok ? "Draft saved \u2014 resume any time \u2713" : "Couldn't save draft \u2014 check your connection");
+  home();
+}
+
+async function cancelActiveSession(){
+  if(sessionState && DRAFTS[sessionState.id]){
+    delete DRAFTS[sessionState.id];
+    await saveLog();
+  }
+  stopTimer(); cancelRest();
+  sessionState = null;
+  home();
+}
+
+// ── Mid-session exercise editing ───────────────────────────
+function showAddExerciseToSession(){
+  if(!sessionState) return;
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="renderActiveSessionScreen(null)">&#8592; Back</button>
+      <div class="topbar-info"><h2>Add Exercise</h2></div>
+    </div>
+    <div class="add-ex-row">
+      <select id="midSessionPicker" onchange="toggleCustomExerciseInput('midSessionPicker','midSessionCustom')">${exercisePickerOptions()}</select>
+    </div>
+    <input type="text" id="midSessionCustom" class="custom-ex-input" style="display:none" placeholder="Type the exercise name" maxlength="60">
+    <div class="editor-field" style="margin-top:14px">
+      <label>Sets</label>
+      <input type="text" id="midSessionSets" value="3" inputmode="numeric">
+    </div>
+    <div class="editor-field" style="margin-top:10px">
+      <label>Reps</label>
+      <input type="text" id="midSessionReps" value="10-12">
+    </div>
+    <button class="save-session-btn" style="margin-top:16px" onclick="confirmAddExerciseToSession()">Add to session</button>`;
+  window.scrollTo(0,0);
+}
+
+function confirmAddExerciseToSession(){
+  const sel = $("midSessionPicker"), custom = $("midSessionCustom");
+  let name = sel ? sel.value : "";
+  if(name==="__custom__") name = (custom?.value||"").trim();
+  if(!name){ showToast("Choose an exercise", false); return; }
+  const sets = parseInt($("midSessionSets")?.value) || 3;
+  const reps = ($("midSessionReps")?.value||"10-12").trim();
+  sessionState.workingEx.push({n:name, s:sets, r:reps});
+  // Re-rendering the screen doesn't disturb the running timer — it looks up
+  // its DOM element fresh each tick rather than holding a stale reference,
+  // and timerStart itself is untouched by this re-render.
+  renderActiveSessionScreen(null);
+}
+
+function swapSessionExercise(idx){
+  if(!sessionState) return;
+  _swapSessionExerciseIdx = idx;
+  app.innerHTML = `
+    <div class="topbar">
+      <button class="back" onclick="renderActiveSessionScreen(null)">&#8592; Back</button>
+      <div class="topbar-info"><h2>Swap Exercise</h2><div class="focus">${sessionState.workingEx[idx].n}</div></div>
+    </div>
+    <div class="add-ex-row">
+      <select id="swapPicker" onchange="toggleCustomExerciseInput('swapPicker','swapCustom')">${exercisePickerOptions()}</select>
+    </div>
+    <input type="text" id="swapCustom" class="custom-ex-input" style="display:none" placeholder="Type the exercise name" maxlength="60">
+    <button class="save-session-btn" style="margin-top:16px" onclick="confirmSwapSessionExercise()">Swap</button>`;
+  window.scrollTo(0,0);
+}
+
+let _swapSessionExerciseIdx = null;
+function confirmSwapSessionExercise(){
+  const sel = $("swapPicker"), custom = $("swapCustom");
+  let name = sel ? sel.value : "";
+  if(name==="__custom__") name = (custom?.value||"").trim();
+  if(!name){ showToast("Choose an exercise", false); return; }
+  if(_swapSessionExerciseIdx===null) return;
+  sessionState.workingEx[_swapSessionExerciseIdx].n = name;
+  _swapSessionExerciseIdx = null;
+  renderActiveSessionScreen(null);
 }
 
 // ── Set-type system (Warm-up / Drop Set / Failure) ────────
@@ -1987,10 +2222,12 @@ function removeSet(btn){
 }
 
 async function saveSession(id){
-  const p = PLAN.find(x=>x.id===id);
+  id = (sessionState && sessionState.id) || id;
+  const workingEx = (sessionState && sessionState.workingEx) || ((PLAN.find(x=>x.id===id)||{}).ex) || [];
   const ex = [];
-  p.ex.forEach((e,i)=>{
+  workingEx.forEach((e,i)=>{
     const c = $("sets"+i);
+    if(!c) return;
     if(e.superset){
       // Each ss-set-pair contains two ss-rows (A and B) — collect them separately
       const setsA=[], setsB=[];
@@ -2045,21 +2282,65 @@ async function saveSession(id){
 
   const duration = elapsedMinutes();
   LOG.push({sessionId:id, date:new Date().toISOString(), duration, ex});
+  const templateChanged = sessionState ? sessionTemplateChanged() : false;
+  const workingExSnapshot = workingEx;
+  if(DRAFTS[id]) delete DRAFTS[id]; // finishing supersedes any saved draft for this session
   const ok = await saveLog();
   stopTimer();
   cancelRest();
+  sessionState = null;
   if(!ok){
     showToast("Couldn't save \u2014 check your connection");
     LOG.pop(); // don't keep an unsaved entry in memory if the write failed
     setTimeout(home, 1000);
+    return;
+  }
+  if(templateChanged){
+    showTemplateChangePrompt(ex, prHits, id, workingExSnapshot);
   } else {
     if(prHits.length){
       showToast(`\u{1F3C6} New PR: ${prHits.slice(0,2).join(", ")}${prHits.length>2?` +${prHits.length-2} more`:""}`);
     } else {
       showToast("Session saved & synced \u2713");
     }
-    setTimeout(()=>showPostSessionSummary(ex, prHits), 1200);
+    setTimeout(()=>showPostSessionSummary(ex, prHits, id, workingExSnapshot), 1200);
   }
+}
+
+let _pendingSaveContext = null;
+function showTemplateChangePrompt(ex, prHits, sessionId, workingEx){
+  _pendingSaveContext = {ex, prHits, sessionId, workingEx};
+  const p = PLAN.find(x=>x.id===sessionId);
+  app.innerHTML = `
+    <div class="topbar"><div class="topbar-info"><h2>Update Template?</h2><div class="focus">${p?p.name:""}</div></div></div>
+    <div class="template-change-card">
+      <div class="last-updated" style="text-align:left">You changed the exercises during this session. Want to keep those changes for next time?</div>
+      <button class="save-session-btn" style="margin-top:14px" onclick="applyTemplateChangeYes()">Update ${p?p.name:"session"} template</button>
+      <button class="restore-default-btn" style="margin-top:10px" onclick="applyTemplateChangeNo()">Just this once</button>
+    </div>`;
+  window.scrollTo(0,0);
+}
+async function applyTemplateChangeYes(){
+  const ctx = _pendingSaveContext;
+  if(!ctx) return;
+  const p = PLAN.find(x=>x.id===ctx.sessionId);
+  if(p) p.ex = ctx.workingEx;
+  await saveLog();
+  finishSaveFlow();
+}
+function applyTemplateChangeNo(){
+  finishSaveFlow();
+}
+function finishSaveFlow(){
+  const ctx = _pendingSaveContext;
+  _pendingSaveContext = null;
+  if(!ctx){ home(); return; }
+  if(ctx.prHits.length){
+    showToast(`\u{1F3C6} New PR: ${ctx.prHits.slice(0,2).join(", ")}${ctx.prHits.length>2?` +${ctx.prHits.length-2} more`:""}`);
+  } else {
+    showToast("Session saved & synced \u2713");
+  }
+  setTimeout(()=>showPostSessionSummary(ctx.ex, ctx.prHits, ctx.sessionId, ctx.workingEx), 1200);
 }
 
 function showHistory(){
@@ -4850,13 +5131,18 @@ function setPostSessionRPE(v){
 }
 function setPostSessionComment(v){ postSessionComment = v; }
 
-function showPostSessionSummary(ex, prHits){
+let _lastSessionEditContext = null;
+function showPostSessionSummary(ex, prHits, sessionId, workingEx){
   postSessionRPE = null;
   postSessionComment = "";
+  _lastSessionEditContext = sessionId ? {sessionId, workingEx: workingEx||((PLAN.find(x=>x.id===sessionId)||{}).ex)||[]} : null;
   const totals = computeMuscleSets([{ex}]);
   const svg = buildMuscleMapSVG(totals);
   const prHtml = (prHits && prHits.length)
     ? `<div class="last-updated">&#127942; New PR: ${prHits.join(", ")}</div>`
+    : "";
+  const editBtn = _lastSessionEditContext
+    ? `<button class="auth-link-btn" style="margin-top:6px" onclick="reopenJustSavedSession()">Edit this session</button>`
     : "";
   app.innerHTML = `
     <div class="topbar"><div class="topbar-info"><h2>Session Complete</h2><div class="focus">Nice work, ${CURRENT_PROFILE.name}</div></div></div>
@@ -4874,6 +5160,7 @@ function showPostSessionSummary(ex, prHits){
     </div>
     <textarea class="rpe-comment" placeholder="Any notes about this session? (optional)" oninput="setPostSessionComment(this.value)"></textarea>
     <div class="savebar"><div class="inner"><button class="save-btn" onclick="finishPostSessionSummary()">Done</button></div></div>
+    ${editBtn}
   `;
   window.scrollTo(0,0);
 }
@@ -4888,7 +5175,39 @@ async function finishPostSessionSummary(){
   }
   postSessionRPE = null;
   postSessionComment = "";
+  _lastSessionEditContext = null;
   home();
+}
+
+// Reopens the session you just saved, prefilled with exactly what was
+// submitted. Pops the just-created LOG entry — re-saving after edits
+// writes a fresh entry rather than leaving a duplicate behind.
+function resumeDataFromLogEntry(workingEx, logEntry){
+  return workingEx.map((e,i)=>{
+    if(e.superset){
+      const entryA = logEntry.ex.find(le=>le.supersetGroup===i && le.n===e.exA.n);
+      const entryB = logEntry.ex.find(le=>le.supersetGroup===i && le.n===e.exB.n);
+      return {A: entryA?entryA.sets:[], B: entryB?entryB.sets:[]};
+    }
+    const entry = logEntry.ex.find(le=>le.n===e.n && le.supersetGroup===undefined);
+    return entry ? entry.sets : [];
+  });
+}
+function reopenJustSavedSession(){
+  const ctx = _lastSessionEditContext;
+  _lastSessionEditContext = null;
+  if(!ctx || !LOG.length){ home(); return; }
+  const logEntry = LOG.pop();
+  const p = PLAN.find(x=>x.id===ctx.sessionId);
+  sessionState = {
+    id: ctx.sessionId,
+    started: true,
+    workingEx: ctx.workingEx,
+    originalEx: JSON.parse(JSON.stringify(p ? p.ex : ctx.workingEx))
+  };
+  const resumeData = resumeDataFromLogEntry(ctx.workingEx, logEntry);
+  renderActiveSessionScreen(resumeData);
+  startTimer(Math.round((logEntry.duration||0)*60));
 }
 
 let muscleMapPeriod = 7;
@@ -5317,6 +5636,19 @@ window.setPostSessionComment = setPostSessionComment;
 window.finishPostSessionSummary = finishPostSessionSummary;
 window.home = home;
 window.openSession = openSession;
+window.startActiveSession = startActiveSession;
+window.handleSessionBack = handleSessionBack;
+window.saveSessionDraft = saveSessionDraft;
+window.cancelActiveSession = cancelActiveSession;
+window.resumeExitPrompt = resumeExitPrompt;
+window.showAddExerciseToSession = showAddExerciseToSession;
+window.confirmAddExerciseToSession = confirmAddExerciseToSession;
+window.swapSessionExercise = swapSessionExercise;
+window.confirmSwapSessionExercise = confirmSwapSessionExercise;
+window.renderActiveSessionScreen = renderActiveSessionScreen;
+window.applyTemplateChangeYes = applyTemplateChangeYes;
+window.applyTemplateChangeNo = applyTemplateChangeNo;
+window.reopenJustSavedSession = reopenJustSavedSession;
 window.addSet = addSet;
 window.tick = tick;
 window.openSetTypePopup = openSetTypePopup;
