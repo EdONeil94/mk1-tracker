@@ -190,6 +190,9 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 
 .template-change-card{margin-top:16px}
 
+.blank-session-btn{width:100%;background:none;border:1.5px dashed var(--accent2);color:var(--accent2);
+  border-radius:14px;padding:13px;font-size:13.5px;font-weight:800;cursor:pointer;margin:10px 0 4px}
+
 .app-update-banner{position:fixed;left:14px;right:14px;bottom:calc(14px + var(--safe-bot));
   z-index:500;background:var(--accent2);color:#fff;border-radius:14px;padding:13px 14px;
   display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -1617,13 +1620,19 @@ function getHomeLayoutFor(person){
 
 function homeModuleHtml(id, ctx){
   switch(id){
-    case "sessions": return PLAN.length ? `
+    case "sessions": {
+      const blankBtnLabel = DRAFTS["adhoc"] ? "&#9203; Resume Freestyle Session" : "&#65291; Start Freestyle Session";
+      const blankBtn = `<button class="blank-session-btn" onclick="startBlankSession()">${blankBtnLabel}</button>`;
+      return PLAN.length ? `
       <div class="section-label">Gym Sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">📱</button><button class="icon-btn" onclick="refresh()" aria-label="Refresh">🔄</button></div></div>
       <div class="grid">${ctx.cards}</div>
+      ${blankBtn}
       <button class="histbtn" onclick="showHistory()">📋 &nbsp;View Full History &mdash; ${LOG.length} session${LOG.length!==1?"s":""} logged</button>` : `
       <div class="section-label">Gym Sessions</div>
-      <div class="chart-empty">You don't have any sessions yet &mdash; create one to start logging workouts.</div>
+      <div class="chart-empty">You don't have any sessions yet &mdash; create one to start logging workouts, or just start a blank one below.</div>
+      ${blankBtn}
       <button class="addsessbtn" onclick="showSettings()">+ Create your first session</button>`;
+    }
     case "hiit": return ctx.hiitSection;
     case "cardio": return `
       <button class="weightbtn" onclick="showCardioTracker()">
@@ -1795,6 +1804,27 @@ async function refresh(){
 // the template until the user explicitly chooses to at save time.
 let sessionState = null; // {id, started, workingEx, originalEx}
 
+// A freeform session not tied to any saved template — exercises get added
+// one at a time as you go, via the same "Add Exercise" mechanism used for
+// editing a template session mid-workout. Uses a fixed "adhoc" sessionId so
+// weight/rep prefill and history naturally carry forward between freeform
+// sessions, the same way it does for template sessions.
+function startBlankSession(){
+  const draft = DRAFTS["adhoc"];
+  if(draft){
+    sessionState = {id:"adhoc", started:true, workingEx: draft.workingEx, originalEx: draft.workingEx, adHocName: draft.adHocName||"Freestyle Session"};
+    renderActiveSessionScreen(draft.setsData);
+    startTimer(draft.elapsedSec||0);
+    showToast("Resumed your in-progress session \u2713");
+    return;
+  }
+  const name = prompt("Name this session:", "Freestyle Session");
+  if(name===null) return; // cancelled
+  const trimmed = name.trim() || "Freestyle Session";
+  sessionState = {id:"adhoc", started:false, workingEx:[], originalEx:[], adHocName: trimmed};
+  renderActiveSessionScreen(null);
+}
+
 function openSession(id){
   const p = PLAN.find(x=>x.id===id);
   if(!p) return;
@@ -1818,6 +1848,9 @@ function sessionTemplateChanged(){
 
 function renderActiveSessionScreen(resumeSetsData){
   const p = PLAN.find(x=>x.id===sessionState.id);
+  const isAdHoc = sessionState.id === "adhoc";
+  const displayName = isAdHoc ? (sessionState.adHocName||"Freestyle Session") : (p?p.name:"Session");
+  const displayFocus = isAdHoc ? "Freestyle session" : (p?p.focus:"");
   const last = lastOf(sessionState.id);
   const workingEx = sessionState.workingEx;
 
@@ -1924,13 +1957,17 @@ function renderActiveSessionScreen(resumeSetsData){
       <div class="savebar"><div class="inner"><button class="save-btn" onclick="saveSession('${sessionState.id}')">Save session</button></div></div>`
     : "";
 
+  const blocksHtml = workingEx.length
+    ? blocks
+    : `<div class="chart-empty">No exercises added yet &mdash; tap "Add Exercise" below to get started.</div>`;
+
   app.innerHTML = `
     <div class="topbar">
       <button class="back" onclick="handleSessionBack()">&#8592; Back</button>
-      <div class="topbar-info"><h2>${p.name}</h2><div class="focus">${p.focus}</div></div>
+      <div class="topbar-info"><h2>${displayName}</h2><div class="focus">${displayFocus}</div></div>
       ${timerArea}
     </div>
-    ${blocks}
+    ${blocksHtml}
     ${addExBtn}
     ${footer}
     ${bottomBar}`;
@@ -2021,6 +2058,7 @@ async function saveSessionDraft(){
     savedAt: new Date().toISOString(),
     elapsedSec: elapsedSeconds(),
     workingEx: sessionState.workingEx,
+    adHocName: sessionState.adHocName || null,
     setsData
   };
   const ok = await saveLog();
@@ -2295,8 +2333,11 @@ async function saveSession(id){
   });
 
   const duration = elapsedMinutes();
-  LOG.push({sessionId:id, date:new Date().toISOString(), duration, ex});
-  const templateChanged = sessionState ? sessionTemplateChanged() : false;
+  const isAdHocSession = id === "adhoc";
+  const logEntry = {sessionId:id, date:new Date().toISOString(), duration, ex};
+  if(isAdHocSession) logEntry.adHocName = (sessionState && sessionState.adHocName) || "Freestyle Session";
+  LOG.push(logEntry);
+  const templateChanged = (sessionState && !isAdHocSession) ? sessionTemplateChanged() : false;
   const workingExSnapshot = workingEx;
   if(DRAFTS[id]) delete DRAFTS[id]; // finishing supersedes any saved draft for this session
   const ok = await saveLog();
@@ -2365,7 +2406,7 @@ function showHistory(){
   }
   const sorted = [...LOG].map((w,i)=>({...w,_i:i})).sort((a,b)=>b.date.localeCompare(a.date));
   const html = sorted.map(w=>{
-    const p = PLAN.find(x=>x.id===w.sessionId)||{name:w.sessionId};
+    const p = PLAN.find(x=>x.id===w.sessionId)||{name:w.adHocName||w.sessionId};
     const rows = w.ex.map(e=>`<div class="hrow"><div class="hn">${e.n}</div><div class="hv">${e.sets.map(s=>fmtSet(s)).join("  ")}</div></div>`).join("");
     const rpeBadge = (w.rpe!=null) ? `<span class="session-rpe-badge">RPE ${w.rpe}</span>` : "";
     const commentHtml = w.comment ? `<div class="session-comment">&ldquo;${w.comment}&rdquo;</div>` : "";
@@ -2753,6 +2794,7 @@ function sessionLabelForLog(entries, planToUse){
   if(!entries || !entries.length) return null;
   const e = entries[0];
   if(e.hiit) return e.hiitName || "HIIT";
+  if(e.adHocName) return e.adHocName;
   const planEntry = (planToUse||PLAN).find(p=>p.id===e.sessionId);
   return planEntry ? planEntry.name : (e.sessionId || "Session");
 }
@@ -5217,7 +5259,8 @@ function reopenJustSavedSession(){
     id: ctx.sessionId,
     started: true,
     workingEx: ctx.workingEx,
-    originalEx: JSON.parse(JSON.stringify(p ? p.ex : ctx.workingEx))
+    originalEx: JSON.parse(JSON.stringify(p ? p.ex : ctx.workingEx)),
+    adHocName: logEntry.adHocName || null
   };
   const resumeData = resumeDataFromLogEntry(ctx.workingEx, logEntry);
   renderActiveSessionScreen(resumeData);
@@ -5649,6 +5692,7 @@ window.setPostSessionRPE = setPostSessionRPE;
 window.setPostSessionComment = setPostSessionComment;
 window.finishPostSessionSummary = finishPostSessionSummary;
 window.home = home;
+window.startBlankSession = startBlankSession;
 window.openSession = openSession;
 window.startActiveSession = startActiveSession;
 window.handleSessionBack = handleSessionBack;
