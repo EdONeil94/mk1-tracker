@@ -648,7 +648,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-20.14";
+const APP_VERSION = "2026-10-20.16";
 
 const fbApp = initializeApp(firebaseConfig);
 // Offline mode: Firestore keeps a copy of your data on the phone (IndexedDB),
@@ -760,50 +760,57 @@ let PEOPLE = [];
 let PEOPLE_LOAD_FAILED = false, LOCATIONS_LOAD_FAILED = false;
 function peopleDocRef(){ return doc(db, "meta", "people"); }
 
-// A deliberately narrow, public-readable lookup so people can log in with
-// either their username or their real email. It contains ONLY email->username
-// pairs - no names, roles, or client links - everything else stays behind
-// the normal "must be signed in" rule.
-function loginLookupDocRef(){ return doc(db, "meta", "login-lookup"); }
-
+// ── Login lookups ───────────────────────────────────────────
+// One small document per username (usernames/{username} -> email) and per
+// email (emails/{email} -> username). Anyone can look up a name they already
+// know (needed to sign in with a username before you're signed in), but the
+// security rules don't allow listing them, so there's no public directory of
+// emails any more. Creating usernames/{name} only succeeds if nobody owns it
+// yet, which is what keeps usernames unique.
+const lkey = v => String(v==null?"":v).trim().toLowerCase();
+function usernameRef(u){ return doc(db, "usernames", lkey(u)); }
+function emailRef(e){ return doc(db, "emails", lkey(e)); }
 async function getUsernameForEmail(email){
-  try{
-    const snap = await getDoc(loginLookupDocRef());
-    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
-    return map[email.trim().toLowerCase()] || null;
-  }catch(e){ return null; }
+  if(!lkey(email)) return null;
+  try{ const snap = await getDoc(emailRef(email)); return snap.exists() ? (snap.data().username||null) : null; }
+  catch(e){ return null; }
 }
-async function registerLoginLookup(email, username){
-  try{
-    const snap = await getDoc(loginLookupDocRef());
-    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
-    map[email.trim().toLowerCase()] = username;
-    await setDoc(loginLookupDocRef(), {map});
-    return true;
-  }catch(e){ return false; }
-}
-
-// New direction, used now that the real email IS the Firebase Auth
-// credential going forward: resolve a typed username straight to its real
-// email so we can sign in directly. The old email->username doc above is
-// kept untouched as a fallback for any account that hasn't completed the
-// one-time migration yet (still registered under the old placeholder email).
-function usernameLookupDocRef(){ return doc(db, "meta", "username-lookup"); }
 async function getEmailForUsername(username){
-  try{
-    const snap = await getDoc(usernameLookupDocRef());
-    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
-    return map[username.trim().toLowerCase()] || null;
-  }catch(e){ return null; }
+  if(!lkey(username)) return null;
+  try{ const snap = await getDoc(usernameRef(username)); return snap.exists() ? (snap.data().email||null) : null; }
+  catch(e){ return null; }
 }
-async function registerUsernameLookup(username, email){
+// True once the username belongs to this login (newly claimed, or already
+// theirs). False if someone else owns it, or the write failed.
+async function claimUsername(username, email, uid){
+  uid = uid || (auth.currentUser && auth.currentUser.uid);
+  if(!lkey(username) || !uid) return false;
+  try{ await setDoc(usernameRef(username), {email:String(email||"").trim(), uid}); return true; }
+  catch(e){ return false; }
+}
+async function registerUsernameLookup(username, email, uid){ return claimUsername(username, email, uid); }
+async function registerLoginLookup(email, username, uid){
+  uid = uid || (auth.currentUser && auth.currentUser.uid);
+  if(!lkey(email) || !uid) return false;
+  try{ await setDoc(emailRef(email), {username:String(username||"").trim(), uid}); return true; }
+  catch(e){ return false; }
+}
+async function removeFromLoginLookup(email){ if(!lkey(email)) return; try{ await deleteDoc(emailRef(email)); }catch(e){} }
+async function removeFromUsernameLookup(username){ if(!lkey(username)) return; try{ await deleteDoc(usernameRef(username)); }catch(e){} }
+
+// Make sure your own lookups exist and point at you (covers accounts made
+// before this change and any earlier write that didn't land). Runs quietly.
+async function ensureMyLookups(){
+  const me = CURRENT_PROFILE, uid = auth.currentUser && auth.currentUser.uid;
+  if(!me || !uid || !me.username) return;
   try{
-    const snap = await getDoc(usernameLookupDocRef());
-    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
-    map[username.trim().toLowerCase()] = email;
-    await setDoc(usernameLookupDocRef(), {map});
-    return true;
-  }catch(e){ return false; }
+    const u = await getDoc(usernameRef(me.username));
+    if(!u.exists() || (u.data().uid===uid && me.email && u.data().email!==me.email)) await claimUsername(me.username, me.email||"", uid);
+    if(me.email){
+      const e = await getDoc(emailRef(me.email));
+      if(!e.exists() || (e.data().uid===uid && e.data().username!==me.username)) await registerLoginLookup(me.email, me.username, uid);
+    }
+  }catch(e){}
 }
 
 // Each person lives in their own document (people/{profileId}) so security
@@ -1176,6 +1183,67 @@ function loadLog(){
     }catch(e){ settle(false); }
   });
 }
+// ── One-off admin migrations ───────────────────────────────
+// Run from the admin's login (the only one allowed to write for others):
+// copies the old shared login lookups into one-per-name documents, and
+// creates a leaderboard summary for everyone who hasn't opened the new
+// version yet. Recorded in meta/migrations so each runs once.
+async function runAdminMigrations(){
+  try{
+    const mref = doc(db, "meta", "migrations");
+    const msnap = await getDoc(mref);
+    const done = msnap.exists() ? msnap.data() : {};
+    const byUsername = u => PEOPLE.find(p=>lkey(p.username)===lkey(u));
+    if(!done.lookupsV2){
+      const [un, le] = await Promise.all([getDoc(doc(db,"meta","username-lookup")).catch(()=>null), getDoc(doc(db,"meta","login-lookup")).catch(()=>null)]);
+      const umap = (un && un.exists() && un.data().map) || {}, emap = (le && le.exists() && le.data().map) || {};
+      for(const [u, email] of Object.entries(umap)){
+        const person = byUsername(u);
+        if(!person || !person.uid) continue;
+        const ex = await getDoc(usernameRef(u)).catch(()=>null);
+        if(ex && !ex.exists()) await setDoc(usernameRef(u), {email:String(email||""), uid:person.uid}).catch(()=>{});
+      }
+      for(const [email, u] of Object.entries(emap)){
+        const person = byUsername(u);
+        if(!person || !person.uid) continue;
+        const ex = await getDoc(emailRef(email)).catch(()=>null);
+        if(ex && !ex.exists()) await setDoc(emailRef(email), {username:String(u||""), uid:person.uid}).catch(()=>{});
+      }
+      await setDoc(mref, {lookupsV2:true}, {merge:true});
+    }
+    if(!done.leaderboardV1){
+      for(const p of PEOPLE){
+        if(p.id===CURRENT_PROFILE.id) continue;
+        const ex = await getDoc(leaderboardRef(p.id)).catch(()=>null);
+        if(!ex || ex.exists()) continue;
+        const t = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${p.id}`)).catch(()=>null);
+        const log = (t && t.exists() && t.data().log) || [];
+        await setDoc(leaderboardRef(p.id), {dates:summaryFromLog(log).dates, updatedAt:new Date().toISOString()}).catch(()=>{});
+      }
+      await setDoc(mref, {leaderboardV1:true}, {merge:true});
+    }
+  }catch(e){ /* tries again next time the admin opens the app */ }
+}
+
+// ── Leaderboard summary ───────────────────────────────────
+// Trackers are private, so the leaderboard reads a small public summary per
+// person instead: just the dates of their sessions (no weights, notes or
+// anything else). Kept up to date whenever your log changes.
+function leaderboardRef(pid){ return doc(db, "leaderboard", pid); }
+function summaryFromLog(log){ return {dates:(log||[]).map(e=>e && e.date).filter(Boolean).sort()}; }
+let LB_SAVED = null;
+async function syncMySummary(){
+  if(!STORAGE_AVAILABLE || !CURRENT_PROFILE) return;
+  const sum = summaryFromLog(LOG), sj = stableJson(sum);
+  if(LB_SAVED === null){
+    try{ const snap = await getDocCacheFirst(leaderboardRef(CURRENT_PROFILE.id)); if(snap.exists()) LB_SAVED = stableJson({dates:snap.data().dates||[]}); }catch(e){}
+  }
+  if(sj === LB_SAVED) return;
+  LB_SAVED = sj;
+  const ok = await commitWrite(setDoc(leaderboardRef(CURRENT_PROFILE.id), {dates:sum.dates, updatedAt:new Date().toISOString()}));
+  if(!ok) LB_SAVED = null;
+}
+
 async function saveLog(){
   // If the load failed, the in-memory arrays are empty placeholders. Writing
   // them would wipe the real history in Firestore, so refuse until a reload works.
@@ -1196,6 +1264,7 @@ async function saveLog(){
   // go) and leaves every other field untouched.
   try{ ok = await commitWrite(setDoc(profileDocRef(), patch, {mergeFields:[...fields, "updatedAt"]})); }catch(e){ ok = false; }
   if(!ok) fields.forEach(f=>{ TRACKER_SAVED[f] = prev[f]; });
+  if(ok && fields.includes("log")) syncMySummary();
   return ok;
 }
 
@@ -1332,27 +1401,39 @@ function stopTimer(){ if(timerInterval){clearInterval(timerInterval); timerInter
 function elapsedMinutes(){ return timerStart ? Math.round((Date.now()-timerStart)/60000) : 0; }
 function elapsedSeconds(){ return timerStart ? Math.round((Date.now()-timerStart)/1000) : 0; }
 
-let restInterval=null, restRemaining=0;
+// ── Rest timer ─────────────────────────────────────────────
+// Counts down to a fixed end time rather than subtracting a second at a time,
+// so locking the phone or switching apps can't freeze it: on return it shows
+// the true time left (or that rest is over).
+let restInterval=null, restRemaining=0, restEndsAt=0;
 function fmtRest(sec){ return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`; }
-function startRest(seconds){
+function startRest(seconds, endsAt){
   clearInterval(restInterval);
-  restRemaining = seconds;
-  renderRest();
-  restInterval = setInterval(()=>{
-    restRemaining--;
-    if(restRemaining<=0){
-      clearInterval(restInterval); restInterval=null; restRemaining=0;
-      renderRest();
-      try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(e){}
-      playBeep();
-      showToast("\u23F1 Rest over \u2014 back to it!");
-      return;
-    }
+  restEndsAt = endsAt || (Date.now() + seconds*1000);
+  maybeShowSoundTip();
+  restInterval = setInterval(tickRest, 250);
+  tickRest();
+  if(typeof scheduleAutosave === "function") scheduleAutosave();
+}
+function tickRest(){
+  if(!restInterval) return;
+  const left = Math.ceil((restEndsAt - Date.now())/1000);
+  if(left<=0){
+    const lateBy = Date.now() - restEndsAt;
+    clearInterval(restInterval); restInterval=null; restRemaining=0; restEndsAt=0;
     renderRest();
-  },1000);
+    // Only beep if we're on time; coming back to the app long after, a
+    // sudden beep would be confusing, so just say so.
+    if(lateBy < 2000 && !document.hidden){ buzz([200,100,200]); playBeep(); showToast("\u23F1 Rest over \u2014 back to it!"); }
+    else showToast("\u23F1 Rest finished while you were away");
+    if(typeof scheduleAutosave === "function") scheduleAutosave();
+    return;
+  }
+  if(left !== restRemaining){ restRemaining = left; renderRest(); }
 }
 function cancelRest(){
-  clearInterval(restInterval); restInterval=null; restRemaining=0; renderRest();
+  clearInterval(restInterval); restInterval=null; restRemaining=0; restEndsAt=0; renderRest();
+  if(typeof scheduleAutosave === "function") scheduleAutosave();
 }
 function renderRest(){
   const el = $("restDisplay");
@@ -1365,17 +1446,82 @@ function renderRest(){
     el.classList.remove("running");
   }
 }
+
+// ── Keep the screen on mid-workout ─────────────────────────
+// While a gym session is started or a HIIT class is running, ask the phone
+// not to auto-lock (Screen Wake Lock, iOS 16.4+). The phone drops the lock
+// whenever the app is hidden, so it's re-requested when you come back.
+let _wakeLock = null, _wakeRunning = false, _wakeAgain = false;
+function wantsWakeLock(){
+  return !!((sessionState && sessionState.started) || (hiitState && hiitState.running && !hiitState.done));
+}
+// Calls can overlap (a tap and the app coming back, say): run one at a time
+// so we never hold two locks and only release one of them.
+async function updateWakeLock(){
+  if(_wakeRunning){ _wakeAgain = true; return; }
+  _wakeRunning = true;
+  try{
+    do{
+      _wakeAgain = false;
+      try{
+        if(!("wakeLock" in navigator)) break;
+        if(wantsWakeLock() && !document.hidden){
+          if(!_wakeLock || _wakeLock.released){
+            const lock = await navigator.wakeLock.request("screen");
+            lock.addEventListener("release", ()=>{ if(_wakeLock===lock) _wakeLock = null; });
+            _wakeLock = lock;
+          }
+        } else if(_wakeLock){
+          const l = _wakeLock; _wakeLock = null; await l.release();
+        }
+      }catch(e){ _wakeLock = null; }
+    } while(_wakeAgain);
+  } finally { _wakeRunning = false; }
+}
+setInterval(updateWakeLock, 10000); // safety net for any path that changes state
+
+// ── Sound ──────────────────────────────────────────────────
+// iPhones only allow sound from an audio player that was started by a tap,
+// and limit how many players a page can create. So: one shared player,
+// switched on by the first tap anywhere, reused for every beep.
+let _audioCtx = null;
+function unlockAudio(){
+  try{
+    if(!_audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return;
+      _audioCtx = new AC();
+    }
+    if(_audioCtx.state !== "running") _audioCtx.resume().catch(()=>{});
+    // A silent blip inside the tap is what actually unlocks audio on iOS.
+    const b = _audioCtx.createBuffer(1, 1, 22050), src = _audioCtx.createBufferSource();
+    src.buffer = b; src.connect(_audioCtx.destination); src.start(0);
+  }catch(e){}
+}
+["pointerdown","touchend","click"].forEach(ev=>document.addEventListener(ev, unlockAudio, {capture:true, passive:true}));
+function buzz(pattern){ try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){} }
 function playBeep(){
   try{
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = _audioCtx;
+    if(!ctx) return;
+    if(ctx.state !== "running") ctx.resume().catch(()=>{});
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type="sine"; o.frequency.value=880;
     o.connect(g); g.connect(ctx.destination);
-    g.gain.setValueAtTime(0.0001, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime+0.02);
-    o.start();
-    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.5);
-    o.stop(ctx.currentTime+0.55);
+    const t = ctx.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.3, t+0.02);
+    o.start(t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.5);
+    o.stop(t+0.55);
+  }catch(e){}
+}
+// One-time reminder: the iPhone silent switch mutes these beeps.
+function maybeShowSoundTip(){
+  try{
+    if(localStorage.getItem("mk1_sound_tip")) return;
+    localStorage.setItem("mk1_sound_tip","1");
+    setTimeout(()=>showToast("\uD83D\uDD14 Tip: beeps need your phone's silent switch off"), 1600);
   }catch(e){}
 }
 
@@ -1416,7 +1562,7 @@ function renderAuthScreen(){
       <div class="auth-field">
         <label>Gym location${signupRole==="trainer"?"s":""}</label>
         ${locationRows || '<div class="field-hint">No locations set up yet \u2014 ask your admin.</div>'}
-        <div class="field-hint">${signupRole==="client" ? "Pick the one gym you attend." : "Pick every location you train at \u2014 you can select more than one."}</div>
+        <div class="field-hint">${signupRole==="client" ? "Pick the one gym you attend." : "Pick every location you train at \u2014 you can select more than one. Trainer accounts need an admin's approval: you'll start as a client until then."}</div>
       </div>`;
   }
 
@@ -1549,13 +1695,17 @@ async function completeGoogleSetup(){
   const profileId = uniquePersonId(displayName);
   const locations = signupRole==="trainer" ? [...signupLocations] : signupLocations.slice(0,1);
 
+  if(!(await claimUsername(username, user.email||"", user.uid))){
+    showToast("That username is already taken \u2014 please choose another", false); return;
+  }
   try{
-    PEOPLE.push({id:profileId, name:displayName, role:"client", clientIds:[],
-      uid:user.uid, email:user.email||"", username, locations});
+    const newPerson = {id:profileId, name:displayName, role:"client", clientIds:[],
+      uid:user.uid, email:user.email||"", username, locations};
+    if(signupRole==="trainer") newPerson.requestedRole = "trainer";
+    PEOPLE.push(newPerson);
     await writeWithRetry(async()=>{ if(!(await savePeople())) throw new Error("people write failed"); });
     await writeWithRetry(()=>setDoc(doc(db,"users",user.uid),{profileId}));
-    await writeWithRetry(()=>registerLoginLookup(user.email||"", username));
-    await writeWithRetry(()=>registerUsernameLookup(username, user.email||""));
+    await registerLoginLookup(user.email||"", username, user.uid);
     _googleUser = null;
     signupLocations = [];
     await bootForUser(user);
@@ -1705,19 +1855,29 @@ async function submitAuth(){
   signupInProgress = true;
   let cred = null;
   let profileId = null;
+  let claimedUsername = false;
   try{
     // Registered directly under the real email now, so genuine password-reset
     // emails have somewhere real to go - no more synthetic placeholder address.
     cred = await createUserWithEmailAndPassword(auth, realEmail, password);
+    // Claim the username before anything else: if someone got there first,
+    // stop now and roll the login back.
+    if(!(await claimUsername(username, realEmail, cred.user.uid))){
+      const err = new Error("username taken"); err.code = "username-taken"; throw err;
+    }
+    claimedUsername = true;
     await loadPeople(); // now signed in, so the directory is readable
     profileId = uniquePersonId(displayName);
-    PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail, username, locations});
+    // Trainer accounts need an admin's approval: start as a client with a request.
+    const newPerson = {id:profileId, name:displayName, role:"client", clientIds:[], uid:cred.user.uid, email:realEmail, username, locations};
+    if(role==="trainer") newPerson.requestedRole = "trainer";
+    PEOPLE.push(newPerson);
     // Person record first: the security rules only allow the uid mapping once
     // a person record owned by this login exists.
     await writeWithRetry(async()=>{ if(!(await savePeople())) throw new Error("people write failed"); });
     await writeWithRetry(()=>setDoc(doc(db,"users",cred.user.uid), {profileId}));
-    await writeWithRetry(()=>registerLoginLookup(realEmail, username));
-    await writeWithRetry(()=>registerUsernameLookup(username, realEmail));
+    await registerLoginLookup(realEmail, username, cred.user.uid);
+    if(role==="trainer") setTimeout(()=>showToast("Trainer access requested \u2014 an admin will approve it"), 1500);
     // createUserWithEmailAndPassword auto-signs the user in, which fires the
     // auth listener immediately - before the writes just above had finished.
     // That race used to make the very next boot fail to find the profile it
@@ -1728,6 +1888,7 @@ async function submitAuth(){
     await bootForUser(cred.user);
   }catch(e){
     signupInProgress = false;
+    if(cred && claimedUsername){ try{ await removeFromUsernameLookup(username); }catch(x){} }
     if(cred && profileId){
       // Tidy away the half-made person record so it doesn't linger in lists.
       PEOPLE = PEOPLE.filter(p=>p.id!==profileId);
@@ -1740,7 +1901,9 @@ async function submitAuth(){
       // from ever being used to sign up again.
       try{ await deleteUser(cred.user); }catch(rollbackErr){ /* best effort */ }
     }
-    if(e && e.code==="auth/email-already-in-use"){
+    if(e && e.code==="username-taken"){
+      authError = "That username is already taken \u2014 please choose another.";
+    } else if(e && e.code==="auth/email-already-in-use"){
       authError = "That email is already registered.";
     } else {
       authError = `Couldn't create that account (${(e&&e.code)||"unknown error"}). Please try again.`;
@@ -1829,12 +1992,17 @@ async function bootForUser(user){
   // this login's uid on now: the security rules use it to decide who can edit what.
   if(!PEOPLE_LOAD_FAILED && PEOPLE.includes(CURRENT_PROFILE) && !CURRENT_PROFILE.uid){
     CURRENT_PROFILE.uid = user.uid;
-    await savePeople();
+    // Wait for the server here: your tracker is only readable once this lands.
+    try{ await setDoc(personRef(CURRENT_PROFILE.id), plainCopy(CURRENT_PROFILE)); PEOPLE_SAVED.set(CURRENT_PROFILE.id, stableJson(CURRENT_PROFILE)); }
+    catch(e){ await savePeople(); }
   }
   await loadLog();
   await deduplicateHiitLog();
   home();
-  restoreActiveSession(); // if the app was closed mid-workout, drop straight back in
+  if(!restoreActiveSession()) restoreActiveHiit(); // if the app was closed mid-workout, drop straight back in
+  // Quiet background upkeep (never blocks opening the app).
+  ensureMyLookups(); syncMySummary();
+  if(CURRENT_PROFILE.role==="admin") runAdminMigrations();
   // Firebase remembers the session, so most future opens skip the login
   // screen entirely and land here directly — this is the one point every
   // user actually reaches, so it's the right place to check for updates
@@ -2007,9 +2175,12 @@ function home(){
     ${HIIT_CLASSES.length ? `<div class="hiit-grid">${hiitCards}</div>` : '<div class="chart-empty">No HIIT classes yet &mdash; head to Build Your Workout to create one.</div>'}
     ${hiitHistoryHtml}`;
 
+  const pendingTrainers = PEOPLE.filter(p=>p.requestedRole==="trainer" && p.role!=="trainer").length;
+  const requestNote = (CURRENT_PROFILE.requestedRole==="trainer" && CURRENT_PROFILE.role==="client")
+    ? `<div class="last-updated" style="text-align:left">&#9203; Trainer access requested &mdash; waiting for an admin to approve it.</div>` : "";
   const adminSection = CURRENT_PROFILE.role==="admin"
     ? `<button class="trainerbtn" onclick="showAdminDashboard()">
-        <span class="cb-label">🛠️ Admin</span>
+        <span class="cb-label">🛠️ Admin${pendingTrainers?` &middot; ${pendingTrainers} trainer request${pendingTrainers>1?"s":""}`:""}</span>
         <span>&rsaquo;</span>
       </button>`
     : "";
@@ -2037,6 +2208,7 @@ function home(){
       <div class="switch-profile" onclick="logOut()">${avatarHtml(CURRENT_PROFILE, "avatar-sm")}${esc(CURRENT_PROFILE.name)} &middot; log out</div>
       <div class="switch-profile" onclick="showAccountSettings()" style="margin-left:8px">&#9881; Account settings</div>
     </div>
+    ${requestNote}
     ${adminSection}
     ${moduleHtml}
     <span id="homeMarker" hidden></span>
@@ -2070,6 +2242,7 @@ function startBlankSession(){
     renderActiveSessionScreen(draft.setsData);
     startTimer(draft.elapsedSec||0);
     scheduleAutosave();
+    updateWakeLock();
     showToast("Resumed your in-progress session \u2713");
     return;
   }
@@ -2091,6 +2264,7 @@ function openSession(id){
     renderActiveSessionScreen(draft.setsData);
     startTimer(draft.elapsedSec||0);
     scheduleAutosave();
+    updateWakeLock();
     showToast("Resumed your in-progress session \u2713");
   } else {
     sessionState = {id, started:false, workingEx: JSON.parse(JSON.stringify(p.ex)), originalEx: JSON.parse(JSON.stringify(p.ex))};
@@ -2257,6 +2431,7 @@ function startActiveSession(){
   startTimer();
   renderActiveSessionScreen(null);
   scheduleAutosave();
+  updateWakeLock();
 }
 
 // Back button behaviour: nothing started yet -> just go home, nothing to lose.
@@ -2356,7 +2531,7 @@ function autosaveSession(flush){
     localStorage.setItem(ACTIVE_KEY, JSON.stringify({
       profileId: CURRENT_PROFILE.id, id: sessionState.id,
       workingEx: sessionState.workingEx, adHocName: sessionState.adHocName||null,
-      setsData, timerStart, savedAt: Date.now()
+      setsData, timerStart, restEndsAt: restInterval ? restEndsAt : 0, savedAt: Date.now()
     }));
   }catch(e){}
   clearTimeout(_asSyncTimer);
@@ -2398,6 +2573,8 @@ function restoreActiveSession(){
   _autosaveOff = false;
   renderActiveSessionScreen(snap.setsData);
   startTimer(0, snap.timerStart);
+  if(snap.restEndsAt && snap.restEndsAt > Date.now()) startRest(0, snap.restEndsAt);
+  updateWakeLock();
   showToast("Picked up your session where you left off \u2713");
   scheduleAutosave();
   return true;
@@ -2407,7 +2584,10 @@ document.addEventListener("input", ()=>scheduleAutosave(), true);
 document.addEventListener("change", ()=>scheduleAutosave(), true);
 document.addEventListener("click", ()=>scheduleAutosave(), true);
 document.addEventListener("touchend", ()=>scheduleAutosave(), true);
-document.addEventListener("visibilitychange", ()=>{ if(document.hidden) autosaveSession(true); });
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden) autosaveSession(true);
+  else { tickRest(); if(typeof tickHiit === "function") tickHiit(); updateWakeLock(); }
+});
 window.addEventListener("pagehide", ()=>autosaveSession(true));
 
 async function saveSessionDraft(){
@@ -2425,6 +2605,7 @@ async function saveSessionDraft(){
   if(ok) clearActiveSnapshot();
   stopTimer(); cancelRest();
   sessionState = null;
+  updateWakeLock();
   showToast(ok ? "Draft saved \u2014 resume any time \u2713" : "Couldn't save draft \u2014 check your connection");
   home();
 }
@@ -2438,6 +2619,7 @@ async function cancelActiveSession(){
   }
   stopTimer(); cancelRest();
   sessionState = null;
+  updateWakeLock();
   home();
 }
 
@@ -2877,6 +3059,7 @@ async function saveSession(id){
   stopTimer();
   cancelRest();
   sessionState = null;
+  updateWakeLock();
   if(templateChanged){
     showTemplateChangePrompt(ex, prHits, id, workingExSnapshot);
   } else {
@@ -4431,10 +4614,31 @@ function showHiitHistory(){
 // ── HIIT class runner (countdown engine) ──────────────────
 let hiitState = null;
 let hiitInterval = null;
+// The class runs on the clock: phaseEndsAt is when the current work/rest
+// phase ends, and elapsed time is accMs plus time since runStartedAt. If the
+// phone sleeps, the next tick catches up through every phase that has passed.
+const HIIT_KEY = "mk1_active_hiit_v1";
 
 function cancelHiit(){
   if(hiitInterval){ clearInterval(hiitInterval); hiitInterval=null; }
+  if(hiitState && hiitState.running && !hiitState.done) pauseHiitClock();
   if(hiitState) hiitState.running=false;
+  updateWakeLock();
+}
+// Back from the runner: the class is abandoned, so forget it.
+function leaveHiitRunner(){
+  cancelHiit();
+  hiitState = null;
+  clearHiitSnapshot();
+  home();
+}
+
+function hiitPhaseLength(){
+  const cls = hiitState.cls;
+  if(hiitState.phase==="roundrest") return cls.roundRestSec;
+  if(cls.format==="interval") return hiitState.phase==="work" ? cls.workSec : cls.restSec;
+  if(cls.format==="amrap") return cls.capMin*60;
+  return cls.intervalSec;
 }
 
 function openHiitRunner(id){
@@ -4450,13 +4654,15 @@ function openHiitRunner(id){
     elapsedSec: 0,
     running: false,
     roundsCompleted: 0,
-    done: false
+    done: false,
+    accMs: 0, runStartedAt: 0, phaseEndsAt: 0, pausedLeftMs: 0
   };
   renderHiitRunner();
 }
 
 function cueBeep(){
-  try{ if(navigator.vibrate) navigator.vibrate(150); }catch(e){}
+  if(hiitState && hiitState.catchingUp) return; // no burst of beeps after time away
+  buzz(150);
   playBeep();
 }
 
@@ -4500,20 +4706,52 @@ function handlePhaseEnd(){
   }
 }
 
+function hiitElapsedMs(at){
+  const s = hiitState;
+  return s.accMs + (s.running ? Math.max(0, at - s.runStartedAt) : 0);
+}
+function pauseHiitClock(){
+  const s = hiitState, now = Date.now();
+  s.accMs = hiitElapsedMs(now);
+  s.pausedLeftMs = Math.max(0, s.phaseEndsAt - now);
+  s.elapsedSec = Math.floor(s.accMs/1000);
+}
+
 function tickHiit(){
-  if(!hiitState || hiitState.done) return;
-  hiitState.elapsedSec++;
-  hiitState.remaining--;
-  if(hiitState.remaining<=0) handlePhaseEnd();
-  renderHiitRunner();
+  const s = hiitState;
+  if(!s || s.done || !s.running) return;
+  const now = Date.now();
+  const before = `${s.phase}|${s.exIndex}|${s.round}|${s.remaining}`;
+  let guard = 0;
+  // Step through every phase boundary that has passed (one, normally; many
+  // if the phone was asleep).
+  while(s.running && !s.done && now >= s.phaseEndsAt && guard++ < 500){
+    const boundary = s.phaseEndsAt;
+    s.catchingUp = (now - boundary) > 1500;
+    s.elapsedSec = Math.floor(hiitElapsedMs(boundary)/1000);
+    handlePhaseEnd();
+    if(s.done) break;
+    s.phaseEndsAt = boundary + hiitPhaseLength()*1000;
+  }
+  s.catchingUp = false;
+  if(s.done){ renderHiitRunner(); return; }
+  s.elapsedSec = Math.floor(hiitElapsedMs(now)/1000);
+  s.remaining = Math.max(0, Math.ceil((s.phaseEndsAt - now)/1000));
+  const after = `${s.phase}|${s.exIndex}|${s.round}|${s.remaining}`;
+  if(after !== before){
+    if(before.split("|").slice(0,3).join() !== after.split("|").slice(0,3).join()) saveHiitSnapshot();
+    renderHiitRunner();
+  }
 }
 
 function finishHiit(){
   if(hiitInterval){ clearInterval(hiitInterval); hiitInterval=null; }
+  if(hiitState.running && !hiitState.catchingUp) hiitState.elapsedSec = Math.floor(hiitElapsedMs(Date.now())/1000);
   hiitState.running=false;
   hiitState.done=true;
-  try{ if(navigator.vibrate) navigator.vibrate([200,100,200,100,200]); }catch(e){}
-  playBeep();
+  clearHiitSnapshot();
+  updateWakeLock();
+  if(!hiitState.catchingUp){ buzz([200,100,200,100,200]); playBeep(); }
   const durationMin = Math.max(1, Math.round(hiitState.elapsedSec/60));
   const sessionId = `hiit-${hiitState.cls.id}`;
   const todayKey = localDayKey(new Date());
@@ -4532,16 +4770,32 @@ function finishHiit(){
 
 function toggleHiitTimer(){
   if(hiitState.done) return;
+  const now = Date.now();
   if(hiitState.running){
-    clearInterval(hiitInterval); hiitInterval=null; hiitState.running=false;
+    clearInterval(hiitInterval); hiitInterval=null;
+    pauseHiitClock();
+    hiitState.running=false;
   } else {
     hiitState.running=true;
-    hiitInterval = setInterval(tickHiit, 1000);
+    hiitState.runStartedAt = now;
+    hiitState.phaseEndsAt = now + (hiitState.pausedLeftMs || hiitState.remaining*1000);
+    hiitState.pausedLeftMs = 0;
+    hiitInterval = setInterval(tickHiit, 250);
   }
+  saveHiitSnapshot();
+  updateWakeLock();
   renderHiitRunner();
 }
 function skipHiitPhase(){
+  if(!hiitState || hiitState.done) return;
   handlePhaseEnd();
+  if(!hiitState.done){
+    const len = hiitPhaseLength()*1000;
+    if(hiitState.running) hiitState.phaseEndsAt = Date.now() + len;
+    else hiitState.pausedLeftMs = len;
+    hiitState.remaining = hiitPhaseLength();
+    saveHiitSnapshot();
+  }
   renderHiitRunner();
 }
 function finishHiitEarly(){
@@ -4551,7 +4805,36 @@ function finishHiitEarly(){
 }
 function incrementAmrapRound(){
   hiitState.roundsCompleted++;
+  saveHiitSnapshot();
   renderHiitRunner();
+}
+
+// Keep a running class on the phone so closing the app doesn't lose it.
+function saveHiitSnapshot(){
+  if(!hiitState || hiitState.done || !CURRENT_PROFILE) return;
+  try{
+    const {cls, catchingUp, ...rest} = hiitState;
+    localStorage.setItem(HIIT_KEY, JSON.stringify({profileId:CURRENT_PROFILE.id, clsId:cls.id, savedAt:Date.now(), state:rest}));
+  }catch(e){}
+}
+function clearHiitSnapshot(){ try{ localStorage.removeItem(HIIT_KEY); }catch(e){} }
+function restoreActiveHiit(){
+  if(hiitState && !hiitState.done) return false;
+  let snap = null;
+  try{ snap = JSON.parse(localStorage.getItem(HIIT_KEY)||"null"); }catch(e){}
+  if(!snap || !CURRENT_PROFILE || snap.profileId !== CURRENT_PROFILE.id) return false;
+  const cls = HIIT_CLASSES.find(c=>c.id===snap.clsId);
+  if(!cls || Date.now() - snap.savedAt > 3*3600*1000){ clearHiitSnapshot(); return false; }
+  hiitState = Object.assign({}, snap.state, {cls, catchingUp:false});
+  if(hiitState.running){
+    hiitInterval = setInterval(tickHiit, 250);
+    tickHiit();
+  }
+  updateWakeLock();
+  if(hiitState.done) return true;
+  renderHiitRunner();
+  showToast("Picked up your class where you left off \u2713");
+  return true;
 }
 
 function renderHiitRunner(){
@@ -4592,7 +4875,7 @@ function renderHiitRunner(){
     : "";
 
   app.innerHTML = `
-    ${topbar({back:`home()`, title:esc(cls.name), sub:progressLabel})}
+    ${topbar({back:`leaveHiitRunner()`, title:esc(cls.name), sub:progressLabel})}
     <div class="hiit-timer-card ${phaseClass}">
       <div class="hiit-phase">${phaseLabel}</div>
       <div class="hiit-countdown">${fmtRest(Math.max(0,s.remaining))}</div>
@@ -4623,7 +4906,7 @@ function startOfMonthISO(){
 async function showLeaderboard(){
   stopTimer();
   app.innerHTML = `${topbar({back:`home()`, title:`Leaderboard`})}
-    <div class="lb-loading">Loading everyone's trackers&hellip;</div>`;
+    <div class="lb-loading">Loading the leaderboard&hellip;</div>`;
   window.scrollTo(0,0);
 
   await loadPeople();
@@ -4637,9 +4920,12 @@ async function showLeaderboard(){
   const locationLabel = myLocations.length ? esc(myLocations.join(" & ")) : "your gym";
 
   const results = await Promise.all(candidates.map(async p=>{
+    // Your own numbers come straight from your log; everyone else's from
+    // their public summary (session dates only).
+    if(p.id===CURRENT_PROFILE.id) return {profile:p, log:LOG, ok:true};
     try{
-      const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${p.id}`));
-      const log = snap.exists() ? (snap.data().log || []) : [];
+      const snap = await getDoc(leaderboardRef(p.id));
+      const log = snap.exists() ? (snap.data().dates || []).map(d=>({date:d})) : [];
       return {profile:p, log, ok:true};
     }catch(e){
       return {profile:p, log:[], ok:false};
@@ -4657,7 +4943,7 @@ async function showLeaderboard(){
   stats.sort((a,b)=> b.week-a.week || b.streak-a.streak || b.total-a.total);
 
   const offlineNote = stats.some(s=>!s.ok)
-    ? `<div class="sync-banner">Couldn't load one or more trackers \u2014 numbers below may be incomplete.</div>`
+    ? `<div class="sync-banner">Couldn't load everyone's numbers \u2014 the list below may be incomplete.</div>`
     : "";
 
   const rows = stats.map((s,i)=>`
@@ -4846,8 +5132,17 @@ async function showAdminDashboard(){
   window.scrollTo(0,0);
 
   await loadPeople();
+  const requests = PEOPLE.filter(p=>p.requestedRole==="trainer" && p.role!=="trainer");
+  const requestsHtml = requests.length ? `<div class="section-label" style="margin-top:16px">Trainer requests</div>` + requests.map(p=>`
+    <div class="sess-row">
+      <div class="sr-info"><b>${esc(p.name)}</b><span>${esc((p.locations||[]).join(", ")||"No gym set")}</span></div>
+      <div class="sr-actions">
+        <button class="icon-btn" onclick="approveTrainerRequest(${jsArg(p.id)})" aria-label="Approve as trainer">&#10003;</button>
+        <button class="icon-btn" onclick="declineTrainerRequest(${jsArg(p.id)})" aria-label="Decline">&times;</button>
+      </div>
+    </div>`).join("") : "";
   const rows = PEOPLE.map(p=>{
-    const roleLabel = p.role==="admin" ? "Admin" : p.role==="trainer" ? "Trainer" : "Client";
+    const roleLabel = p.role==="admin" ? "Admin" : p.role==="trainer" ? "Trainer" : (p.requestedRole==="trainer" ? "Client \u00B7 trainer request" : "Client");
     return `<div class="sess-row">
       <div class="sr-info" style="cursor:pointer" onclick="showClientDetail('${p.id}')">
         <b>${esc(p.name)}</b><span class="role-badge">${roleLabel}</span>
@@ -4861,6 +5156,7 @@ async function showAdminDashboard(){
   app.innerHTML = `
     ${topbar({back:`home()`, title:`Admin`, sub:`${PEOPLE.length} registered`})}
     <button class="addsessbtn" onclick="showManageLocations()">📍 Manage Gym Locations</button>
+    ${requestsHtml}
     <div class="section-label" style="margin-top:16px">People</div>
     ${rows || '<div class="chart-empty">No one registered yet.</div>'}
   `;
@@ -5021,15 +5317,37 @@ async function saveEditedPersonDetails(){
   p.name = name;
   if(email) p.email = email;
   const ok = await savePeople();
-  if(ok && email && p.username) await registerLoginLookup(email, p.username);
+  if(ok && email && p.username){ await registerLoginLookup(email, p.username, p.uid); await registerUsernameLookup(p.username, email, p.uid); }
   showToast(ok ? "Saved \u2713" : "Couldn't save \u2014 check your connection");
   renderEditPerson();
+}
+
+async function approveTrainerRequest(id){
+  const p = PEOPLE.find(x=>x.id===id);
+  if(!p) return;
+  p.role = "trainer";
+  if(!p.clientIds) p.clientIds = [];
+  delete p.requestedRole;
+  const ok = await savePeople();
+  showToast(ok ? `${p.name} is now a trainer \u2713` : "Couldn't save \u2014 check your connection");
+  showAdminDashboard();
+}
+async function declineTrainerRequest(id){
+  const p = PEOPLE.find(x=>x.id===id);
+  if(!p) return;
+  if(!confirm(`Decline ${p.name}'s trainer request? They'll stay a client.`)) return;
+  delete p.requestedRole;
+  if(p.locations && p.locations.length>1) p.locations = p.locations.slice(0,1);
+  const ok = await savePeople();
+  showToast(ok ? "Request declined" : "Couldn't save \u2014 check your connection");
+  showAdminDashboard();
 }
 
 async function setPersonRole(role){
   const p = PEOPLE.find(x=>x.id===editPersonId);
   if(!p) return;
   p.role = role;
+  if(role==="trainer") delete p.requestedRole;
   if(role==="trainer" && !p.clientIds) p.clientIds = [];
   if(role==="client" && p.locations && p.locations.length>1) p.locations = p.locations.slice(0,1);
   await savePeople();
@@ -5044,25 +5362,6 @@ async function toggleAdminClientLink(clientId, checked){
   else{ p.clientIds = p.clientIds.filter(id=>id!==clientId); }
   await savePeople();
   showToast("Updated");
-}
-
-async function removeFromLoginLookup(email){
-  if(!email) return;
-  try{
-    const snap = await getDoc(loginLookupDocRef());
-    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
-    delete map[email.trim().toLowerCase()];
-    await setDoc(loginLookupDocRef(), {map});
-  }catch(e){ /* best effort - not worth blocking the deletion over */ }
-}
-async function removeFromUsernameLookup(username){
-  if(!username) return;
-  try{
-    const snap = await getDoc(usernameLookupDocRef());
-    const map = (snap.exists() && snap.data().map) ? snap.data().map : {};
-    delete map[username.trim().toLowerCase()];
-    await setDoc(usernameLookupDocRef(), {map});
-  }catch(e){ /* best effort */ }
 }
 
 async function deletePersonFromAdmin(){
@@ -5193,6 +5492,12 @@ async function saveAccountEmail(){
   }
   await loadPeople();
   const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
+  const oldUsername = p ? (p.username||"") : "";
+  const usernameChanged = lkey(usernameVal) !== lkey(oldUsername);
+  if(usernameChanged && !(await claimUsername(usernameVal, val))){
+    showToast("That username is already taken \u2014 please choose another", false);
+    return;
+  }
 
   // Compare against the REAL registered Firebase Auth email (not the stored
   // profile field) - this one check naturally covers both a genuine new
@@ -5238,6 +5543,7 @@ async function saveAccountEmail(){
   if(ok && p){
     await registerLoginLookup(val, usernameVal);
     await registerUsernameLookup(usernameVal, val);
+    if(usernameChanged && oldUsername) await removeFromUsernameLookup(oldUsername);
   }
   if(!ok){
     showToast("Couldn't save \u2014 check your connection");
@@ -6076,6 +6382,8 @@ window.addLocation = addLocation;
 window.deleteLocation = deleteLocation;
 window.openEditPerson = openEditPerson;
 window.setPersonRole = setPersonRole;
+window.approveTrainerRequest = approveTrainerRequest;
+window.declineTrainerRequest = declineTrainerRequest;
 window.saveEditedPersonDetails = saveEditedPersonDetails;
 window.toggleAdminClientLink = toggleAdminClientLink;
 window.toggleAdminPersonLocation = toggleAdminPersonLocation;
@@ -6149,6 +6457,7 @@ window.moveHiitExercise = moveHiitExercise;
 window.saveDraftHiit = saveDraftHiit;
 window.deleteHiitClass = deleteHiitClass;
 window.openHiitRunner = openHiitRunner;
+window.leaveHiitRunner = leaveHiitRunner;
 window.toggleHiitTimer = toggleHiitTimer;
 window.skipHiitPhase = skipHiitPhase;
 window.finishHiitEarly = finishHiitEarly;
