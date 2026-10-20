@@ -651,7 +651,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-06-24.4";
+const APP_VERSION = "2026-10-20.2";
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
@@ -1101,9 +1101,9 @@ function showToast(msg, ok=true){
 
 let timerStart=null, timerInterval=null;
 function fmtElapsed(ms){ const s=Math.floor(ms/1000); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
-function startTimer(resumeElapsedSec){
+function startTimer(resumeElapsedSec, startedAtMs){
   stopTimer();
-  timerStart = Date.now() - (resumeElapsedSec ? resumeElapsedSec*1000 : 0);
+  timerStart = startedAtMs || (Date.now() - (resumeElapsedSec ? resumeElapsedSec*1000 : 0));
   timerInterval=setInterval(()=>{ const el=$("sessionTimer"); if(!el){stopTimer();return;} el.textContent=fmtElapsed(Date.now()-timerStart); },1000);
 }
 function stopTimer(){ if(timerInterval){clearInterval(timerInterval); timerInterval=null;} }
@@ -1590,6 +1590,7 @@ async function bootForUser(user){
   await loadLog();
   await deduplicateHiitLog();
   home();
+  restoreActiveSession(); // if the app was closed mid-workout, drop straight back in
   // Firebase remembers the session, so most future opens skip the login
   // screen entirely and land here directly — this is the one point every
   // user actually reaches, so it's the right place to check for updates
@@ -1817,9 +1818,11 @@ let sessionState = null; // {id, started, workingEx, originalEx}
 function startBlankSession(){
   const draft = DRAFTS["adhoc"];
   if(draft){
-    sessionState = {id:"adhoc", started:true, workingEx: draft.workingEx, originalEx: draft.workingEx, adHocName: draft.adHocName||"Freestyle Session"};
+    sessionState = {id:"adhoc", started:true, workingEx: draft.workingEx, originalEx: draft.workingEx, adHocName: draft.adHocName||"Freestyle Session", liveSets: draft.setsData};
+    _autosaveOff = false;
     renderActiveSessionScreen(draft.setsData);
     startTimer(draft.elapsedSec||0);
+    scheduleAutosave();
     showToast("Resumed your in-progress session \u2713");
     return;
   }
@@ -1836,9 +1839,11 @@ function openSession(id){
   const draft = DRAFTS[id];
 
   if(draft){
-    sessionState = {id, started:true, workingEx: draft.workingEx, originalEx: JSON.parse(JSON.stringify(p.ex))};
+    sessionState = {id, started:true, workingEx: draft.workingEx, originalEx: JSON.parse(JSON.stringify(p.ex)), liveSets: draft.setsData};
+    _autosaveOff = false;
     renderActiveSessionScreen(draft.setsData);
     startTimer(draft.elapsedSec||0);
+    scheduleAutosave();
     showToast("Resumed your in-progress session \u2713");
   } else {
     sessionState = {id, started:false, workingEx: JSON.parse(JSON.stringify(p.ex)), originalEx: JSON.parse(JSON.stringify(p.ex))};
@@ -1852,6 +1857,9 @@ function sessionTemplateChanged(){
 }
 
 function renderActiveSessionScreen(resumeSetsData){
+  // Re-rendering mid-session (after adding or swapping an exercise, or coming
+  // back from the pause prompt) must never wipe what has been typed so far.
+  if(!resumeSetsData && sessionState && sessionState.started && sessionState.liveSets) resumeSetsData = sessionState.liveSets;
   const p = PLAN.find(x=>x.id===sessionState.id);
   const isAdHoc = sessionState.id === "adhoc";
   const displayName = isAdHoc ? (sessionState.adHocName||"Freestyle Session") : (p?p.name:"Session");
@@ -1865,11 +1873,11 @@ function renderActiveSessionScreen(resumeSetsData){
     if(e.superset){
       const prevA = last && last.ex.find(le=>le.n===e.exA.n);
       const prevB = last && last.ex.find(le=>le.n===e.exB.n);
-      const lastA = prevA && prevA.sets.length ? prevA.sets.map(s=>fmtSet(s)).join(" · ") : null;
-      const lastB = prevB && prevB.sets.length ? prevB.sets.map(s=>fmtSet(s)).join(" · ") : null;
-      const prevHtml = (lastA||lastB)
-        ? `<div class="prev">${lastA?`Last A: <b>${lastA}</b>`:""}${lastA&&lastB?" &nbsp;·&nbsp; ":""}${lastB?`Last B: <b>${lastB}</b>`:""}</div>`
-        : `<div class="prev">First time logging this superset</div>`;
+      const bestA = allTimeBest(e.exA.n), bestB = allTimeBest(e.exB.n);
+      const prParts = [];
+      if(bestA) prParts.push(`&#127942; PR A: <b>${bestA.weight}kg×${bestA.reps}</b>`);
+      if(bestB) prParts.push(`&#127942; PR B: <b>${bestB.weight}kg×${bestB.reps}</b>`);
+      const prevHtml = prParts.length ? `<div class="prev">${prParts.join(" &nbsp;·&nbsp; ")}</div>` : "";
 
       const setPairs = Array.from({length:e.s},(_,si)=>{
         const resumeA = resumeBlock && resumeBlock.A && resumeBlock.A[si];
@@ -1920,11 +1928,9 @@ function renderActiveSessionScreen(resumeSetsData){
     }
 
     const prev = last && last.ex.find(le=>le.n===e.n);
-    const prevHtml = (prev && prev.sets.length)
-      ? `Last: <b>${prev.sets.map(s=>fmtSet(s)).join(" &nbsp;\u00b7&nbsp; ")}</b>`
-      : "First time logging this exercise";
     const priorBest = allTimeBest(e.n);
-    const bestHtml = priorBest ? ` &nbsp;·&nbsp; &#127942; PR: <b>${priorBest.weight}kg×${priorBest.reps}</b>` : "";
+    const prevHtml = priorBest ? `&#127942; PR: <b>${priorBest.weight}kg×${priorBest.reps}</b>` : "";
+    const bestHtml = "";
     const rows = Array.from({length:e.s},(_,si)=>{
       const resumeSet = resumeBlock && resumeBlock[si];
       const pw = resumeSet ? resumeSet.w : (prev&&prev.sets[si] ? prev.sets[si].w : "");
@@ -1936,7 +1942,7 @@ function renderActiveSessionScreen(resumeSetsData){
     return `<div class="ex" id="ex${i}">
       <div class="ex-head"><div class="ex-name">${i+1}. ${e.n}</div><div style="display:flex;align-items:center;gap:8px"><div class="scheme">${e.s}&times;${e.r}</div>${swapBtn}</div></div>
       ${e.note ? `<div class="ex-note">${e.note}</div>` : ""}
-      <div class="prev">${prevHtml}${bestHtml}</div>
+      ${prevHtml ? `<div class="prev">${prevHtml}</div>` : ""}
       <div class="sets" id="sets${i}">${rows}</div>
       <button class="addset-btn" onclick="addSet(${i},event)">+ add set</button>
     </div>`;
@@ -1976,14 +1982,39 @@ function renderActiveSessionScreen(resumeSetsData){
     ${addExBtn}
     ${footer}
     ${bottomBar}`;
+  applyDoneFlags(resumeSetsData);
   window.scrollTo(0,0);
+}
+
+function applyDoneFlags(data){
+  if(!data || !sessionState) return;
+  sessionState.workingEx.forEach((e,i)=>{
+    const c = $("sets"+i), blk = data[i];
+    if(!c || !blk) return;
+    if(e.superset){
+      [...c.querySelectorAll(".ss-set-pair")].forEach((pair,si)=>{
+        const rows = [...pair.querySelectorAll(".ss-row")];
+        [["A",0],["B",1]].forEach(([k,ri])=>{
+          if(blk[k] && blk[k][si] && blk[k][si].d && rows[ri]) rows[ri].querySelector(".tick")?.classList.add("on");
+        });
+      });
+    } else {
+      [...c.children].forEach((row,si)=>{
+        if(blk[si] && blk[si].d) row.querySelector(".tick")?.classList.add("on");
+      });
+    }
+    checkDone($("ex"+i));
+  });
 }
 
 function startActiveSession(){
   if(!sessionState) return;
   sessionState.started = true;
+  sessionState.liveSets = null;
+  _autosaveOff = false;
   startTimer();
   renderActiveSessionScreen(null);
+  scheduleAutosave();
 }
 
 // Back button behaviour: nothing started yet -> just go home, nothing to lose.
@@ -1998,6 +2029,7 @@ function handleSessionBack(){
 }
 
 function showSessionExitPrompt(){
+  currentSetsData(); // snapshot what is typed before the screen is swapped out
   const p = PLAN.find(x=>x.id===sessionState.id);
   app.innerHTML = `
     <div class="topbar">
@@ -2040,15 +2072,16 @@ function serializeSessionSets(){
       [...c.querySelectorAll(".ss-set-pair")].forEach(pair=>{
         const rows = [...pair.querySelectorAll(".ss-row")];
         const rowA=rows[0], rowB=rows[1];
-        A.push(rowA ? {w:rowA.querySelector(".w-input").value.trim(), r:rowA.querySelector(".r-input").value.trim()} : {w:"",r:""});
-        B.push(rowB ? {w:rowB.querySelector(".w-input").value.trim(), r:rowB.querySelector(".r-input").value.trim()} : {w:"",r:""});
+        A.push(rowA ? {w:rowA.querySelector(".w-input").value.trim(), r:rowA.querySelector(".r-input").value.trim(), d:rowA.querySelector(".tick")?.classList.contains("on")?1:0} : {w:"",r:""});
+        B.push(rowB ? {w:rowB.querySelector(".w-input").value.trim(), r:rowB.querySelector(".r-input").value.trim(), d:rowB.querySelector(".tick")?.classList.contains("on")?1:0} : {w:"",r:""});
       });
       setsData.push({A,B});
     } else {
       const sets = [...c.children].map(row=>({
         w: row.querySelector(".w-input").value.trim(),
         r: row.querySelector(".r-input").value.trim(),
-        type: row.querySelector(".setn")?.dataset?.type||""
+        type: row.querySelector(".setn")?.dataset?.type||"",
+        d: row.querySelector(".tick")?.classList.contains("on")?1:0
       }));
       setsData.push(sets);
     }
@@ -2056,9 +2089,91 @@ function serializeSessionSets(){
   return setsData;
 }
 
+// ── Auto-save: a live session survives the app being closed ──
+// iOS freely kills home-screen apps in the background. Every change is written
+// synchronously to localStorage (survives a kill), and mirrored to Firestore
+// as a draft a few seconds later (survives a wiped device cache).
+const ACTIVE_KEY = "mk1_active_session_v1";
+let _autosaveOff = false, _asTimer = null, _asSyncTimer = null;
+const STALE_SESSION_MS = 8*3600*1000;
+
+function currentSetsData(){
+  if(!sessionState || !sessionState.started) return null;
+  const domLive = sessionState.workingEx.length===0 || $("sets0");
+  if(domLive) sessionState.liveSets = serializeSessionSets();
+  return sessionState.liveSets || null;
+}
+function scheduleAutosave(){
+  if(_autosaveOff || !sessionState || !sessionState.started) return;
+  clearTimeout(_asTimer);
+  _asTimer = setTimeout(()=>autosaveSession(false), 300);
+}
+function autosaveSession(flush){
+  if(_autosaveOff || !sessionState || !sessionState.started || !CURRENT_PROFILE) return;
+  clearTimeout(_asTimer);
+  try{
+    const setsData = currentSetsData();
+    localStorage.setItem(ACTIVE_KEY, JSON.stringify({
+      profileId: CURRENT_PROFILE.id, id: sessionState.id,
+      workingEx: sessionState.workingEx, adHocName: sessionState.adHocName||null,
+      setsData, timerStart, savedAt: Date.now()
+    }));
+  }catch(e){}
+  clearTimeout(_asSyncTimer);
+  _asSyncTimer = setTimeout(syncSessionDraft, flush ? 0 : 15000);
+}
+async function syncSessionDraft(){
+  if(_autosaveOff || !sessionState || !sessionState.started) return;
+  DRAFTS[sessionState.id] = {
+    savedAt: new Date().toISOString(), elapsedSec: elapsedSeconds(),
+    workingEx: sessionState.workingEx, adHocName: sessionState.adHocName||null,
+    setsData: currentSetsData()
+  };
+  await saveLog();
+}
+function suspendAutosave(){ _autosaveOff = true; clearTimeout(_asTimer); clearTimeout(_asSyncTimer); }
+function clearActiveSnapshot(){ try{ localStorage.removeItem(ACTIVE_KEY); }catch(e){} }
+
+function restoreActiveSession(){
+  if(sessionState && sessionState.started) return false;
+  let snap = null;
+  try{ snap = JSON.parse(localStorage.getItem(ACTIVE_KEY)||"null"); }catch(e){}
+  if(!snap || !CURRENT_PROFILE || snap.profileId !== CURRENT_PROFILE.id) return false;
+  const p = PLAN.find(x=>x.id===snap.id);
+  if(snap.id!=="adhoc" && !p){ clearActiveSnapshot(); return false; }
+  // Already logged elsewhere (e.g. saved but the clean-up didn't run)? Drop it.
+  if(LOG.some(l=>l.sessionId===snap.id && new Date(l.date).getTime() >= snap.timerStart)){ clearActiveSnapshot(); return false; }
+  if(Date.now() - snap.savedAt > STALE_SESSION_MS){
+    // Left for hours: keep it as a normal draft rather than dropping the user into it.
+    DRAFTS[snap.id] = {savedAt:new Date(snap.savedAt).toISOString(), elapsedSec:Math.max(0,Math.round((snap.savedAt-snap.timerStart)/1000)),
+      workingEx:snap.workingEx, adHocName:snap.adHocName, setsData:snap.setsData};
+    saveLog(); clearActiveSnapshot();
+    showToast("Your unfinished session was kept as a draft \u2713");
+    home();
+    return false;
+  }
+  sessionState = {id:snap.id, started:true, workingEx:snap.workingEx,
+    originalEx: snap.id==="adhoc" ? snap.workingEx : JSON.parse(JSON.stringify(p.ex)),
+    adHocName:snap.adHocName||undefined, liveSets:snap.setsData};
+  _autosaveOff = false;
+  renderActiveSessionScreen(snap.setsData);
+  startTimer(0, snap.timerStart);
+  showToast("Picked up your session where you left off \u2713");
+  scheduleAutosave();
+  return true;
+}
+
+document.addEventListener("input", ()=>scheduleAutosave(), true);
+document.addEventListener("change", ()=>scheduleAutosave(), true);
+document.addEventListener("click", ()=>scheduleAutosave(), true);
+document.addEventListener("touchend", ()=>scheduleAutosave(), true);
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden) autosaveSession(true); });
+window.addEventListener("pagehide", ()=>autosaveSession(true));
+
 async function saveSessionDraft(){
   if(!sessionState) return;
-  const setsData = serializeSessionSets();
+  suspendAutosave();
+  const setsData = currentSetsData() || serializeSessionSets();
   DRAFTS[sessionState.id] = {
     savedAt: new Date().toISOString(),
     elapsedSec: elapsedSeconds(),
@@ -2067,6 +2182,7 @@ async function saveSessionDraft(){
     setsData
   };
   const ok = await saveLog();
+  if(ok) clearActiveSnapshot();
   stopTimer(); cancelRest();
   sessionState = null;
   showToast(ok ? "Draft saved \u2014 resume any time \u2713" : "Couldn't save draft \u2014 check your connection");
@@ -2074,6 +2190,8 @@ async function saveSessionDraft(){
 }
 
 async function cancelActiveSession(){
+  suspendAutosave();
+  clearActiveSnapshot();
   if(sessionState && DRAFTS[sessionState.id]){
     delete DRAFTS[sessionState.id];
     await saveLog();
@@ -2086,6 +2204,7 @@ async function cancelActiveSession(){
 // ── Mid-session exercise editing ───────────────────────────
 function showAddExerciseToSession(){
   if(!sessionState) return;
+  currentSetsData();
   app.innerHTML = `
     <div class="topbar">
       <button class="back" onclick="renderActiveSessionScreen(null)">&#8592; Back</button>
@@ -2115,6 +2234,7 @@ function confirmAddExerciseToSession(){
   const sets = parseInt($("midSessionSets")?.value) || 3;
   const reps = ($("midSessionReps")?.value||"10-12").trim();
   sessionState.workingEx.push({n:name, s:sets, r:reps});
+  setTimeout(scheduleAutosave, 0);
   // Re-rendering the screen doesn't disturb the running timer — it looks up
   // its DOM element fresh each tick rather than holding a stale reference,
   // and timerStart itself is untouched by this re-render.
@@ -2123,6 +2243,7 @@ function confirmAddExerciseToSession(){
 
 function swapSessionExercise(idx){
   if(!sessionState) return;
+  currentSetsData();
   _swapSessionExerciseIdx = idx;
   app.innerHTML = `
     <div class="topbar">
@@ -2145,8 +2266,10 @@ function confirmSwapSessionExercise(){
   if(!name){ showToast("Choose an exercise", false); return; }
   if(_swapSessionExerciseIdx===null) return;
   sessionState.workingEx[_swapSessionExerciseIdx].n = name;
+  if(sessionState.liveSets) sessionState.liveSets[_swapSessionExerciseIdx] = null; // new exercise, fresh sets
   _swapSessionExerciseIdx = null;
   renderActiveSessionScreen(null);
+  scheduleAutosave();
 }
 
 // ── Set-type system (Warm-up / Drop Set / Failure) ────────
@@ -2250,7 +2373,7 @@ function updateSetIndicator(inputEl){
 }
 
 function tick(btn){
-  const row = btn.closest(".setrow");
+  const row = btn.closest(".setrow, .ss-row");
   const w = row.querySelector(".w-input"), r = row.querySelector(".r-input");
   const pw = row.dataset.pw, pr = row.dataset.pr;
   if(!btn.classList.contains("on")){
@@ -2344,17 +2467,23 @@ async function saveSession(id){
   LOG.push(logEntry);
   const templateChanged = (sessionState && !isAdHocSession) ? sessionTemplateChanged() : false;
   const workingExSnapshot = workingEx;
+  suspendAutosave();
+  const prevDraft = DRAFTS[id];
   if(DRAFTS[id]) delete DRAFTS[id]; // finishing supersedes any saved draft for this session
   const ok = await saveLog();
+  if(!ok){
+    // Stay on the session so nothing typed is lost; the user can retry.
+    LOG.pop();
+    if(prevDraft) DRAFTS[id] = prevDraft;
+    _autosaveOff = false;
+    scheduleAutosave();
+    showToast("Couldn't save \u2014 check your connection and tap Save again", false);
+    return;
+  }
+  clearActiveSnapshot();
   stopTimer();
   cancelRest();
   sessionState = null;
-  if(!ok){
-    showToast("Couldn't save \u2014 check your connection");
-    LOG.pop(); // don't keep an unsaved entry in memory if the write failed
-    setTimeout(home, 1000);
-    return;
-  }
   if(templateChanged){
     showTemplateChangePrompt(ex, prHits, id, workingExSnapshot);
   } else {
