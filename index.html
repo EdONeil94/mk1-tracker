@@ -600,7 +600,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, verifyBeforeUpdateEmail, sendPasswordResetEmail, updatePassword, deleteUser, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // ── Your Firebase project ──
@@ -618,7 +618,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-20.3";
+const APP_VERSION = "2026-10-20.4";
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
@@ -708,25 +708,54 @@ async function registerUsernameLookup(username, email){
   }catch(e){ return false; }
 }
 
+// Each person lives in their own document (people/{profileId}) so security
+// rules can let people edit only their own record. PEOPLE stays a plain array
+// for the rest of the app; savePeople() works out which records changed and
+// writes just those.
+let PEOPLE_SAVED = new Map(); // id -> JSON as last read/written
+function personRef(id){ return doc(db, "people", id); }
+function rememberPeopleSnapshot(){ PEOPLE_SAVED = new Map(PEOPLE.map(p=>[p.id, JSON.stringify(p)])); }
+
 async function loadPeople(){
   try{
-    const snap = await getDoc(peopleDocRef());
-    if(snap.exists() && Array.isArray(snap.data().list) && snap.data().list.length){
-      PEOPLE = snap.data().list;
+    const qs = await getDocs(collection(db, "people"));
+    if(!qs.empty){
+      PEOPLE = qs.docs.map(d=>d.data());
       PEOPLE_LOAD_FAILED = false;
-    } else {
-      PEOPLE = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
-      await setDoc(peopleDocRef(), {list: PEOPLE});
+      rememberPeopleSnapshot();
+      return;
     }
+    // One-off migration from the old single meta/people document.
+    const legacy = await getDoc(peopleDocRef());
+    const list = (legacy.exists() && Array.isArray(legacy.data().list)) ? legacy.data().list : [];
+    PEOPLE = list;
+    PEOPLE_LOAD_FAILED = false;
+    PEOPLE_SAVED = new Map(); // nothing in the collection yet, so every record counts as new
+    if(list.length) await savePeople();
   }catch(e){
-    // Fallback is display-only: never save it, or it would replace the real directory.
+    // Display-only fallback: never saved, or it would replace the real directory.
     PEOPLE = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
     PEOPLE_LOAD_FAILED = true;
   }
 }
 async function savePeople(){
   if(PEOPLE_LOAD_FAILED) return false;
-  try{ await setDoc(peopleDocRef(), {list: PEOPLE}); return true; }catch(e){ return false; }
+  let ok = true;
+  const currentIds = new Set();
+  for(const p of PEOPLE){
+    if(!p || !p.id) continue;
+    currentIds.add(p.id);
+    const json = JSON.stringify(p);
+    if(PEOPLE_SAVED.get(p.id) === json) continue; // unchanged
+    try{ await setDoc(personRef(p.id), JSON.parse(json)); PEOPLE_SAVED.set(p.id, json); }
+    catch(e){ ok = false; }
+  }
+  for(const id of [...PEOPLE_SAVED.keys()]){
+    if(currentIds.has(id)) continue;
+    try{ await deleteDoc(personRef(id)); PEOPLE_SAVED.delete(id); }
+    catch(e){ ok = false; }
+  }
+  return ok;
 }
 
 // ── Gym locations (admin-manageable, not hardcoded) ────────
@@ -1280,10 +1309,10 @@ async function completeGoogleSetup(){
   const locations = signupRole==="trainer" ? [...signupLocations] : signupLocations.slice(0,1);
 
   try{
-    await writeWithRetry(()=>setDoc(doc(db,"users",user.uid),{profileId}));
     PEOPLE.push({id:profileId, name:displayName, role:"client", clientIds:[],
       uid:user.uid, email:user.email||"", username, locations});
-    await writeWithRetry(()=>savePeople());
+    await writeWithRetry(async()=>{ if(!(await savePeople())) throw new Error("people write failed"); });
+    await writeWithRetry(()=>setDoc(doc(db,"users",user.uid),{profileId}));
     await writeWithRetry(()=>registerLoginLookup(user.email||"", username));
     await writeWithRetry(()=>registerUsernameLookup(username, user.email||""));
     _googleUser = null;
@@ -1423,7 +1452,6 @@ async function submitAuth(){
   if(password!==password2){ authError="Passwords don't match."; renderAuthScreen(); return; }
   if(!signupLocations.length){ authError="Pick at least one gym location."; renderAuthScreen(); return; }
 
-  await loadPeople();
   const usernameTaken = await getEmailForUsername(username);
   if(usernameTaken){
     authError = "That username is already taken \u2014 please choose another.";
@@ -1433,17 +1461,20 @@ async function submitAuth(){
 
   const role = signupRole || "client";
   const locations = role==="client" ? signupLocations.slice(0,1) : [...signupLocations];
-  const profileId = uniquePersonId(displayName);
-
   signupInProgress = true;
   let cred = null;
+  let profileId = null;
   try{
     // Registered directly under the real email now, so genuine password-reset
     // emails have somewhere real to go - no more synthetic placeholder address.
     cred = await createUserWithEmailAndPassword(auth, realEmail, password);
-    await writeWithRetry(()=>setDoc(doc(db,"users",cred.user.uid), {profileId}));
+    await loadPeople(); // now signed in, so the directory is readable
+    profileId = uniquePersonId(displayName);
     PEOPLE.push({id:profileId, name:displayName, role, clientIds:[], uid:cred.user.uid, email:realEmail, username, locations});
-    await writeWithRetry(()=>savePeople());
+    // Person record first: the security rules only allow the uid mapping once
+    // a person record owned by this login exists.
+    await writeWithRetry(async()=>{ if(!(await savePeople())) throw new Error("people write failed"); });
+    await writeWithRetry(()=>setDoc(doc(db,"users",cred.user.uid), {profileId}));
     await writeWithRetry(()=>registerLoginLookup(realEmail, username));
     await writeWithRetry(()=>registerUsernameLookup(username, realEmail));
     // createUserWithEmailAndPassword auto-signs the user in, which fires the
@@ -1456,6 +1487,11 @@ async function submitAuth(){
     await bootForUser(cred.user);
   }catch(e){
     signupInProgress = false;
+    if(cred && profileId){
+      // Tidy away the half-made person record so it doesn't linger in lists.
+      PEOPLE = PEOPLE.filter(p=>p.id!==profileId);
+      try{ await savePeople(); }catch(cleanupErr){ /* best effort */ }
+    }
     if(cred){
       // The login was created but the profile write never completed even
       // after retrying - roll the login back too, rather than leaving an
@@ -1539,6 +1575,12 @@ async function bootForUser(user){
   }
 
   CURRENT_PROFILE = PEOPLE.find(p=>p.id===mapping.profileId) || {id:mapping.profileId, name:mapping.profileId, role:"client", clientIds:[]};
+  // Older profiles were created before records were tied to a login. Stamp
+  // this login's uid on now: the security rules use it to decide who can edit what.
+  if(!PEOPLE_LOAD_FAILED && PEOPLE.includes(CURRENT_PROFILE) && !CURRENT_PROFILE.uid){
+    CURRENT_PROFILE.uid = user.uid;
+    await savePeople();
+  }
   await loadLog();
   await deduplicateHiitLog();
   home();
