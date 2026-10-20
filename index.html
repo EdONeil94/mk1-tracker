@@ -762,6 +762,55 @@ body.has-tabbar .tabbar{display:block}
   font-size:10px;font-weight:600;min-height:50px;justify-content:center;cursor:pointer}
 .tabbar button.active{color:var(--accent)}
 body.has-tabbar .app-update-banner{bottom:calc(74px + var(--safe-bot))}
+
+/* Live session: compact nav bar */
+.topbar.session-nav{position:sticky;top:0;z-index:40;display:grid;grid-template-columns:1fr auto 1fr;grid-template-areas:none;
+  align-items:center;margin:-6px -16px 14px;padding:4px 12px 6px;background:var(--bar-bg);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line)}
+.topbar.session-nav > *{grid-area:auto !important}
+.sn-title{text-align:center;min-width:0}
+.sn-name{font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.sn-sub{font-size:13px;color:var(--mute);font-variant-numeric:tabular-nums}
+.sn-right{justify-self:end}
+.session-finish-btn,.session-nav .start-session-btn{height:32px;padding:0 15px;border-radius:16px;border:none;background:var(--accent2);
+  color:#fff;font-size:15px;font-weight:600;cursor:pointer;min-width:0}
+
+/* Live session: exercise cards */
+.ex,.ss-card{padding:14px 16px 8px;margin-bottom:14px}
+.ex-num{border:none;min-width:26px;height:26px;border-radius:8px}
+.ex-swap-btn{width:32px;height:32px;border-radius:16px;border:none;background:var(--chip);color:var(--text);
+  display:inline-flex;align-items:center;justify-content:center;padding:0}
+.setn{border:none}
+.setrow:has(.tick.on) .setn:not([data-type="warmup"]):not([data-type="dropset"]):not([data-type="failure"]){background:var(--good-tint);color:var(--good)}
+.tick{border:none;border-radius:10px}
+.tick.on{background:var(--good);color:var(--paper)}
+.addset-btn{color:var(--accent);font-size:15px;font-weight:600;min-height:40px;padding:0 2px}
+.add-mid-session-btn{width:100%;min-height:50px;border-radius:12px;border:1.5px dashed var(--line);background:none;
+  color:var(--accent);font-size:17px;font-weight:600;cursor:pointer;margin:2px 0 6px}
+.ss-badge{border-radius:11px;padding:4px 9px;font-size:11px;letter-spacing:.06em}
+
+/* Live session: rest panel fixed to the bottom */
+.rest-panel{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--bar-bg);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  border-top:.5px solid var(--line);padding:8px 16px calc(12px + var(--safe-bot))}
+.rest-panel > *{max-width:468px;margin-left:auto;margin-right:auto}
+.rest-panel-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.rest-panel .rest-display{flex:none;background:none;border:none;border-radius:0;color:var(--mute);font-size:17px;font-weight:600;
+  text-align:left;padding:0;min-height:44px;min-width:100px;font-variant-numeric:tabular-nums;cursor:pointer}
+.rest-panel .rest-display.running{background:none;color:var(--text);font-size:34px;font-weight:700;line-height:40px}
+.rest-seg{width:200px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.rest-seg .rest-chip{background:none;border:none;color:var(--text);height:32px;font-size:15px;font-weight:600;border-radius:7px;cursor:pointer}
+.rest-seg .rest-chip.active{background:var(--seg-on);box-shadow:0 1px 3px var(--shadow)}
+.rest-track{height:4px;border-radius:2px;background:var(--chip);margin-top:6px;overflow:hidden}
+.rest-fill{height:100%;width:0;background:var(--accent2)}
+.rest-panel-spacer{height:110px}
+
+/* Grouped-row extras */
+.ios-row-sub{display:block;font-size:15px;color:var(--mute);margin-top:1px}
+.pill{display:inline-block;font-size:13px;font-weight:600;padding:3px 8px;border-radius:6px}
+.pill-good{background:var(--good-tint);color:var(--good)}
+.pill-warn{background:var(--warn-tint);color:var(--warn)}
+.photo-upload-btn{border:none;border-radius:10px;background:var(--chip);color:var(--accent);font-size:15px;font-weight:600}
 .loading,.lb-loading{font-size:15px}
 </style>
 </head>
@@ -789,7 +838,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-20.17";
+const APP_VERSION = "2026-10-20.18";
 
 const fbApp = initializeApp(firebaseConfig);
 // Offline mode: Firestore keeps a copy of your data on the phone (IndexedDB),
@@ -1432,6 +1481,7 @@ const ICONS = {
   play:'<path d="M7 4l13 8-13 8z"/>',
   history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 3"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  pin:'<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
   home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'
 };
 function svgIcon(name, size){
@@ -1596,11 +1646,13 @@ function elapsedSeconds(){ return timerStart ? Math.round((Date.now()-timerStart
 // Counts down to a fixed end time rather than subtracting a second at a time,
 // so locking the phone or switching apps can't freeze it: on return it shows
 // the true time left (or that rest is over).
-let restInterval=null, restRemaining=0, restEndsAt=0;
+let restInterval=null, restRemaining=0, restEndsAt=0, restTotalMs=0, restPreset=0;
 function fmtRest(sec){ return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`; }
 function startRest(seconds, endsAt){
   clearInterval(restInterval);
   restEndsAt = endsAt || (Date.now() + seconds*1000);
+  restPreset = seconds || 0;
+  restTotalMs = Math.max(1000, seconds ? seconds*1000 : (restEndsAt - Date.now()));
   maybeShowSoundTip();
   restInterval = setInterval(tickRest, 250);
   tickRest();
@@ -1621,6 +1673,7 @@ function tickRest(){
     return;
   }
   if(left !== restRemaining){ restRemaining = left; renderRest(); }
+  else { const fill = $("restFill"); if(fill) fill.style.width = `${Math.min(100, 100*Math.max(0, restEndsAt - Date.now())/Math.max(restTotalMs, 1))}%`; }
 }
 function cancelRest(){
   clearInterval(restInterval); restInterval=null; restRemaining=0; restEndsAt=0; renderRest();
@@ -1636,6 +1689,12 @@ function renderRest(){
     el.textContent = "Rest";
     el.classList.remove("running");
   }
+  const fill = $("restFill");
+  if(fill){
+    const left = restInterval ? Math.max(0, restEndsAt - Date.now()) : 0;
+    fill.style.width = restInterval ? `${Math.min(100, 100*left/Math.max(restTotalMs, left))}%` : "0%";
+  }
+  document.querySelectorAll(".rest-chip[data-sec]").forEach(b=>b.classList.toggle("active", !!restInterval && +b.dataset.sec===restPreset));
 }
 
 // ── Keep the screen on mid-workout ─────────────────────────
@@ -2230,10 +2289,10 @@ function getHomeLayoutFor(person){
 function homeModuleHtml(id, ctx){
   switch(id){
     case "sessions": {
-      const blankBtn = iosRow({icon:"plus", tint:"gray", label: DRAFTS["adhoc"] ? "Resume freestyle session" : "Start a freestyle session", onclick:"startBlankSession()", cls:"ios-row-solo"});
+      const blankBtn = iosRow({icon:"plus", tint:"gray", label: DRAFTS["adhoc"] ? "Resume freestyle session" : "Start a freestyle session", onclick:"startBlankSession()"});
       return PLAN.length ? `
       <div class="section-label">Gym sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">${svgIcon("qr")}</button><button class="icon-btn" onclick="refresh()" aria-label="Sync data">${svgIcon("sync")}</button></div></div>
-      <div class="grid">${ctx.cards}</div>
+      ${ctx.cards}
       ${blankBtn}
       ${iosRow({icon:"history", tint:"indigo", label:"Session history", value:`${LOG.filter(s=>!s.hiit).length}`, onclick:"showHistory()"})}` : `
       <div class="section-label">Gym Sessions</div>
@@ -2386,18 +2445,14 @@ function home(){
         <button class="sync-banner-dismiss" onclick="this.closest(\'.sync-banner\').remove()" aria-label="Dismiss">&times;</button>
       </div>`;
 
+  const todayKey = localDayKey(new Date());
   const cards = PLAN.map(p=>{
     const last = lastOf(p.id);
-    let lastHtml = "Not logged yet";
-    if(last){
-      const topSet = last.ex.flatMap(e=>e.sets).filter(s=>s.w).sort((a,b)=>b.w-a.w)[0];
-      lastHtml = `Last: <b>${fmtDate(last.date)}</b>` + (topSet ? `<br>Top weight: <b>${topSet.w}kg</b>` : "");
-    }
-    const draftBadge = DRAFTS[p.id] ? `<div class="draft-badge">&#9203; Resume in-progress</div>` : "";
-    return `<div class="scard${last?" has-data":""}" onclick="openSession('${p.id}')">
-      ${draftBadge}
-      <h2>${esc(p.name)}</h2><div class="focus">${esc(p.focus)}</div><div class="last">${lastHtml}</div>
-    </div>`;
+    const value = DRAFTS[p.id] ? `<span class="pill pill-warn">In progress</span>`
+      : (last && localDayKey(last.date)===todayKey) ? `<span class="pill pill-good">Done today</span>`
+      : last ? `Last ${fmtDate(last.date)}` : "New";
+    const focus = p.focus ? `<span class="ios-row-sub">${esc(p.focus)}</span>` : "";
+    return iosRow({icon:"play", tint:"brand", label:`${esc(p.name)}${focus}`, value, onclick:`openSession(${jsArg(p.id)})`});
   }).join("");
 
   const latestW = [...WEIGHTS].sort((a,b)=>b.date.localeCompare(a.date))[0];
@@ -2601,13 +2656,13 @@ function renderActiveSessionScreen(resumeSetsData){
       const pt = resumeSet ? (resumeSet.type||"") : (prev&&prev.sets[si] ? (prev.sets[si].type||"") : "");
       return makeSetRow(si,pw,pr,pt);
     }).join("");
-    const swapBtn = `<button class="ex-swap-btn" onclick="swapSessionExercise(${i})" aria-label="Swap exercise">&#8646;</button>`;
+    const swapBtn = `<button class="ex-swap-btn" onclick="swapSessionExercise(${i})" aria-label="Swap exercise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg></button>`;
     return `<div class="ex" id="ex${i}">
-      <div class="ex-head"><div class="ex-name"><span class="ex-num ex-drag">${i+1}</span>${esc(e.n)}</div><div style="display:flex;align-items:center;gap:8px"><div class="scheme">${e.s}&times;${e.r}</div>${swapBtn}</div></div>
+      <div class="ex-head"><div class="ex-name"><span class="ex-num ex-drag">${i+1}</span>${esc(e.n)}</div><div style="display:flex;align-items:center;gap:8px"><div class="scheme">${e.s} &times; ${esc(e.r)}</div>${swapBtn}</div></div>
       ${e.note ? `<div class="ex-note">${esc(e.note)}</div>` : ""}
       ${prevHtml ? `<div class="prev">${prevHtml}</div>` : ""}
       <div class="sets" id="sets${i}">${rows}</div>
-      <button class="addset-btn" onclick="addSet(${i},event)">+ add set</button>
+      <button class="addset-btn" onclick="addSet(${i},event)">+ Add set</button>
     </div>`;
   }).join("");
 
@@ -2615,20 +2670,36 @@ function renderActiveSessionScreen(resumeSetsData){
     ? `<div class="last-updated">Last workout: <b>${fmtDate(last.date)}</b> &middot; ${timeAgo(last.date)}</div>`
     : `<div class="last-updated">No previous workout logged for this session yet</div>`;
 
-  const addExBtn = `<button class="add-mid-session-btn" onclick="showAddExerciseToSession()">&#65291; Add Exercise</button>`;
+  const addExBtn = `<button class="add-mid-session-btn" onclick="showAddExerciseToSession()">+ Add exercise</button>`;
 
-  const timerArea = sessionState.started
-    ? `<div class="timer-chip"><div class="tlabel">Time</div><div class="tval" id="sessionTimer">0:00</div></div>`
-    : `<button class="start-session-btn" onclick="startActiveSession()">&#9654; Start Session</button>`;
+  // Compact iOS nav bar: Back, the session name with its running clock, and
+  // Start (before you begin) or Finish (once started) on the right.
+  const navRight = sessionState.started
+    ? `<button class="session-finish-btn" onclick="saveSession(${jsArg(sessionState.id)})">Finish</button>`
+    : `<button class="start-session-btn" onclick="startActiveSession()">Start</button>`;
+  const navSub = sessionState.started
+    ? `<div class="sn-sub" id="sessionTimer">0:00</div>`
+    : `<div class="sn-sub">${esc(displayFocus)}</div>`;
+  const sessionNav = `<div class="topbar session-nav">
+      <button class="back" onclick="handleSessionBack()"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2L2 10l8 8"/></svg>Back</button>
+      <div class="sn-title"><div class="sn-name">${esc(displayName)}</div>${navSub}</div>
+      <div class="sn-right">${navRight}</div>
+    </div>`;
 
+  // Rest panel fixed to the bottom: countdown (tap to stop), 60s/90s/2m, progress.
   const bottomBar = sessionState.started
-    ? `<div class="rest-bar">
-        <button class="rest-chip" onclick="startRest(60)">60s</button>
-        <button class="rest-chip" onclick="startRest(90)">90s</button>
-        <button class="rest-chip" onclick="startRest(120)">120s</button>
-        <div class="rest-display" id="restDisplay" onclick="cancelRest()">Rest</div>
+    ? `<div class="rest-panel">
+        <div class="rest-panel-row">
+          <button class="rest-display" id="restDisplay" onclick="cancelRest()" aria-label="Rest timer (tap to stop)">Rest</button>
+          <div class="seg rest-seg" role="group" aria-label="Start a rest">
+            <button class="rest-chip" data-sec="60" onclick="startRest(60)">60s</button>
+            <button class="rest-chip" data-sec="90" onclick="startRest(90)">90s</button>
+            <button class="rest-chip" data-sec="120" onclick="startRest(120)">2m</button>
+          </div>
+        </div>
+        <div class="rest-track"><div class="rest-fill" id="restFill"></div></div>
       </div>
-      <div class="savebar"><div class="inner"><button class="save-btn" onclick="saveSession('${sessionState.id}')">Save session</button></div></div>`
+      <div class="rest-panel-spacer"></div>`
     : "";
 
   const blocksHtml = workingEx.length
@@ -2636,7 +2707,7 @@ function renderActiveSessionScreen(resumeSetsData){
     : `<div class="chart-empty">No exercises added yet &mdash; tap "Add Exercise" below to get started.</div>`;
 
   app.innerHTML = `
-    ${topbar({back:`handleSessionBack()`, title:esc(displayName), sub:esc(displayFocus), right:timerArea})}
+    ${sessionNav}
     ${blocksHtml}
     ${addExBtn}
     ${footer}
@@ -3967,7 +4038,7 @@ function compileWeekMetrics(log, weights, cardioLog, weekKey){
 function renderCheckInMetricSummary(m){
   const pbSection = m.pbs && m.pbs.length
     ? `<div class="checkin-pbs">
-        <div class="checkin-pb-label">🏆 PBs this week</div>
+        <div class="checkin-pb-label">PBs this week</div>
         ${m.pbs.map(p=>`<div class="checkin-pb-row"><span class="checkin-pb-name">${esc(p.name)}</span><span class="checkin-pb-val">${p.weight}kg &times; ${p.reps}</span></div>`).join("")}
       </div>`
     : "";
@@ -3977,7 +4048,7 @@ function renderCheckInMetricSummary(m){
   const cardioSection = (m.cardioDist>0||m.cardioDur>0)
     ? `<div class="stat-row">
         <div class="stat-card" style="grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center">
-          <div class="label">🏃 Cardio</div>
+          <div class="label">Cardio</div>
           <div style="font-size:14px;font-weight:800;color:var(--text)">
             ${m.cardioDist>0?`${m.cardioDist.toFixed(1)}km`:""}${m.cardioDist>0&&m.cardioDur>0?" &middot; ":""}${m.cardioDur>0?fmtDuration(m.cardioDur):""}
           </div>
@@ -3988,7 +4059,7 @@ function renderCheckInMetricSummary(m){
     <div class="stat-row">
       <div class="stat-card"><div class="label">Sessions</div><div class="value">${m.sessions}</div></div>
       <div class="stat-card"><div class="label">Duration</div><div class="value">${fmtDuration(m.duration)}</div></div>
-      <div class="stat-card"><div class="label">Streak</div><div class="value">${m.streak}w 🔥</div></div>
+      <div class="stat-card"><div class="label">Streak</div><div class="value">${m.streak} wk</div></div>
     </div>
     <div class="stat-row">
       <div class="stat-card"><div class="label">Volume</div><div class="value">${fmtVolume(m.volume)}</div></div>
@@ -4049,7 +4120,7 @@ function showWeeklyCheckin(weekKey){
       ${topbar({back:`home()`, title:`Weekly Check-In`, sub:`${m.monday} &ndash; ${m.sunday}`})}
       ${pickerHtml}
       <div class="checkin-banner">
-        <div class="checkin-banner-title">📋 Week in review</div>
+        <div class="checkin-banner-title">Week in review</div>
         <div class="checkin-banner-sub">Here's what your data says — add your weight and a note to complete this week's check-in.</div>
       </div>
       ${renderCheckInMetricSummary(m)}
@@ -4081,7 +4152,7 @@ function renderCheckinView(ci, m, isTrainerView, pickerHtml){
     ${topbar({back:backFn, title:`Check-In`, sub:`${m.monday} &ndash; ${m.sunday}`})}
     ${pickerHtml||""}
     <div class="checkin-banner">
-      <div class="checkin-banner-title">✅ Submitted</div>
+      <div class="checkin-banner-title">Submitted</div>
       <div class="checkin-banner-sub">Submitted ${fmtDate(ci.submittedAt||ci.weekKey)}</div>
     </div>
     ${renderCheckInMetricSummary(m)}
@@ -4421,8 +4492,8 @@ function showBuildWorkoutChoice(){
   app.innerHTML = `
     ${topbar({back:`home()`, title:`Build Your Workout`, sub:esc(CURRENT_PROFILE.name)})}
     <div class="last-updated" style="text-align:left">What would you like to build?</div>
-    <button class="addsessbtn" onclick="showSettings()">🏋️ Gym Session</button>
-    <button class="addsessbtn" onclick="showHiitSettings()">⚡ HIIT Class</button>
+    ${iosRow({icon:"build", tint:"blue", label:"Gym session", onclick:"showSettings()"})}
+    ${iosRow({icon:"bolt", tint:"orange", label:"HIIT class", onclick:"showHiitSettings()"})}
   `;
   window.scrollTo(0,0);
 }
@@ -5345,13 +5416,15 @@ async function showClientDetail(clientId){
       <div class="stat-card"><div class="label">This month</div><div class="value">${month}</div></div>
       <div class="stat-card"><div class="label">Streak</div><div class="value">${streak}</div></div>
     </div>
-    <button class="addsessbtn" onclick="manageClientSessions('${clientId}')">📋 Manage ${esc(person.name)}'s Sessions</button>
-    <button class="addsessbtn" onclick="showClientCheckins('${clientId}')">📋 ${esc(person.name)}'s Check-Ins</button>
-    <button class="addsessbtn" onclick="openDashboard('${clientId}')">📊 ${esc(person.name)}'s Dashboard</button>
-    <button class="addsessbtn" onclick="openExercisePicker('${clientId}')">📈 ${esc(person.name)}'s Exercise Metrics</button>
-    <button class="addsessbtn" onclick="showActivity('${clientId}')">🔥 ${esc(person.name)}'s Activity &amp; Streak</button>
-    <button class="addsessbtn" onclick="openMuscleMap('${clientId}')">💪 ${esc(person.name)}'s Muscle Map</button>
-    <button class="addsessbtn" onclick="openMeasurements('${clientId}')">📏 ${esc(person.name)}'s Body Measurements</button>
+    <div class="section-label">Manage</div>
+    ${iosRow({icon:"build", tint:"blue", label:"Sessions", onclick:`manageClientSessions(${jsArg(clientId)})`})}
+    ${iosRow({icon:"check", tint:"brand", label:"Check-ins", onclick:`showClientCheckins(${jsArg(clientId)})`})}
+    <div class="section-label">Progress</div>
+    ${iosRow({icon:"chart", tint:"purple", label:"Dashboard", onclick:`openDashboard(${jsArg(clientId)})`})}
+    ${iosRow({icon:"trend", tint:"indigo", label:"Exercise metrics", onclick:`openExercisePicker(${jsArg(clientId)})`})}
+    ${iosRow({icon:"flame", tint:"orange", label:"Activity &amp; streak", onclick:`showActivity(${jsArg(clientId)})`})}
+    ${iosRow({icon:"body", tint:"pink", label:"Muscle map", onclick:`openMuscleMap(${jsArg(clientId)})`})}
+    ${iosRow({icon:"ruler", tint:"teal", label:"Body measurements", onclick:`openMeasurements(${jsArg(clientId)})`})}
     <div class="section-label" style="margin-top:16px">Weight trend</div>
     <div class="chart-card">${chart}</div>
     <div class="section-label">Recent session summaries</div>
@@ -5393,7 +5466,7 @@ async function showAdminDashboard(){
 
   app.innerHTML = `
     ${topbar({back:`home()`, title:`Admin`, sub:`${PEOPLE.length} registered`})}
-    <button class="addsessbtn" onclick="showManageLocations()">📍 Manage Gym Locations</button>
+    ${iosRow({icon:"pin", tint:"red", label:"Gym locations", value:`${GYM_LOCATIONS.length}`, onclick:"showManageLocations()", cls:"ios-row-solo"})}
     ${requestsHtml}
     <div class="section-label" style="margin-top:16px">People</div>
     ${rows || '<div class="chart-empty">No one registered yet.</div>'}
@@ -5643,7 +5716,7 @@ function showAccountSettings(preserveScroll){
     <div class="photo-upload-row">
       ${avatarHtml(current, "photo-preview")}
       <div class="photo-upload-actions">
-        <button class="photo-upload-btn" onclick="triggerPhotoUpload()">📷 ${current.photo||KNOWN_PHOTOS[current.id]?"Change photo":"Add a photo"}</button>
+        <button class="photo-upload-btn" onclick="triggerPhotoUpload()">${current.photo||KNOWN_PHOTOS[current.id]?"Change photo":"Add a photo"}</button>
         ${current.photo ? `<button class="photo-remove-btn" onclick="removeProfilePhoto()">Remove photo</button>` : ""}
       </div>
       <input type="file" id="photoFileInput" accept="image/*" style="display:none" onchange="handlePhotoFileSelected(event)">
