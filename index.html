@@ -229,16 +229,6 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .last-updated{text-align:center;color:var(--mute);font-size:12px;margin:6px 0 18px;line-height:1.6}
 .last-updated b{color:var(--text)}
 
-.profile-wrap{padding-top:40px}
-.profile-title{text-align:center;margin-bottom:30px}
-.profile-title h1{margin-top:6px}
-.profile-grid{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-.profile-card{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:24px 20px;
-  width:140px;text-align:center;cursor:pointer;transition:transform .08s,border-color .15s}
-.profile-card:active{transform:scale(.96)}
-.profile-avatar{width:56px;height:56px;border-radius:50%;background:var(--accent2);color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;margin:0 auto 12px;
-  background-size:cover;background-position:center}
 .photo-upload-row{display:flex;align-items:center;gap:16px;margin-bottom:18px}
 .photo-preview{width:72px;height:72px;border-radius:50%;background:var(--accent2);color:#fff;
   display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;flex-shrink:0;
@@ -248,7 +238,6 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;text-align:center}
 .photo-remove-btn{background:none;border:none;color:#a04030;font-size:12px;font-weight:700;
   cursor:pointer;padding:0;text-align:left}
-.profile-name{font-size:16px;font-weight:800}
 
 .auth-wrap{padding-top:40px;max-width:380px;margin:0 auto}
 .auth-title{text-align:center;margin-bottom:22px}
@@ -342,16 +331,10 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .feedback-phrase-btn{background:var(--chip);border:1.5px solid var(--line);color:var(--text);
   border-radius:20px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer}
 .feedback-phrase-btn.active{border-color:var(--accent2);color:var(--accent2);background:rgba(93,76,220,.1)}
-.checkin-due-banner{background:var(--card);border:2px solid var(--accent2);border-radius:14px;
-  padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;cursor:pointer}
 .checkin-module-due{background:var(--card);border:2px solid var(--accent);border-radius:14px;
   padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;
   cursor:pointer;animation:pulse-border 2s ease-in-out infinite}
 @keyframes pulse-border{0%,100%{border-color:var(--accent)}50%{border-color:#c04020}}
-.checkin-due-icon{font-size:24px;flex-shrink:0}
-.checkin-due-text{flex:1}
-.checkin-due-text b{display:block;font-size:14px;margin-bottom:2px}
-.checkin-due-text span{font-size:12px;color:var(--mute)}
 .checkin-vol-fun{background:var(--chip);border:1.5px solid var(--line);border-radius:10px;
   padding:10px 12px;font-size:13px;font-weight:700;color:var(--text);margin-top:6px;text-align:center}
 .checkin-pbs{background:var(--chip);border:1.5px solid var(--line);border-radius:12px;
@@ -438,19 +421,6 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .leaderbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
   color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
   display:flex;align-items:center;justify-content:space-between}
-.lb-head{display:flex;justify-content:space-around;align-items:center;margin-bottom:16px}
-.lb-person{text-align:center}
-.lb-person .lb-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent2);color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin:0 auto 8px;
-  background-size:cover;background-position:center}
-.lb-person .lb-name{font-weight:800;font-size:14px}
-.lb-vs{color:var(--mute);font-size:12px;font-weight:800}
-.lb-row{display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;gap:8px;
-  background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px 12px;margin-bottom:10px}
-.lb-row .lb-val{font-size:20px;font-weight:800;text-align:center}
-.lb-row .lb-val.lead{color:var(--accent)}
-.lb-row .lb-label{color:var(--mute);font-size:10.5px;font-weight:800;text-transform:uppercase;
-  letter-spacing:.06em;text-align:center}
 .lb-loading{color:var(--mute);text-align:center;padding:60px 20px;font-size:14px}
 .lbrank-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--line);
   border-radius:14px;padding:12px 14px;margin-bottom:10px}
@@ -597,9 +567,6 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border-radius:6px;
   padding:2px 6px;margin-top:6px}
 .hiit-card .hc-meta{color:var(--mute);font-size:11px;margin-top:8px}
-.hiitbtn{margin-top:10px;width:100%;background:var(--card);border:1.5px solid var(--line);
-  color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
-  display:flex;align-items:center;justify-content:space-between}
 .hiit-ex-row{display:flex;align-items:center;gap:8px;background:var(--card);border:1.5px solid var(--line);
   border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .hiit-ex-row .hx-name{flex:1;font-size:13.5px;font-weight:700}
@@ -651,7 +618,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-20.2";
+const APP_VERSION = "2026-10-20.3";
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
@@ -692,6 +659,7 @@ const DEFAULT_PEOPLE = [
   {id:"tara", name:"Tara", role:"client", clientIds:[]}
 ];
 let PEOPLE = [];
+let PEOPLE_LOAD_FAILED = false, LOCATIONS_LOAD_FAILED = false;
 function peopleDocRef(){ return doc(db, "meta", "people"); }
 
 // A deliberately narrow, public-readable lookup so people can log in with
@@ -745,15 +713,19 @@ async function loadPeople(){
     const snap = await getDoc(peopleDocRef());
     if(snap.exists() && Array.isArray(snap.data().list) && snap.data().list.length){
       PEOPLE = snap.data().list;
+      PEOPLE_LOAD_FAILED = false;
     } else {
       PEOPLE = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
       await setDoc(peopleDocRef(), {list: PEOPLE});
     }
   }catch(e){
+    // Fallback is display-only: never save it, or it would replace the real directory.
     PEOPLE = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
+    PEOPLE_LOAD_FAILED = true;
   }
 }
 async function savePeople(){
+  if(PEOPLE_LOAD_FAILED) return false;
   try{ await setDoc(peopleDocRef(), {list: PEOPLE}); return true; }catch(e){ return false; }
 }
 
@@ -766,15 +738,18 @@ async function loadLocations(){
     const snap = await getDoc(locationsDocRef());
     if(snap.exists() && Array.isArray(snap.data().list) && snap.data().list.length){
       GYM_LOCATIONS = snap.data().list;
+      LOCATIONS_LOAD_FAILED = false;
     } else {
       GYM_LOCATIONS = [...DEFAULT_LOCATIONS];
       await setDoc(locationsDocRef(), {list: GYM_LOCATIONS});
     }
   }catch(e){
     GYM_LOCATIONS = [...DEFAULT_LOCATIONS];
+    LOCATIONS_LOAD_FAILED = true;
   }
 }
 async function saveLocations(){
+  if(LOCATIONS_LOAD_FAILED) return false;
   try{ await setDoc(locationsDocRef(), {list: GYM_LOCATIONS}); return true; }catch(e){ return false; }
 }
 
@@ -815,42 +790,6 @@ async function fetchPersonData(personId){
   return {log:[], weights:[], measurements:[], plan:[], hiitClasses:[], cardioLog:[]};
 }
 
-const DEFAULT_PLAN = [
-  {id:"upperA", name:"Upper A", focus:"Chest-press focus", ex:[
-    {n:"Incline chest press machine", s:3, r:"8-10"},
-    {n:"Lat pulldown (wide grip)", s:3, r:"10-12"},
-    {n:"Flat chest press machine", s:3, r:"10-12"},
-    {n:"Wide grip seated row", s:3, r:"10-12"},
-    {n:"Dumbbell lateral raises", s:3, r:"12-15"},
-    {n:"Single arm cable tricep extension", s:2, r:"12-15"},
-    {n:"Seated dumbbell biceps curl", s:2, r:"10-12"}
-  ]},
-  {id:"lowerA", name:"Lower A", focus:"Quad focus", ex:[
-    {n:"Abductor machine (warm-up)", s:2, r:"15"},
-    {n:"Leg press", s:3, r:"8-10"},
-    {n:"Leg extension", s:3, r:"12-15"},
-    {n:"Seated / lying leg curl", s:3, r:"10-12"},
-    {n:"Romanian deadlift", s:3, r:"8-10"},
-    {n:"Standing calf raise machine", s:4, r:"12-15"}
-  ]},
-  {id:"upperB", name:"Upper B", focus:"Back focus", ex:[
-    {n:"Flat bench machine press", s:3, r:"8-10"},
-    {n:"Single arm back row machine", s:3, r:"10-12 ea"},
-    {n:"Incline dumbbell fly", s:3, r:"12-15"},
-    {n:"Lat pulldown (close grip)", s:3, r:"10-12"},
-    {n:"Lateral raise m/c + reverse fly (SS)", s:3, r:"12-15 ea"},
-    {n:"Overhead rope tricep extension", s:2, r:"12-15"},
-    {n:"Dumbbell preacher curl", s:2, r:"10-12"}
-  ]},
-  {id:"lowerB", name:"Lower B", focus:"Glute / hamstring focus", ex:[
-    {n:"Abductor machine (last set to fail)", s:2, r:"15-20"},
-    {n:"Hip thrusts", s:3, r:"8-12"},
-    {n:"Hack squat", s:3, r:"8-10"},
-    {n:"Leg curl", s:3, r:"12-15"},
-    {n:"Walking lunges", s:2, r:"10-12 /leg"},
-    {n:"Seated calf raises", s:4, r:"15-20"}
-  ]}
-];
 let PLAN = [];
 
 // Curated, commonly-available exercises (50 total) for the session builder
@@ -970,7 +909,14 @@ let currentMeasureMetric = "waist";
 
 async function loadLog(){
   try{
-    const snap = await getDoc(profileDocRef());
+    // A flaky gym connection shouldn't leave you with an empty app: retry a
+    // couple of times before giving up.
+    let snap = null, lastErr = null;
+    for(let attempt=0; attempt<3 && !snap; attempt++){
+      try{ snap = await getDoc(profileDocRef()); }
+      catch(err){ lastErr = err; if(attempt<2) await new Promise(r=>setTimeout(r, 500*(attempt+1))); }
+    }
+    if(!snap) throw lastErr;
     LOG = snap.exists() ? (snap.data().log || []) : [];
     WEIGHTS = snap.exists() ? (snap.data().weights || []) : [];
     MEASUREMENTS = snap.exists() ? (snap.data().measurements || []) : [];
@@ -987,6 +933,9 @@ async function loadLog(){
   }
 }
 async function saveLog(){
+  // If the load failed, the in-memory arrays are empty placeholders. Writing
+  // them would wipe the real history in Firestore, so refuse until a reload works.
+  if(!STORAGE_AVAILABLE) return false;
   try{
     await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, measurements: MEASUREMENTS, plan: PLAN, hiitClasses: HIIT_CLASSES, cardioLog: CARDIO_LOG, checkIns: CHECKINS, drafts: DRAFTS, updatedAt: new Date().toISOString()});
     return true;
@@ -994,6 +943,9 @@ async function saveLog(){
 }
 
 const $ = id => document.getElementById(id);
+// Escape free text (comments, notes) before it goes into innerHTML, so a
+// stray "<" can't break the layout or run script on a trainer's screen.
+const esc = v => String(v==null?"":v).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const app = $("app");
 const fmtDate = iso => new Date(iso).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
 const timeAgo = iso => {
@@ -1718,7 +1670,7 @@ function home(){
   const banner = STORAGE_AVAILABLE
     ? ""
     : `<div class="sync-banner">
-        <span>&#9888;&#65039; Couldn\'t reach Firebase — your data is loaded locally but changes won\'t sync until your connection is restored.</span>
+        <span>&#9888;&#65039; Couldn\'t load your data. Nothing will be saved until it loads. <a href="#" onclick="refresh();return false" style="color:inherit;font-weight:800">Try again</a></span>
         <button class="sync-banner-dismiss" onclick="this.closest(\'.sync-banner\').remove()" aria-label="Dismiss">&times;</button>
       </div>`;
 
@@ -1930,7 +1882,6 @@ function renderActiveSessionScreen(resumeSetsData){
     const prev = last && last.ex.find(le=>le.n===e.n);
     const priorBest = allTimeBest(e.n);
     const prevHtml = priorBest ? `&#127942; PR: <b>${priorBest.weight}kg×${priorBest.reps}</b>` : "";
-    const bestHtml = "";
     const rows = Array.from({length:e.s},(_,si)=>{
       const resumeSet = resumeBlock && resumeBlock[si];
       const pw = resumeSet ? resumeSet.w : (prev&&prev.sets[si] ? prev.sets[si].w : "");
@@ -1941,7 +1892,7 @@ function renderActiveSessionScreen(resumeSetsData){
     const swapBtn = `<button class="ex-swap-btn" onclick="swapSessionExercise(${i})" aria-label="Swap exercise">&#8646;</button>`;
     return `<div class="ex" id="ex${i}">
       <div class="ex-head"><div class="ex-name">${i+1}. ${e.n}</div><div style="display:flex;align-items:center;gap:8px"><div class="scheme">${e.s}&times;${e.r}</div>${swapBtn}</div></div>
-      ${e.note ? `<div class="ex-note">${e.note}</div>` : ""}
+      ${e.note ? `<div class="ex-note">${esc(e.note)}</div>` : ""}
       ${prevHtml ? `<div class="prev">${prevHtml}</div>` : ""}
       <div class="sets" id="sets${i}">${rows}</div>
       <button class="addset-btn" onclick="addSet(${i},event)">+ add set</button>
@@ -2315,12 +2266,6 @@ function closeSetTypePopup(){
   _activeSetTypeRow = null;
 }
 
-function setnLabel(si, type){
-  if(type==="warmup") return "<span data-type=\"warmup\">W</span>";
-  if(type==="dropset") return "<span data-type=\"dropset\">D</span>";
-  if(type==="failure") return "<span data-type=\"failure\">F</span>";
-  return "S"+(si+1);
-}
 
 function makeSetRow(si, pw, pr, type){
   const badge = type||"";
@@ -2543,7 +2488,7 @@ function showHistory(){
     const p = PLAN.find(x=>x.id===w.sessionId)||{name:w.adHocName||w.sessionId};
     const rows = w.ex.map(e=>`<div class="hrow"><div class="hn">${e.n}</div><div class="hv">${e.sets.map(s=>fmtSet(s)).join("  ")}</div></div>`).join("");
     const rpeBadge = (w.rpe!=null) ? `<span class="session-rpe-badge">RPE ${w.rpe}</span>` : "";
-    const commentHtml = w.comment ? `<div class="session-comment">&ldquo;${w.comment}&rdquo;</div>` : "";
+    const commentHtml = w.comment ? `<div class="session-comment">&ldquo;${esc(w.comment)}&rdquo;</div>` : "";
     return `<div class="hday">
       <div class="hday-head"><div><b>${p.name}</b>${rpeBadge}</div><span>${fmtDate(w.date)}${w.duration?` &middot; <span class="dur">${w.duration} min</span>`:""}</span></div>
       ${rows}
@@ -3030,12 +2975,6 @@ function weekKeyForDate(d){
   mon.setDate(dt.getDate() + diffToMon);
   return localDayKey(mon);
 }
-function weekKeyForSunday(sundayDate){
-  // Sunday belongs to the week that started the previous Monday
-  const mon = new Date(sundayDate);
-  mon.setDate(sundayDate.getDate() - 6);
-  return localDayKey(mon);
-}
 function weekSunday(weekKey){
   // Given a Monday-date week key, return the following Sunday
   const mon = new Date(weekKey + "T12:00:00");
@@ -3290,7 +3229,7 @@ function renderCheckinView(ci, m, isTrainerView, pickerHtml){
     ${ci.bodyWeight ? `<div class="section-label" style="margin-top:16px">Body weight</div>
       <div class="streak-hero" style="padding:14px"><div class="num">${ci.bodyWeight}kg</div></div>` : ""}
     ${ci.comment ? `<div class="section-label">Note</div>
-      <div class="checkin-comment-card">&ldquo;${ci.comment}&rdquo;</div>` : ""}
+      <div class="checkin-comment-card">&ldquo;${esc(ci.comment)}&rdquo;</div>` : ""}
     ${feedbackSection}
   `;
   window.scrollTo(0,0);
@@ -3462,7 +3401,7 @@ async function showClientCheckins(clientId){
       <button class="back" onclick="showClientDetail('${clientId}')">&#8592; Back</button>
       <div class="topbar-info"><h2>${person.name}'s Check-Ins</h2><div class="focus">Tap any week to leave feedback</div></div>
     </div>
-    ${rows || '<div class="chart-empty">${person.name} hasn\'t submitted any check-ins yet.</div>'}
+    ${rows || `<div class="chart-empty">${person.name} hasn't submitted any check-ins yet.</div>`}
   `;
   window.scrollTo(0,0);
 }
@@ -4449,7 +4388,7 @@ async function showClientDetail(clientId){
     const title = s.hiit ? (s.hiitName||"HIIT class") : (s.sessionId||"Session");
     const exLines = (s.ex||[]).map(e=>`${e.n}: ${e.sets.map(st=>fmtSetPlain(st)).join(", ")}`).join("<br>");
     const rpeBadge = (s.rpe!=null) ? `<span class="session-rpe-badge">RPE ${s.rpe}</span>` : "";
-    const commentHtml = s.comment ? `<div class="session-comment">&ldquo;${s.comment}&rdquo;</div>` : "";
+    const commentHtml = s.comment ? `<div class="session-comment">&ldquo;${esc(s.comment)}&rdquo;</div>` : "";
     return `<div class="hday">
       <div class="hday-head"><div><b>${title}</b>${rpeBadge}</div><span>${fmtDate(s.date)}${s.duration?` &middot; ${s.duration} min`:""}</span></div>
       ${exLines ? `<div class="last-updated" style="text-align:left;margin:8px 0 0">${exLines}</div>` : ""}
