@@ -14,13 +14,14 @@
 // Bump SHELL_CACHE only when this file's caching logic changes. Normal app
 // releases (new index.html) need no change here.
 
-const SHELL_CACHE = "mk1-shell-v1";
+const SHELL_CACHE = "mk1-shell-v2";
 const SDK_URLS = [
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js",
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
 ];
-const LOCAL_FILES = ["./", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
+const LOCAL_FILES = ["./", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png",
+  "./photo-ed.jpg", "./photo-tara.jpg", "./qr-ed.png", "./qr-tara.png"];
 const PAGE_KEY = new URL("./", self.registration.scope).href; // the one stored copy of the page
 
 self.addEventListener("install", event => {
