@@ -1,0 +1,16 @@
+{
+  "name": "MK1 Gym Tracker",
+  "short_name": "MK1 Tracker",
+  "description": "Track gym sessions, HIIT, cardio, body weight and weekly check-ins.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#15181f",
+  "theme_color": "#15181f",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

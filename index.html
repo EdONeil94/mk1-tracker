@@ -11,6 +11,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MK1 Tracker">
 <meta name="theme-color" content="#15181f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <title>MK1 Workout Tracker</title>
 <style>
 :root{
@@ -623,7 +626,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-20.5";
+const APP_VERSION = "2026-10-20.6";
 
 const fbApp = initializeApp(firebaseConfig);
 // Offline mode: Firestore keeps a copy of your data on the phone (IndexedDB),
@@ -6186,6 +6189,12 @@ document.addEventListener("click", e=>{
 // copy indefinitely rather than fetching the latest release.
 let _updateBannerShown = false;
 let _lastUpdateCheckAt = 0;
+// Service worker: keeps a copy of the app on the phone so it opens with no
+// signal at all (see sw.js). Failing to register just means no offline launch.
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+
 async function checkForAppUpdate(){
   if(_updateBannerShown) return;
   const now = Date.now();
