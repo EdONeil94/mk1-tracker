@@ -27,6 +27,11 @@ html,body{height:100%;background:var(--paper);color:var(--text);
 body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 #app{max-width:500px;margin:0 auto;padding:14px 14px 100px}
 
+.sync-chip{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translate(-50%,-140%);
+  background:#2a2418;border:1.5px solid #6a5420;color:#f0d9a0;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;
+  z-index:9999;transition:transform .25s ease;pointer-events:none;white-space:nowrap}
+.sync-chip.show{transform:translate(-50%,0)}
+.sync-chip.done{background:#16261b;border-color:#2f6a40;color:#a8e0b8}
 .sync-banner{background:#2a1f1f;border:1.5px solid #5a3030;color:#e0a890;border-radius:14px;
   padding:12px 14px;font-size:12.5px;line-height:1.5;margin-bottom:14px;
   display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
@@ -600,7 +605,7 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocFromCache, setDoc, collection, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, verifyBeforeUpdateEmail, sendPasswordResetEmail, updatePassword, deleteUser, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // ── Your Firebase project ──
@@ -618,10 +623,73 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-20.4";
+const APP_VERSION = "2026-10-20.5";
 
 const fbApp = initializeApp(firebaseConfig);
-const db = getFirestore(fbApp);
+// Offline mode: Firestore keeps a copy of your data on the phone (IndexedDB),
+// so the app opens from that copy instantly and saves still work with no
+// signal. Changes queue up and sync automatically when the signal returns.
+let db;
+try{
+  db = initializeFirestore(fbApp, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})});
+}catch(e){
+  db = initializeFirestore(fbApp, {});
+}
+
+// ── Sync helpers ───────────────────────────────────────────
+// Key-order-independent JSON, so "same data, different key order" from the
+// server isn't mistaken for a change.
+function stableJson(v){
+  if(Array.isArray(v)) return "[" + v.map(stableJson).join(",") + "]";
+  if(v && typeof v === "object") return "{" + Object.keys(v).filter(k=>v[k]!==undefined).sort().map(k=>JSON.stringify(k)+":"+stableJson(v[k])).join(",") + "}";
+  return v===undefined ? "null" : JSON.stringify(v);
+}
+const plainCopy = v => JSON.parse(JSON.stringify(v===undefined ? null : v));
+
+// A write is applied to the phone's copy straight away, but Firestore only
+// resolves the promise once the server confirms. Offline that could be hours,
+// so don't make the app wait: report success once the write is queued, and
+// keep a count so the sync chip can show what's still waiting.
+let PENDING_WRITES = 0, _syncChipTimer = null, _syncChipShown = false;
+function commitWrite(promise){
+  PENDING_WRITES++; updateSyncChip();
+  const settled = promise.then(()=>true, err=>{
+    showToast(`Couldn't sync a change (${(err&&err.code)||"error"})`, false);
+    return false;
+  }).finally(()=>{ PENDING_WRITES--; updateSyncChip(); });
+  return Promise.race([settled, new Promise(r=>setTimeout(()=>r(true), 1500))]);
+}
+function updateSyncChip(){
+  clearTimeout(_syncChipTimer);
+  if(PENDING_WRITES>0){
+    _syncChipTimer = setTimeout(()=>{
+      if(PENDING_WRITES<=0) return;
+      let chip = document.getElementById("syncChip");
+      if(!chip){ chip = document.createElement("div"); chip.id = "syncChip"; chip.className = "sync-chip"; document.body.appendChild(chip); }
+      chip.textContent = "\u23F3 Saved on your phone \u00B7 will sync when online";
+      chip.classList.remove("done"); chip.classList.add("show");
+      _syncChipShown = true;
+    }, 1600);
+  } else if(_syncChipShown){
+    const chip = document.getElementById("syncChip");
+    if(chip){ chip.textContent = "\u2713 Synced"; chip.classList.add("done"); setTimeout(()=>chip.classList.remove("show"), 1500); }
+    _syncChipShown = false;
+  }
+}
+// Read a document from the phone's copy first (instant), falling back to the network.
+async function getDocCacheFirst(ref){
+  try{ const snap = await getDocFromCache(ref); if(snap.exists()) return snap; }catch(e){}
+  return getDoc(ref);
+}
+// When live data changes underneath us (another device, a trainer's
+// feedback), redraw the home screen, but never interrupt anything else.
+let _refreshTimer = null;
+function refreshVisibleScreen(){
+  clearTimeout(_refreshTimer);
+  _refreshTimer = setTimeout(()=>{
+    if($("homeMarker") && !(sessionState && sessionState.started) && CURRENT_PROFILE) home();
+  }, 250);
+}
 const auth = getAuth(fbApp);
 
 // Firebase wants an email; people just type a username, so we quietly build
@@ -714,29 +782,90 @@ async function registerUsernameLookup(username, email){
 // writes just those.
 let PEOPLE_SAVED = new Map(); // id -> JSON as last read/written
 function personRef(id){ return doc(db, "people", id); }
-function rememberPeopleSnapshot(){ PEOPLE_SAVED = new Map(PEOPLE.map(p=>[p.id, JSON.stringify(p)])); }
+function rememberPeopleSnapshot(){ PEOPLE_SAVED = new Map(PEOPLE.map(p=>[p.id, stableJson(p)])); }
 
-async function loadPeople(){
-  try{
-    const qs = await getDocs(collection(db, "people"));
-    if(!qs.empty){
-      PEOPLE = qs.docs.map(d=>d.data());
-      PEOPLE_LOAD_FAILED = false;
-      rememberPeopleSnapshot();
-      return;
-    }
-    // One-off migration from the old single meta/people document.
-    const legacy = await getDoc(peopleDocRef());
-    const list = (legacy.exists() && Array.isArray(legacy.data().list)) ? legacy.data().list : [];
-    PEOPLE = list;
-    PEOPLE_LOAD_FAILED = false;
-    PEOPLE_SAVED = new Map(); // nothing in the collection yet, so every record counts as new
-    if(list.length) await savePeople();
-  }catch(e){
-    // Display-only fallback: never saved, or it would replace the real directory.
-    PEOPLE = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
-    PEOPLE_LOAD_FAILED = true;
+// The people directory is kept live with a listener: the first answer comes
+// from the phone's copy (instant), later server updates are merged in.
+let _peopleUnsub = null, _peopleReady = null, _peopleLive = false, _peopleMigrating = false;
+function stopPeopleListener(){ if(_peopleUnsub){ _peopleUnsub(); _peopleUnsub = null; } _peopleReady = null; _peopleLive = false; }
+
+function adoptServerPeople(docs){
+  // Merge server records in, but never clobber a local edit that hasn't synced yet.
+  let changed = false;
+  const serverIds = new Set();
+  docs.forEach(d=>{
+    const data = d.data(); serverIds.add(d.id);
+    const sj = stableJson(data);
+    if(PEOPLE_SAVED.get(d.id) === sj) return;
+    const idx = PEOPLE.findIndex(p=>p.id===d.id);
+    const local = idx>=0 ? PEOPLE[idx] : null;
+    if(local && PEOPLE_SAVED.has(d.id) && stableJson(local) !== PEOPLE_SAVED.get(d.id)) return; // unsynced local edit wins
+    if(idx>=0) PEOPLE[idx] = data; else PEOPLE.push(data);
+    PEOPLE_SAVED.set(d.id, sj); changed = true;
+  });
+  [...PEOPLE_SAVED.keys()].forEach(id=>{
+    if(serverIds.has(id)) return;
+    PEOPLE = PEOPLE.filter(p=>p.id!==id); PEOPLE_SAVED.delete(id); changed = true;
+  });
+  if(changed && CURRENT_PROFILE){
+    CURRENT_PROFILE = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
   }
+  return changed;
+}
+
+function loadPeople(){
+  if(_peopleReady && _peopleLive) return _peopleReady; // already live and up to date
+  stopPeopleListener();
+  _peopleReady = new Promise(resolve=>{
+    let settled = false;
+    const settle = ok=>{
+      if(settled) return; settled = true; clearTimeout(timer);
+      if(!ok){
+        // Display-only fallback: never saved, or it would replace the real directory.
+        PEOPLE = JSON.parse(JSON.stringify(DEFAULT_PEOPLE));
+        PEOPLE_LOAD_FAILED = true;
+      }
+      resolve();
+    };
+    const timer = setTimeout(()=>settle(false), 10000);
+    try{
+      _peopleUnsub = onSnapshot(collection(db, "people"), {includeMetadataChanges:true}, async qs=>{
+        const fromCache = qs.metadata.fromCache;
+        if(_peopleMigrating) return; // our own migration writes echoing back
+        if(!settled){
+          if(!qs.empty){
+            PEOPLE = qs.docs.map(d=>d.data());
+            PEOPLE_LOAD_FAILED = false;
+            rememberPeopleSnapshot();
+            _peopleLive = true;
+            settle(true);
+          } else if(!fromCache){
+            // Server says the collection is empty: one-off migration from the old meta/people document.
+            _peopleMigrating = true;
+            try{
+              const legacy = await getDoc(peopleDocRef());
+              PEOPLE = (legacy.exists() && Array.isArray(legacy.data().list)) ? legacy.data().list : [];
+              PEOPLE_LOAD_FAILED = false;
+              PEOPLE_SAVED = new Map();
+              if(PEOPLE.length) await savePeople();
+              _peopleLive = true;
+              _peopleMigrating = false;
+              settle(true);
+            }catch(e){ _peopleMigrating = false; settle(false); }
+          }
+          return; // empty phone copy: wait for the server
+        }
+        if(qs.metadata.hasPendingWrites) return; // our own write echoing back
+        if(PEOPLE_LOAD_FAILED){
+          PEOPLE = qs.docs.map(d=>d.data()); PEOPLE_LOAD_FAILED = false; rememberPeopleSnapshot();
+          if(CURRENT_PROFILE) CURRENT_PROFILE = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
+          refreshVisibleScreen(); return;
+        }
+        if(adoptServerPeople(qs.docs)) refreshVisibleScreen();
+      }, ()=>{ _peopleLive = false; settle(false); });
+    }catch(e){ settle(false); }
+  });
+  return _peopleReady;
 }
 async function savePeople(){
   if(PEOPLE_LOAD_FAILED) return false;
@@ -745,15 +874,21 @@ async function savePeople(){
   for(const p of PEOPLE){
     if(!p || !p.id) continue;
     currentIds.add(p.id);
-    const json = JSON.stringify(p);
-    if(PEOPLE_SAVED.get(p.id) === json) continue; // unchanged
-    try{ await setDoc(personRef(p.id), JSON.parse(json)); PEOPLE_SAVED.set(p.id, json); }
-    catch(e){ ok = false; }
+    const sj = stableJson(p);
+    if(PEOPLE_SAVED.get(p.id) === sj) continue; // unchanged
+    const prev = PEOPLE_SAVED.get(p.id);
+    PEOPLE_SAVED.set(p.id, sj);
+    let wrote = false;
+    try{ wrote = await commitWrite(setDoc(personRef(p.id), plainCopy(p))); }catch(e){}
+    if(!wrote){ ok = false; if(prev===undefined) PEOPLE_SAVED.delete(p.id); else PEOPLE_SAVED.set(p.id, prev); }
   }
   for(const id of [...PEOPLE_SAVED.keys()]){
     if(currentIds.has(id)) continue;
-    try{ await deleteDoc(personRef(id)); PEOPLE_SAVED.delete(id); }
-    catch(e){ ok = false; }
+    const prev = PEOPLE_SAVED.get(id);
+    PEOPLE_SAVED.delete(id);
+    let wrote = false;
+    try{ wrote = await commitWrite(deleteDoc(personRef(id))); }catch(e){}
+    if(!wrote){ ok = false; PEOPLE_SAVED.set(id, prev); }
   }
   return ok;
 }
@@ -764,10 +899,16 @@ let GYM_LOCATIONS = [];
 function locationsDocRef(){ return doc(db, "meta", "locations"); }
 async function loadLocations(){
   try{
-    const snap = await getDoc(locationsDocRef());
+    const snap = await getDocCacheFirst(locationsDocRef());
     if(snap.exists() && Array.isArray(snap.data().list) && snap.data().list.length){
       GYM_LOCATIONS = snap.data().list;
       LOCATIONS_LOAD_FAILED = false;
+      // Quietly refresh from the server for next time (and this session).
+      if(snap.metadata && snap.metadata.fromCache){
+        getDoc(locationsDocRef()).then(fresh=>{
+          if(fresh.exists() && Array.isArray(fresh.data().list) && fresh.data().list.length) GYM_LOCATIONS = fresh.data().list;
+        }).catch(()=>{});
+      }
     } else {
       GYM_LOCATIONS = [...DEFAULT_LOCATIONS];
       await setDoc(locationsDocRef(), {list: GYM_LOCATIONS});
@@ -779,7 +920,7 @@ async function loadLocations(){
 }
 async function saveLocations(){
   if(LOCATIONS_LOAD_FAILED) return false;
-  try{ await setDoc(locationsDocRef(), {list: GYM_LOCATIONS}); return true; }catch(e){ return false; }
+  try{ return await commitWrite(setDoc(locationsDocRef(), {list: GYM_LOCATIONS})); }catch(e){ return false; }
 }
 
 let CURRENT_PROFILE = null;
@@ -936,39 +1077,96 @@ let STORAGE_AVAILABLE = true;
 const MEASURE_METRICS = [{id:"waist",label:"Waist"},{id:"chest",label:"Chest"},{id:"arms",label:"Arms"}];
 let currentMeasureMetric = "waist";
 
-async function loadLog(){
-  try{
-    // A flaky gym connection shouldn't leave you with an empty app: retry a
-    // couple of times before giving up.
-    let snap = null, lastErr = null;
-    for(let attempt=0; attempt<3 && !snap; attempt++){
-      try{ snap = await getDoc(profileDocRef()); }
-      catch(err){ lastErr = err; if(attempt<2) await new Promise(r=>setTimeout(r, 500*(attempt+1))); }
-    }
-    if(!snap) throw lastErr;
-    LOG = snap.exists() ? (snap.data().log || []) : [];
-    WEIGHTS = snap.exists() ? (snap.data().weights || []) : [];
-    MEASUREMENTS = snap.exists() ? (snap.data().measurements || []) : [];
-    PLAN = snap.exists() && snap.data().plan ? snap.data().plan : [];
-    HIIT_CLASSES = snap.exists() ? (snap.data().hiitClasses || []) : [];
-    CARDIO_LOG = snap.exists() ? (snap.data().cardioLog || []) : [];
-    CHECKINS = snap.exists() ? (snap.data().checkIns || []) : [];
-    DRAFTS = snap.exists() ? (snap.data().drafts || {}) : {};
-    STORAGE_AVAILABLE = true;
-  }catch(e){
-    STORAGE_AVAILABLE = false;
-    LOG = []; WEIGHTS = []; MEASUREMENTS = []; PLAN = [];
-    HIIT_CLASSES = []; CARDIO_LOG = []; CHECKINS = []; DRAFTS = {};
-  }
+// Your tracker document is kept live: the first answer comes from the
+// phone's copy, so the app opens instantly; later changes from the server
+// (another device, a trainer's feedback or plan edit) are merged in.
+const TRACKER_FIELDS = ["log","weights","measurements","plan","hiitClasses","cardioLog","checkIns","drafts"];
+let TRACKER_SAVED = {}; // field -> stableJson as last read/written
+let _trackerUnsub = null;
+function trackerField(f){
+  return {log:LOG, weights:WEIGHTS, measurements:MEASUREMENTS, plan:PLAN, hiitClasses:HIIT_CLASSES,
+          cardioLog:CARDIO_LOG, checkIns:CHECKINS, drafts:DRAFTS}[f];
+}
+function setTrackerField(f, v){
+  if(f==="log") LOG = v||[];
+  else if(f==="weights") WEIGHTS = v||[];
+  else if(f==="measurements") MEASUREMENTS = v||[];
+  else if(f==="plan") PLAN = v||[];
+  else if(f==="hiitClasses") HIIT_CLASSES = v||[];
+  else if(f==="cardioLog") CARDIO_LOG = v||[];
+  else if(f==="checkIns") CHECKINS = v||[];
+  else if(f==="drafts") DRAFTS = v||{};
+}
+function applyTrackerData(d){
+  d = d || {};
+  TRACKER_FIELDS.forEach(f=>setTrackerField(f, d[f]));
+  TRACKER_SAVED = {};
+  TRACKER_FIELDS.forEach(f=>{ TRACKER_SAVED[f] = stableJson(trackerField(f)); });
+}
+function stopTrackerListener(){ if(_trackerUnsub){ _trackerUnsub(); _trackerUnsub = null; } }
+
+function loadLog(){
+  stopTrackerListener();
+  return new Promise(resolve=>{
+    let settled = false;
+    const settle = ok=>{
+      if(settled) return; settled = true; clearTimeout(timer);
+      STORAGE_AVAILABLE = ok;
+      if(!ok) applyTrackerData({}); // empty placeholders; saveLog refuses to write them
+      resolve();
+    };
+    // No copy on this phone and no answer from the server within 10s: give up
+    // for now (banner + Try again). If the server answers later, we recover.
+    const timer = setTimeout(()=>settle(false), 10000);
+    try{
+      _trackerUnsub = onSnapshot(profileDocRef(), {includeMetadataChanges:true}, snap=>{
+        const fromCache = snap.metadata.fromCache;
+        if(!settled){
+          if(snap.exists()){ applyTrackerData(snap.data()); settle(true); }
+          else if(!fromCache){ applyTrackerData({}); settle(true); } // genuinely new user
+          return; // nothing on the phone yet: wait for the server
+        }
+        if(snap.metadata.hasPendingWrites) return; // our own write echoing back
+        if(!STORAGE_AVAILABLE){
+          // Late answer after the timeout: load it properly now.
+          if(snap.exists() || !fromCache){ applyTrackerData(snap.exists()?snap.data():{}); STORAGE_AVAILABLE = true; refreshVisibleScreen(); }
+          return;
+        }
+        if(!snap.exists()) return;
+        const d = snap.data();
+        let changed = false;
+        TRACKER_FIELDS.forEach(f=>{
+          const sj = stableJson(d[f] === undefined ? (f==="drafts"?{}:[]) : d[f]);
+          if(sj === TRACKER_SAVED[f]) return;                          // nothing new from the server
+          if(stableJson(trackerField(f)) !== TRACKER_SAVED[f]) return;  // unsynced local edit wins
+          setTrackerField(f, d[f]); TRACKER_SAVED[f] = sj; changed = true;
+        });
+        if(changed) refreshVisibleScreen();
+      }, ()=>settle(false));
+    }catch(e){ settle(false); }
+  });
 }
 async function saveLog(){
   // If the load failed, the in-memory arrays are empty placeholders. Writing
   // them would wipe the real history in Firestore, so refuse until a reload works.
   if(!STORAGE_AVAILABLE) return false;
-  try{
-    await setDoc(profileDocRef(), {log: LOG, weights: WEIGHTS, measurements: MEASUREMENTS, plan: PLAN, hiitClasses: HIIT_CLASSES, cardioLog: CARDIO_LOG, checkIns: CHECKINS, drafts: DRAFTS, updatedAt: new Date().toISOString()});
-    return true;
-  }catch(e){ return false; }
+  // Only send the fields that actually changed. That keeps writes small and
+  // means saving a session can't overwrite a trainer's feedback that arrived
+  // in the meantime.
+  const patch = {}, prev = {};
+  TRACKER_FIELDS.forEach(f=>{
+    const sj = stableJson(trackerField(f));
+    if(sj !== TRACKER_SAVED[f]){ patch[f] = plainCopy(trackerField(f)); prev[f] = TRACKER_SAVED[f]; TRACKER_SAVED[f] = sj; }
+  });
+  const fields = Object.keys(patch);
+  if(!fields.length) return true;
+  patch.updatedAt = new Date().toISOString();
+  let ok = false;
+  // mergeFields replaces each listed field wholesale (so deleted drafts really
+  // go) and leaves every other field untouched.
+  try{ ok = await commitWrite(setDoc(profileDocRef(), patch, {mergeFields:[...fields, "updatedAt"]})); }catch(e){ ok = false; }
+  if(!ok) fields.forEach(f=>{ TRACKER_SAVED[f] = prev[f]; });
+  return ok;
 }
 
 const $ = id => document.getElementById(id);
@@ -1510,6 +1708,7 @@ async function submitAuth(){
 
 function logOut(){
   cancelHiit(); cancelRest(); stopTimer();
+  stopTrackerListener(); stopPeopleListener();
   signupRole = "client";
   signupLocations = [];
   signOut(auth);
@@ -1537,11 +1736,19 @@ async function bootForUser(user){
   // independent of each other, so run them concurrently rather than one
   // after another — this is the main lever on cold-start time, since each
   // round trip to Firestore was previously blocking the next.
-  const [, , mappingSnap] = await Promise.all([
-    loadPeople(),
-    loadLocations(),
-    getDoc(doc(db,"users",user.uid)).catch(()=>null)
-  ]);
+  const peopleP = loadPeople(), locationsP = loadLocations();
+  const mappingSnap = await getDocCacheFirst(doc(db,"users",user.uid)).catch(()=>({_offline:true}));
+  if(mappingSnap && mappingSnap._offline){
+    // Couldn't reach the server and nothing is stored on this phone yet.
+    // Don't treat that as "no profile" (which signs you out): wait for signal.
+    app.innerHTML = `<div class="loading" style="padding:60px 24px;text-align:center">
+      <div style="font-size:34px;margin-bottom:10px">&#128246;</div>
+      <b>You're offline</b><br><span style="color:var(--mute);font-size:13px">This phone doesn't have your data saved yet. Connect to the internet and it will load automatically.</span><br>
+      <button class="save-session-btn" style="margin-top:16px" onclick="location.reload()">Try again</button></div>`;
+    window.addEventListener("online", ()=>bootForUser(user), {once:true});
+    return;
+  }
+  await Promise.all([peopleP, locationsP]);
   let mapping = (mappingSnap && mappingSnap.exists && mappingSnap.exists()) ? mappingSnap.data() : null;
 
   await ensureEdIsAdmin(); // needs PEOPLE, which just resolved above
@@ -1789,12 +1996,15 @@ function home(){
     </div>
     ${adminSection}
     ${moduleHtml}
+    <span id="homeMarker" hidden></span>
   `;
 }
 
 async function refresh(){
   showToast("Syncing your data\u2026");
-  await loadLog();
+  stopPeopleListener();
+  await Promise.all([loadLog(), loadPeople()]);
+  if(CURRENT_PROFILE) CURRENT_PROFILE = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
   home();
 }
 
@@ -3325,7 +3535,7 @@ async function submitTrainerFeedback(){
       trainerName: CURRENT_PROFILE.name,
       sentAt: new Date().toISOString()
     };
-    await setDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`), {checkIns}, {merge:true});
+    if(!(await commitWrite(setDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`), {checkIns}, {merge:true})))) throw new Error("write failed");
     showToast("Feedback sent \u2713");
     pendingFeedbackEmoji = ""; pendingFeedbackPhrase = "";
     showClientCheckins(clientId);
@@ -5130,7 +5340,7 @@ async function saveTrainerClientPlan(){
   try{
     // merge:true is essential here - it touches ONLY the plan field on the
     // client's document, leaving their log/weights/measurements untouched.
-    await setDoc(doc(db, "trackers", `${TRACKER_ID}-${trainerClientId}`), {plan: trainerClientPlan}, {merge:true});
+    if(!(await commitWrite(setDoc(doc(db, "trackers", `${TRACKER_ID}-${trainerClientId}`), {plan: trainerClientPlan}, {merge:true})))) throw new Error("write failed");
     return true;
   }catch(e){ return false; }
 }
