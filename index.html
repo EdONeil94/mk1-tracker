@@ -23,6 +23,7 @@
      --accent  = MK1 orange for text, icons and links (readable on the background)
      --accent2 = MK1 orange for filled buttons and badges (white text on top) */
   color-scheme: dark light;
+  --sheet:#1C1C1E; --sheet-group:#2C2C2E;
   --paper:#000000; --card:#1C1C1E; --chip:#2C2C2E; --elev:#2C2C2E; --seg-on:#636366; --switch-off:#39393D;
   --text:#FFFFFF; --mute:rgba(235,235,245,.62); --placeholder:rgba(235,235,245,.38);
   --line:rgba(84,84,88,.65); --bar-bg:rgba(22,22,24,.86);
@@ -38,6 +39,7 @@
 }
 @media (prefers-color-scheme: light){
   :root{
+    --sheet:#F2F2F7; --sheet-group:#FFFFFF;
     --paper:#F2F2F7; --card:#FFFFFF; --chip:#E9E9EE; --elev:#FFFFFF; --seg-on:#FFFFFF; --switch-off:#E2E2E7;
     --text:#000000; --mute:rgba(60,60,67,.78); --placeholder:rgba(60,60,67,.45);
     --line:rgba(60,60,67,.22); --bar-bg:rgba(249,249,251,.88);
@@ -131,6 +133,12 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .setrow.set-dragging{position:relative;z-index:5;transition:none;filter:drop-shadow(0 6px 14px var(--shadow))}
 .setrow.set-dragging .setn{background:var(--accent2);border-color:var(--accent);color:#fff}
 .setrow.set-settling{transition:transform .15s ease}
+.layout-grip{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background:none;border:none;padding:0;margin:0 4px 0 -10px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--mute);cursor:grab}
+.layout-row.layout-dragging{position:relative;z-index:5;transition:none;filter:drop-shadow(0 6px 14px var(--shadow))}
+.layout-row.layout-dragging .layout-grip{color:var(--accent2)}
+.layout-row.layout-settling{transition:transform .15s ease}
+.layout-grip:focus:not(:focus-visible){outline:none}
+.layout-list.layout-reordering .layout-row:not(.layout-dragging){transition:transform .12s ease}
 .sets.sets-reordering .setrow:not(.set-dragging){transition:transform .12s ease}
 .setn[data-type="warmup"]{background:var(--warn-tint);border-color:var(--warn);color:var(--warn)}
 .setn[data-type="dropset"]{background:var(--purple-tint);border-color:var(--purple);color:var(--purple)}
@@ -771,7 +779,34 @@ body.has-tabbar .app-update-banner{bottom:calc(74px + var(--safe-bot))}
 .sn-title{text-align:center;min-width:0}
 .sn-name{font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
 .sn-sub{font-size:13px;color:var(--mute);font-variant-numeric:tabular-nums}
-.sn-right{justify-self:end}
+.sn-right{justify-self:end;display:flex;align-items:center;gap:2px}
+.sn-edit{background:none;border:none;color:var(--accent);font-size:17px;font-family:inherit;padding:0 8px;min-height:44px;cursor:pointer}
+
+/* iOS sheet (slides up from the bottom; Cancel / title / Done) */
+.sheet-backdrop{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;animation:sheetFade .2s ease}
+.ios-sheet{width:100%;max-width:620px;max-height:92vh;overflow:auto;background:var(--sheet);border-radius:12px 12px 0 0;
+  padding-bottom:calc(24px + var(--safe-bot));animation:sheetUp .32s cubic-bezier(.2,.9,.25,1);box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+.sheet-nav{position:sticky;top:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:6px 8px;
+  background:var(--bar-bg);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line)}
+.sheet-nav::before{content:"";position:absolute;top:5px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:var(--line)}
+.sheet-title{font-size:17px;font-weight:600;text-align:center;padding-top:6px}
+.sheet-btn{background:none;border:none;color:var(--accent);font-size:17px;font-family:inherit;min-height:44px;padding:6px 8px 0;cursor:pointer;justify-self:start}
+.sheet-btn.done{font-weight:600;justify-self:end}
+.sheet-btn:disabled{color:var(--placeholder);cursor:default}
+.sheet-body{padding:20px 16px 0}
+.sheet-label{font-size:13px;color:var(--mute);text-transform:uppercase;letter-spacing:.02em;padding:0 16px 6px}
+.sheet-group{background:var(--sheet-group);border-radius:12px;overflow:hidden;margin-bottom:22px}
+.sheet-input{width:100%;box-sizing:border-box;min-height:44px;border:none;background:none;color:var(--text);font-size:17px;font-family:inherit;padding:11px 16px}
+.sheet-input::placeholder{color:var(--placeholder)}
+.sheet-input:focus{outline:none}
+.sheet-foot{font-size:13px;line-height:18px;color:var(--mute);padding:0 16px;margin:-14px 0 22px}
+.sheet-row{width:100%;display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 16px;border:none;background:none;
+  color:var(--text);font-size:17px;font-family:inherit;cursor:pointer;text-align:left}
+.sheet-row-chev{color:var(--mute);display:flex}
+body.sheet-open{overflow:hidden}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheetFade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet-backdrop,.ios-sheet{animation:none}}
 .session-finish-btn,.session-nav .start-session-btn{height:32px;padding:0 15px;border-radius:16px;border:none;background:var(--accent2);
   color:#fff;font-size:15px;font-weight:600;cursor:pointer;min-width:0}
 
@@ -851,7 +886,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-21.1";
+const APP_VERSION = "2026-10-21.3";
 
 const fbApp = initializeApp(firebaseConfig);
 // Offline mode: Firestore keeps a copy of your data on the phone (IndexedDB),
@@ -2714,7 +2749,7 @@ function renderActiveSessionScreen(resumeSetsData){
   const sessionNav = `<div class="topbar session-nav">
       <button class="back" onclick="handleSessionBack()"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2L2 10l8 8"/></svg>Back</button>
       <div class="sn-title"><div class="sn-name">${esc(displayName)}</div>${navSub}</div>
-      <div class="sn-right">${navRight}</div>
+      <div class="sn-right"><button class="sn-edit" onclick="openSessionDetails()">Edit</button>${navRight}</div>
     </div>`;
 
   // Rest panel fixed to the bottom: countdown (tap to stop), 60s/90s/2m, progress.
@@ -2766,6 +2801,88 @@ function applyDoneFlags(data){
     }
     checkDone($("ex"+i));
   });
+}
+
+// ── Edit the session's name and focus (iOS pattern: Edit in the nav bar
+// opens a sheet with Cancel and Done) ─────────────────────
+function openSessionDetails(){
+  if(!sessionState) return;
+  closeSessionDetails();
+  const isAdHoc = sessionState.id === "adhoc";
+  const p = isAdHoc ? null : PLAN.find(x=>x.id===sessionState.id);
+  if(!isAdHoc && !p) return;
+  const name = isAdHoc ? (sessionState.adHocName||"") : (p.name||"");
+  const focus = isAdHoc ? "" : (p.focus||"");
+  const chevron = `<svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1l6 6-6 6"/></svg>`;
+  const exercisesRow = (!isAdHoc && !sessionState.started)
+    ? `<div class="sheet-group"><button class="sheet-row" onclick="closeSessionDetails();openSessionEditor(${jsArg(sessionState.id)})"><span>Exercises, sets and reps</span><span class="sheet-row-chev">${chevron}</span></button></div>`
+    : "";
+  const footnote = isAdHoc
+    ? "Renames this freestyle session."
+    : sessionState.started
+      ? "Saved to this session for next time too. Add, swap or drag exercises right here in the session."
+      : "Saved to this session for next time too.";
+  const wrap = document.createElement("div");
+  wrap.className = "sheet-backdrop";
+  wrap.id = "sessionDetailsSheet";
+  wrap.innerHTML = `<div class="ios-sheet" role="dialog" aria-modal="true" aria-labelledby="sdTitle">
+      <div class="sheet-nav">
+        <button class="sheet-btn" onclick="closeSessionDetails()">Cancel</button>
+        <div class="sheet-title" id="sdTitle">Session Details</div>
+        <button class="sheet-btn done" id="sdDone" onclick="saveSessionDetails()">Done</button>
+      </div>
+      <div class="sheet-body">
+        <div class="sheet-label">Name</div>
+        <div class="sheet-group"><input id="sdName" class="sheet-input" type="text" maxlength="60" value="${esc(name)}" placeholder="e.g. Push Day" oninput="sessionDetailsInput()"></div>
+        ${isAdHoc ? "" : `<div class="sheet-label">Focus</div>
+        <div class="sheet-group"><input id="sdFocus" class="sheet-input" type="text" maxlength="80" value="${esc(focus)}" placeholder="e.g. Chest &amp; triceps"></div>`}
+        <div class="sheet-foot">${footnote}</div>
+        ${exercisesRow}
+      </div>
+    </div>`;
+  wrap.addEventListener("click", e=>{ if(e.target===wrap) closeSessionDetails(); });
+  wrap.addEventListener("keydown", e=>{
+    if(e.key==="Escape") closeSessionDetails();
+    if(e.key==="Enter" && e.target.tagName==="INPUT"){ e.preventDefault(); saveSessionDetails(); }
+  });
+  document.body.appendChild(wrap);
+  document.body.classList.add("sheet-open");
+  sessionDetailsInput();
+}
+function sessionDetailsInput(){
+  const done = $("sdDone"), n = $("sdName");
+  if(done && n) done.disabled = !n.value.trim();
+}
+function closeSessionDetails(){
+  const el = $("sessionDetailsSheet");
+  if(el) el.remove();
+  document.body.classList.remove("sheet-open");
+}
+async function saveSessionDetails(){
+  if(!sessionState) return closeSessionDetails();
+  const name = (($("sdName")||{}).value||"").trim();
+  if(!name) return;
+  const focusEl = $("sdFocus");
+  const focus = focusEl ? focusEl.value.trim() : "";
+  closeSessionDetails();
+  let subText = null;
+  if(sessionState.id === "adhoc"){
+    sessionState.adHocName = name;
+    if(typeof scheduleAutosave === "function" && sessionState.started) scheduleAutosave();
+  } else {
+    const p = PLAN.find(x=>x.id===sessionState.id);
+    if(!p) return;
+    if(p.name === name && (p.focus||"") === focus) return;
+    p.name = name; p.focus = focus;
+    subText = focus;
+    saveLog().then(ok=>{ if(ok===false) showToast("Couldn't save \u2014 check your connection", false); });
+    showToast("Session updated \u2713");
+  }
+  // Update the nav bar in place, so the clock and anything typed are untouched.
+  const nm = document.querySelector(".session-nav .sn-name");
+  if(nm) nm.textContent = name;
+  const sub = document.querySelector(".session-nav .sn-sub:not(#sessionTimer)");
+  if(sub && subText!==null) sub.textContent = subText;
 }
 
 function startActiveSession(){
@@ -5764,11 +5881,10 @@ function showAccountSettings(preserveScroll){
   const layout = getHomeLayoutFor(current);
   const layoutRows = layout.map((m,i)=>{
     const mod = HOME_MODULES.find(h=>h.id===m.id);
-    return `<div class="sess-row">
-      <div class="dx-reorder">
-        <button onclick="moveHomeModule(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
-        <button onclick="moveHomeModule(${i},1)" ${i===layout.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
-      </div>
+    return `<div class="sess-row layout-row" data-idx="${i}">
+      <button class="layout-grip" aria-label="Move ${esc(mod?mod.label:m.id)}: drag, or use the up and down arrow keys" onkeydown="layoutGripKey(event, ${i})">
+        <svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><path d="M1 1h16M1 6h16M1 11h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
       <div class="sr-info"><b>${mod?mod.label:m.id}</b></div>
       <input type="checkbox" ${m.hidden?"":"checked"} onchange="toggleHomeModuleVisibility(${i}, this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
     </div>`;
@@ -5811,8 +5927,8 @@ function showAccountSettings(preserveScroll){
     <button class="save-session-btn" onclick="changePassword()">Change password</button>
 
     <div class="section-label" style="margin-top:24px">Home screen layout</div>
-    <div class="last-updated" style="text-align:left">Reorder with the arrows, untick anything you don't want to see &mdash; including Sessions or HIIT Classes if you only use one. Changes save instantly.</div>
-    ${layoutRows}
+    <div class="last-updated" style="text-align:left">Press and drag the &#8801; handle to reorder. Untick anything you don't want to see, including Sessions or HIIT Classes if you only use one. Changes save instantly.</div>
+    <div class="layout-list" id="homeLayoutList">${layoutRows}</div>
     <button class="restore-default-btn" onclick="restoreDefaultHomeLayout()">Restore Default View</button>
 
     <div class="section-label" style="margin-top:24px">Weekly Check-In</div>
@@ -5840,6 +5956,72 @@ async function moveHomeModule(idx, dir){
   await saveHomeLayout(layout);
   showAccountSettings(true);
 }
+function layoutGripKey(e, idx){
+  if(e.key==="ArrowUp" || e.key==="ArrowDown"){
+    e.preventDefault();
+    moveHomeModule(idx, e.key==="ArrowUp" ? -1 : 1).then(()=>{
+      const g = document.querySelector(`.layout-row[data-idx="${idx + (e.key==="ArrowUp"?-1:1)}"] .layout-grip`);
+      if(g) g.focus();
+    });
+  }
+}
+
+// ── Reorder home screen sections by dragging ──────────────
+// Press the grip (three lines) on a row and drag, with a finger or a mouse. Same feel as reordering sets: dragging starts once the pointer has
+// moved a few pixels, rows swap as you pass their middle, and the new order
+// saves when you let go.
+let _layoutDrag = null;
+document.addEventListener("pointerdown", e=>{
+  if(e.button !== undefined && e.button !== 0) return;
+  const grip = e.target.closest(".layout-grip");
+  const row = grip && grip.closest(".layout-row");
+  if(!row || !row.parentElement || row.parentElement.id !== "homeLayoutList") return;
+  _layoutDrag = {row, list:row.parentElement, startY:e.clientY, pointerId:e.pointerId, active:false, shift:0};
+});
+document.addEventListener("pointermove", e=>{
+  const d = _layoutDrag;
+  if(!d || e.pointerId !== d.pointerId) return;
+  const dy = e.clientY - d.startY;
+  if(!d.active){
+    if(Math.abs(dy) < 8) return;
+    d.active = true;
+    try{ d.row.setPointerCapture(e.pointerId); }catch(err){}
+    d.row.classList.add("layout-dragging");
+    d.list.classList.add("layout-reordering");
+  }
+  e.preventDefault();
+  d.row.style.transform = `translateY(${dy - d.shift}px)`;
+  const rect = d.row.getBoundingClientRect();
+  const centre = rect.top + rect.height/2;
+  const prev = d.row.previousElementSibling, next = d.row.nextElementSibling;
+  const before = d.row.offsetTop;
+  if(next && centre > next.getBoundingClientRect().top + next.offsetHeight/2) d.list.insertBefore(next, d.row);
+  else if(prev && centre < prev.getBoundingClientRect().top + prev.offsetHeight/2) d.list.insertBefore(d.row, prev);
+  d.shift += d.row.offsetTop - before;
+  d.row.style.transform = `translateY(${dy - d.shift}px)`;
+}, {passive:false});
+async function _endLayoutDrag(e){
+  const d = _layoutDrag;
+  if(!d || (e && e.pointerId !== d.pointerId)) return;
+  _layoutDrag = null;
+  if(!d.active) return;
+  d.row.classList.remove("layout-dragging");
+  d.row.classList.add("layout-settling");
+  d.row.style.transform = "";
+  d.list.classList.remove("layout-reordering");
+  const swallow = ev=>{ ev.stopPropagation(); ev.preventDefault(); };
+  window.addEventListener("click", swallow, {capture:true, once:true});
+  setTimeout(()=>window.removeEventListener("click", swallow, {capture:true}), 100);
+  const order = [...d.list.children].map(r=>parseInt(r.dataset.idx,10));
+  if(!order.some((oldIdx,newIdx)=>oldIdx!==newIdx)){ setTimeout(()=>d.row.classList.remove("layout-settling"), 160); return; }
+  const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
+  const layout = getHomeLayoutFor(current);
+  await saveHomeLayout(order.map(i=>layout[i]));
+  setTimeout(()=>showAccountSettings(true), 160);
+}
+document.addEventListener("pointerup", _endLayoutDrag);
+document.addEventListener("pointercancel", _endLayoutDrag);
+
 async function toggleHomeModuleVisibility(idx, checked){
   const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
   const layout = getHomeLayoutFor(current);
@@ -6715,6 +6897,10 @@ window.home = home;
 window.startBlankSession = startBlankSession;
 window.openSession = openSession;
 window.startActiveSession = startActiveSession;
+window.openSessionDetails = openSessionDetails;
+window.closeSessionDetails = closeSessionDetails;
+window.saveSessionDetails = saveSessionDetails;
+window.sessionDetailsInput = sessionDetailsInput;
 window.handleSessionBack = handleSessionBack;
 window.saveSessionDraft = saveSessionDraft;
 window.cancelActiveSession = cancelActiveSession;
@@ -6775,6 +6961,7 @@ window.triggerPhotoUpload = triggerPhotoUpload;
 window.handlePhotoFileSelected = handlePhotoFileSelected;
 window.removeProfilePhoto = removeProfilePhoto;
 window.moveHomeModule = moveHomeModule;
+window.layoutGripKey = layoutGripKey;
 window.toggleHomeModuleVisibility = toggleHomeModuleVisibility;
 window.restoreDefaultHomeLayout = restoreDefaultHomeLayout;
 window.manageClientSessions = manageClientSessions;
