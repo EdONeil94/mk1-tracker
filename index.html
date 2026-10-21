@@ -851,7 +851,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-20.19";
+const APP_VERSION = "2026-10-21.1";
 
 const fbApp = initializeApp(firebaseConfig);
 // Offline mode: Firestore keeps a copy of your data on the phone (IndexedDB),
@@ -2193,7 +2193,22 @@ async function ensureEdIsAdmin(){
   }
 }
 
+// Signing in must never leave you on an endless "Loading…": anything that
+// goes wrong lands on a screen that says so, with Try again and Sign out.
 async function bootForUser(user){
+  try{ await bootForUserInner(user); }
+  catch(err){ showSignInProblem(err && (err.code || err.message) || "unknown error"); }
+}
+function showSignInProblem(detail, message){
+  document.body.classList.remove("has-tabbar");
+  app.innerHTML = `<div class="loading" style="padding:60px 24px;text-align:center">
+    <b style="font-size:17px">We couldn't sign you in</b><br>
+    <span style="color:var(--mute);font-size:15px;display:block;margin-top:8px">${message || "Something went wrong while loading your profile."} If it keeps happening, ask your admin.</span>
+    <span style="color:var(--mute);font-size:13px;display:block;margin-top:8px">Details: ${esc(detail)}</span>
+    <button class="save-session-btn" style="margin-top:18px" onclick="location.reload()">Try again</button>
+    <button class="restore-default-btn" style="margin-top:8px;width:100%" onclick="logOut()">Sign out</button></div>`;
+}
+async function bootForUserInner(user){
   if(!user){
     CURRENT_PROFILE = null;
     renderAuthScreen();
@@ -2219,22 +2234,33 @@ async function bootForUser(user){
   }
   await Promise.all([peopleP, locationsP]);
   let mapping = (mappingSnap && mappingSnap.exists && mappingSnap.exists()) ? mappingSnap.data() : null;
+  // A mapping to a profile that no longer exists (e.g. removed in Admin) is stale.
+  if(mapping && mapping.profileId && !PEOPLE_LOAD_FAILED && !PEOPLE.some(p=>p.id===mapping.profileId)) mapping = null;
 
   await ensureEdIsAdmin(); // needs PEOPLE, which just resolved above
 
-  // If no UID mapping exists yet, check whether this Google account's email
-  // is already linked to a profile from a prior email/password signup —
-  // if so, reuse that profile rather than creating a duplicate.
+  // No profile for this login yet: if it's a Google login whose verified email
+  // matches an existing profile, link it to that profile (a profile can have
+  // more than one login: its `uid` plus any extra in `uids`).
   if(!mapping || !mapping.profileId){
     const isGoogle = user.providerData && user.providerData.some(p=>p.providerId==="google.com");
     if(isGoogle && user.email){
       const username = await getUsernameForEmail(user.email);
-      if(username){
-        const existing = PEOPLE.find(p=>p.username===username || p.email===user.email);
-        if(existing){
-          await writeWithRetry(()=>setDoc(doc(db,"users",user.uid),{profileId:existing.id}));
-          if(!existing.uid){ existing.uid = user.uid; await savePeople(); }
+      const existing = PEOPLE.find(p=>p.email && lkey(p.email)===lkey(user.email))
+        || (username ? PEOPLE.find(p=>lkey(p.username)===lkey(username)) : null);
+      if(existing){
+        try{
+          await setDoc(doc(db,"users",user.uid), {profileId:existing.id});
+          if(!existing.uid) existing.uid = user.uid;
+          else if(existing.uid !== user.uid && !(existing.uids||[]).includes(user.uid)) existing.uids = [...(existing.uids||[]), user.uid];
+          const linkPatch = {uid: existing.uid}; if(existing.uids) linkPatch.uids = existing.uids;
+          await setDoc(personRef(existing.id), linkPatch, {merge:true});
+          PEOPLE_SAVED.set(existing.id, stableJson(existing));
           mapping = {profileId: existing.id};
+        }catch(e){
+          showSignInProblem((e && e.code) || "link failed",
+            `This Google account (${esc(user.email)}) matches ${esc(existing.name)}'s profile, but it couldn't be linked. Your admin can fix this from Admin \u2192 ${esc(existing.name)} \u2192 Reset sign-in, after checking the email address on the profile matches this Google account.`);
+          return;
         }
       }
     }
@@ -2253,7 +2279,7 @@ async function bootForUser(user){
   CURRENT_PROFILE = PEOPLE.find(p=>p.id===mapping.profileId) || {id:mapping.profileId, name:mapping.profileId, role:"client", clientIds:[]};
   // Older profiles were created before records were tied to a login. Stamp
   // this login's uid on now: the security rules use it to decide who can edit what.
-  if(!PEOPLE_LOAD_FAILED && PEOPLE.includes(CURRENT_PROFILE) && !CURRENT_PROFILE.uid){
+  if(!PEOPLE_LOAD_FAILED && PEOPLE.includes(CURRENT_PROFILE) && !CURRENT_PROFILE.uid && !(CURRENT_PROFILE.uids||[]).includes(user.uid)){
     CURRENT_PROFILE.uid = user.uid;
     // Wait for the server here: your tracker is only readable once this lands.
     try{ await setDoc(personRef(CURRENT_PROFILE.id), plainCopy(CURRENT_PROFILE)); PEOPLE_SAVED.set(CURRENT_PROFILE.id, stableJson(CURRENT_PROFILE)); }
@@ -5472,6 +5498,7 @@ async function showAdminDashboard(){
   app.innerHTML = `
     ${topbar({back:`home()`, title:`Admin`, sub:`${PEOPLE.length} registered`})}
     ${iosRow({icon:"pin", tint:"red", label:"Gym locations", value:`${GYM_LOCATIONS.length}`, onclick:"showManageLocations()", cls:"ios-row-solo"})}
+    ${iosRow({icon:"history", tint:"gray", label:"Restore removed people", onclick:"restoreRemovedPeople()"})}
     ${requestsHtml}
     <div class="section-label" style="margin-top:16px">People</div>
     ${rows || '<div class="chart-empty">No one registered yet.</div>'}
@@ -5600,6 +5627,9 @@ function renderEditPerson(){
     <div class="last-updated" style="text-align:left">Username: <b>${esc(p.username||p.id)}</b> &mdash; only they can change this, from their own Account Settings, since it's tied to their actual login. Editing it here isn't possible.</div>
     <div class="editor-field" style="margin-top:14px"><label>Email address</label><input type="email" id="editPersonEmail" value="${esc(p.email||"")}" placeholder="you@example.com"></div>
     <button class="save-session-btn" onclick="saveEditedPersonDetails()">Save details</button>
+    <div class="section-label" style="margin-top:22px">Sign-in</div>
+    ${iosRow({icon:"user", tint:"blue", label:"Reset sign-in", value: (p.uid || (p.uids||[]).length) ? `${[p.uid,...(p.uids||[])].filter(Boolean).length} login${[p.uid,...(p.uids||[])].filter(Boolean).length>1?"s":""} linked` : "Not linked", onclick:"resetPersonSignIn()"})}
+    <div class="last-updated" style="text-align:left">Use this if someone can't sign in (for example after switching to Google). Their profile and history are kept.</div>
 
     <div class="editor-field" style="margin-top:22px"><label>Role</label><div class="seg">${roleButtons}</div></div>
     ${locationsSection}
@@ -5635,6 +5665,35 @@ async function saveEditedPersonDetails(){
   const ok = await savePeople();
   if(ok && email && p.username){ await registerLoginLookup(email, p.username, p.uid); await registerUsernameLookup(p.username, email, p.uid); }
   showToast(ok ? "Saved \u2713" : "Couldn't save \u2014 check your connection");
+  renderEditPerson();
+}
+
+// People removed from the directory can be brought back from the backup made
+// when the directory moved to one document per person (meta/people). Their
+// workout history was never deleted, so it reappears with them.
+async function restoreRemovedPeople(){
+  let backup = [];
+  try{ const snap = await getDoc(doc(db,"meta","people")); backup = (snap.exists() && snap.data().list) || []; }catch(e){}
+  const missing = backup.filter(b=>b && b.id && !PEOPLE.some(p=>p.id===b.id));
+  if(!missing.length){ showToast("Nobody to restore \u2014 everyone in the backup is already here"); return; }
+  if(!confirm(`Restore ${missing.map(m=>m.name).join(", ")}?\n\nTheir profile comes back as it was in the backup, with their sign-in reset so they can sign in again with Google (matching email) or their username.`)) return;
+  missing.forEach(m=>{ const r = Object.assign({}, m); r.uid = ""; delete r.uids; PEOPLE.push(r); });
+  const ok = await savePeople();
+  showToast(ok ? `Restored ${missing.length} \u2713` : "Couldn't restore \u2014 check your connection");
+  showAdminDashboard();
+}
+
+// Unlink every login from a profile (keeps the profile and all its data). The
+// person's next Google sign-in with the email on their profile links afresh.
+async function resetPersonSignIn(){
+  const p = PEOPLE.find(x=>x.id===editPersonId);
+  if(!p) return;
+  if(!confirm(`Reset sign-in for ${p.name}?\n\nTheir profile and workout history stay as they are. Their next sign-in with Google (using ${p.email || "the email on their profile"}) will link to this profile.`)) return;
+  const uids = [p.uid, ...(p.uids||[])].filter(Boolean);
+  for(const u of uids){ try{ await deleteDoc(doc(db,"users",u)); }catch(e){} }
+  p.uid = ""; delete p.uids;
+  const ok = await savePeople();
+  showToast(ok ? "Sign-in reset \u2713" : "Couldn't save \u2014 check your connection");
   renderEditPerson();
 }
 
@@ -5683,7 +5742,7 @@ async function toggleAdminClientLink(clientId, checked){
 async function deletePersonFromAdmin(){
   const p = PEOPLE.find(x=>x.id===editPersonId);
   if(!p) return;
-  if(!confirm(`Remove ${p.name} from the people directory?\n\nThis does NOT delete their Firebase login if one still exists (do that separately in Firebase Console \u2192 Authentication), and does NOT delete any workout history they've logged \u2014 only their entry here and their place in lists like client-linking.`)) return;
+  if(!confirm(`Remove ${p.name} from the people directory?\n\nThey will no longer be able to open their workouts until restored (Admin \u2192 Restore removed people). If they just can't sign in, use Reset sign-in instead.\n\nTheir workout history is not deleted.`)) return;
   PEOPLE = PEOPLE.filter(x=>x.id!==p.id);
   await savePeople();
   await removeFromLoginLookup(p.email);
@@ -6700,6 +6759,8 @@ window.addLocation = addLocation;
 window.deleteLocation = deleteLocation;
 window.openEditPerson = openEditPerson;
 window.setPersonRole = setPersonRole;
+window.restoreRemovedPeople = restoreRemovedPeople;
+window.resetPersonSignIn = resetPersonSignIn;
 window.approveTrainerRequest = approveTrainerRequest;
 window.declineTrainerRequest = declineTrainerRequest;
 window.saveEditedPersonDetails = saveEditedPersonDetails;
