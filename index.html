@@ -725,6 +725,53 @@ button,input,select,textarea{font-family:inherit}
 .sess-row .sr-info b{font-size:17px;font-weight:400}
 .sess-row .sr-info span{font-size:15px}
 .ios-row-solo{margin-top:12px}
+/* Today tab */
+.page-header-actions{display:flex;align-items:center;gap:10px}
+.header-icon-btn{width:36px;height:36px;border-radius:18px;border:none;background:var(--chip);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.today-card{display:block;width:100%;box-sizing:border-box;background:var(--card);border:none;border-radius:16px;padding:16px;margin:0 0 14px;color:var(--text);font-family:inherit;text-align:left}
+button.today-card{cursor:pointer}
+.tc-eyebrow{font-size:13px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+.tc-eyebrow.warn{color:var(--warn,#FF9F0A)}
+.tc-next h2{font-size:28px;line-height:34px;margin:4px 0 2px;font-weight:700}
+.tc-sub{font-size:15px;color:var(--mute)}
+.tc-exlist{margin:14px 0 16px;display:flex;flex-direction:column;gap:7px}
+.tc-ex{display:flex;justify-content:space-between;gap:12px;font-size:15px}
+.tc-ex span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tc-mute{color:var(--mute);flex-shrink:0}
+.tc-primary,.tc-secondary{width:100%;height:50px;border:none;border-radius:12px;font-size:17px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:14px}
+.tc-primary{background:var(--accent2);color:#fff}
+.tc-secondary{background:var(--chip);color:var(--accent)}
+.tc-exlist + .tc-primary,.tc-exlist + .tc-secondary{margin-top:0}
+.tc-link{display:block;width:100%;background:none;border:none;color:var(--accent);font-size:15px;font-family:inherit;padding:12px 0 0;cursor:pointer}
+.tc-done{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--good);margin-bottom:12px;padding-bottom:12px;border-bottom:.5px solid var(--line)}
+.tc-head{display:flex;justify-content:space-between;align-items:center}
+.tc-head h3{font-size:20px;margin:0;font-weight:700}
+.tc-more{display:flex;align-items:center;gap:6px;color:var(--accent);font-size:15px}
+.tc-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:14px 0;text-align:center}
+.tc-dl{font-size:12px;font-weight:600;color:var(--mute)}
+.tc-dot{width:34px;height:34px;border-radius:17px;margin:6px auto 0;background:var(--chip);display:flex;align-items:center;justify-content:center;color:#fff;box-sizing:border-box}
+.tc-dot.on{background:var(--accent2)}
+.tc-dot.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.tc-dot.on.today{box-shadow:inset 0 0 0 2px var(--accent),inset 0 0 0 4px var(--card)}
+.tc-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:.5px solid var(--line);padding-top:12px}
+.tc-stats div{display:flex;flex-direction:column;gap:2px}
+.tc-stats b{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.tc-stats span{font-size:12px;color:var(--mute)}
+.tc-two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.tc-two .today-card{margin:0}
+.tc-mini{padding:14px}
+.tc-lab{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.tc-tile{width:26px;height:26px;border-radius:7px}
+.tc-val{font-size:24px;font-weight:700;margin-top:10px;font-variant-numeric:tabular-nums}
+.tc-val small{font-size:15px;color:var(--mute);font-weight:500}
+.tc-val.tc-none{font-size:17px;font-weight:600;color:var(--mute);padding:5px 0 2px}
+.tc-when{font-size:13px;color:var(--mute);margin-top:2px}
+.tc-log{display:flex;align-items:center;justify-content:center;margin-top:12px;height:32px;border-radius:16px;background:var(--chip);color:var(--accent);font-size:15px;font-weight:600}
+.today-banner{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;background:var(--accent-tint);border:none;border-radius:14px;padding:12px 14px;margin:0 0 14px;color:var(--text);font-family:inherit;text-align:left;cursor:pointer}
+.tb-text{flex:1;display:flex;flex-direction:column;gap:2px}
+.tb-text b{font-size:16px;font-weight:600}
+.tb-text span{font-size:14px;color:var(--mute)}
+.pill-next{background:var(--accent-tint);color:var(--accent)}
 .ios-row-solo + .ios-row{margin-top:0}
 .ios-break{height:4px}
 .ios-row{width:100%;display:flex;align-items:center;gap:12px;padding:8px 16px;color:var(--text);text-align:left;cursor:pointer;font-size:17px}
@@ -904,7 +951,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-21.7";
+const APP_VERSION = "2026-10-21.8";
 
 const fbApp = initializeApp(firebaseConfig);
 // Offline mode: Firestore keeps a copy of your data on the phone (IndexedDB),
@@ -1617,6 +1664,7 @@ const ICONS = {
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   pin:'<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
   home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  tick:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   export:'<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>',
   archive:'<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>'
 };
@@ -1637,11 +1685,11 @@ function iosRow({icon, tint, label, value, onclick, cls}){
 
 // Top-level screens: today's date, a large title, and your photo (which
 // opens Settings), like the large titles in iPhone apps.
-function largeHeader(title){
+function largeHeader(title, extra){
   const date = new Date().toLocaleDateString("en-GB",{weekday:"long", day:"numeric", month:"long"});
   return `<div class="page-header">
     <div><div class="kicker">${date}</div><h1>${title}</h1></div>
-    <button class="avatar-btn" onclick="showAccountSettings()" aria-label="Settings">${avatarHtml(CURRENT_PROFILE, "avatar-in")}</button>
+    <div class="page-header-actions">${extra||""}<button class="avatar-btn" onclick="showAccountSettings()" aria-label="Settings">${avatarHtml(CURRENT_PROFILE, "avatar-in")}</button></div>
   </div>`;
 }
 
@@ -2425,19 +2473,14 @@ async function bootForUserInner(user){
 // The optional, user-customizable home screen blocks. Order here is the
 // default for anyone who hasn't customized yet; admin's own Admin button is
 // role-gated separately and isn't part of this customizable set.
+// The cards on the Today tab, in their default order. Shown, hidden and
+// reordered in Settings → Today screen. (Saved layouts from before the
+// Today redesign only listed the old modules; those ids are simply ignored.)
 const HOME_MODULES = [
-  {id:"sessions", label:"Gym Sessions"},
-  {id:"hiit", label:"HIIT Classes"},
-  {id:"weight", label:"Body weight"},
-  {id:"cardio", label:"Cardio"},
-  {id:"managesessions", label:"Build Your Workout"},
-  {id:"activity", label:"Activity & streak"},
-  {id:"dashboard", label:"Dashboard"},
-  {id:"musclemap", label:"Muscle map"},
-  {id:"exercisemetrics", label:"Exercise metrics"},
-  {id:"measurements", label:"Body measurements"},
-  {id:"leaderboard", label:"Leaderboard"},
-  {id:"checkin", label:"Weekly Check-In"}
+  {id:"upnext", label:"Up next"},
+  {id:"week", label:"This week"},
+  {id:"body", label:"Weight and cardio"},
+  {id:"checkin", label:"Weekly check-in (when due)"}
 ];
 
 function getHomeLayoutFor(person){
@@ -2450,55 +2493,133 @@ function getHomeLayoutFor(person){
 
 function homeModuleHtml(id, ctx){
   switch(id){
-    case "sessions": {
-      const blankBtn = iosRow({icon:"plus", tint:"gray", label: DRAFTS["adhoc"] ? "Resume freestyle session" : "Start a freestyle session", onclick:"startBlankSession()"});
-      return PLAN.length ? `
-      <div class="section-label">Gym sessions<div class="label-actions"><button class="icon-btn" onclick="showCheckIn()" aria-label="Gym check-in QR">${svgIcon("qr")}</button><button class="icon-btn" onclick="refresh()" aria-label="Sync data">${svgIcon("sync")}</button></div></div>
-      ${ctx.cards}
-      ${blankBtn}
-      ${iosRow({icon:"history", tint:"indigo", label:"Session history", value:`${LOG.filter(s=>!s.hiit).length}`, onclick:"showHistory()"})}` : `
-      <div class="section-label">Gym Sessions</div>
-      <div class="chart-empty">You don't have any sessions yet &mdash; create one to start logging workouts, or just start a blank one below.</div>
-      ${blankBtn}
-      <button class="addsessbtn" onclick="showSettings()">+ Create your first session</button>`;
-    }
-    case "hiit": return ctx.hiitSection;
-    case "cardio": return `
-${iosRow({icon:"cardio", tint:"green", label:"Cardio", value:ctx.cardioLabel, onclick:"showCardioTracker()"})}`;
-    case "weight": return `
-${iosRow({icon:"weight", tint:"teal", label:"Body weight", value:ctx.weightLabel, onclick:"showWeightTracker()"})}`;
-    case "activity": return `
-${iosRow({icon:"flame", tint:"orange", label:"Activity &amp; streak", onclick:"showActivity()"})}`;
-    case "musclemap": return `
-${iosRow({icon:"body", tint:"pink", label:"Muscle map", onclick:"openMuscleMap()"})}`;
-    case "dashboard": return `
-${iosRow({icon:"chart", tint:"purple", label:"Dashboard", onclick:"openDashboard()"})}`;
-    case "exercisemetrics": return `
-${iosRow({icon:"trend", tint:"indigo", label:"Exercise metrics", onclick:"openExercisePicker()"})}`;
-    case "measurements": return `
-${iosRow({icon:"ruler", tint:"teal", label:"Body measurements", onclick:"openMeasurements()"})}`;
-    case "leaderboard": return `
-${iosRow({icon:"trophy", tint:"green", label:"Leaderboard", onclick:"showLeaderboard()"})}`;
-    case "managesessions": return `
-${iosRow({icon:"build", tint:"blue", label:"Build your workout", onclick:"showBuildWorkoutChoice()"})}`;
-    case "checkin":{
-      if(!CURRENT_PROFILE.weeklyCheckIn) return "";
-      const due = isCheckInDue();
-      const lastCheckin = [...CHECKINS].filter(c=>c.submitted).sort((a,b)=>b.weekKey.localeCompare(a.weekKey))[0];
-      const lastText = lastCheckin ? `Last submitted ${fmtDate(lastCheckin.weekKey)}` : "No check-ins yet";
-      return due
-        ? `<button class="checkin-module-due" onclick="showWeeklyCheckin()">
-            <span class="ios-tile" style="background:${TINTS.brand}">${svgIcon("check")}</span>
-            <span style="flex:1;text-align:left">
-              <span style="display:block;font-weight:600;font-size:17px">Weekly check-in due</span>
-              <span style="display:block;font-size:15px;color:var(--mute);margin-top:2px">You have an unsubmitted week. Tap to complete it.</span>
-            </span>
-            <span class="ios-chev" aria-hidden="true"></span>
-          </button>`
-        : iosRow({icon:"check", tint:"brand", label:"Weekly check-in", value:lastText, onclick:"showCheckinHistory()"});
-    }
+    case "upnext": return ctx.upNext;
+    case "week": return ctx.week;
+    case "body": return ctx.body;
+    case "checkin": return ctx.checkin;
     default: return "";
   }
+}
+
+// Which gym session comes next: the one after your last logged session in
+// the order of your Workouts list, looping round. First time: the first one.
+function nextPlanSession(){
+  if(!PLAN.length) return null;
+  const last = [...LOG].filter(e=>!e.hiit && PLAN.some(p=>p.id===e.sessionId)).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  if(!last) return {session:PLAN[0], last:null};
+  const idx = PLAN.findIndex(p=>p.id===last.sessionId);
+  return {session:PLAN[(idx+1) % PLAN.length], last};
+}
+function relDay(iso){
+  const days = Math.round((new Date(localDayKey(new Date())) - new Date(localDayKey(iso))) / 86400000);
+  if(days<=0) return "Today";
+  if(days===1) return "Yesterday";
+  if(days<7) return `${days} days ago`;
+  return fmtDate(iso);
+}
+function exLinesHtml(exList, max){
+  const lines = exList.slice(0, max).map(e=> e.superset
+    ? `<div class="tc-ex"><span>${esc(e.exA.n)} + ${esc(e.exB.n)}</span><span class="tc-mute">${e.s} &times; SS</span></div>`
+    : `<div class="tc-ex"><span>${esc(e.n)}</span><span class="tc-mute">${e.s} &times; ${esc(e.r)}</span></div>`).join("");
+  const more = exList.length > max ? `<div class="tc-ex tc-mute">+ ${exList.length-max} more</div>` : "";
+  return lines + more;
+}
+function todayUpNextCard(){
+  // A workout left half done comes first.
+  const draftId = Object.keys(DRAFTS).find(id=>id==="adhoc" || PLAN.some(p=>p.id===id));
+  if(draftId){
+    const d = DRAFTS[draftId];
+    const p = PLAN.find(x=>x.id===draftId);
+    const name = draftId==="adhoc" ? (d.adHocName||"Freestyle Session") : (p ? p.name : "Session");
+    const done = (d.setsData||[]).reduce((t,blk)=>t + (Array.isArray(blk) ? blk.filter(x=>x && x.d).length : blk ? [...(blk.A||[]),...(blk.B||[])].filter(x=>x && x.d).length : 0), 0);
+    const open = draftId==="adhoc" ? "startBlankSession()" : `openSession(${jsArg(draftId)})`;
+    return `<div class="today-card tc-next">
+      <div class="tc-eyebrow warn">In progress</div>
+      <h2>${esc(name)}</h2>
+      <div class="tc-sub">${d.elapsedSec ? `${fmtDuration(Math.max(1, Math.round(d.elapsedSec/60)))} in &middot; ` : ""}${done} set${done!==1?"s":""} ticked</div>
+      <button class="tc-primary" onclick="${open}">Resume Workout</button>
+    </div>`;
+  }
+  const nx = nextPlanSession();
+  if(!nx){
+    return `<div class="today-card tc-next">
+      <div class="tc-eyebrow">Get started</div>
+      <h2>No workouts yet</h2>
+      <div class="tc-sub">Build a session to follow, or just start one and add exercises as you go.</div>
+      <button class="tc-primary" onclick="hubGo('workouts','showSettings')">Build a Session</button>
+      <button class="tc-link" onclick="startBlankSession()">Start a freestyle session</button>
+    </div>`;
+  }
+  const todayKey = localDayKey(new Date());
+  const doneToday = LOG.filter(e=>localDayKey(e.date)===todayKey);
+  const trainedNote = doneToday.length
+    ? `<div class="tc-done">${svgIcon("tick", 16)}<span>${esc(sessionLabelForLog([doneToday[doneToday.length-1]])||"Workout")} done today. Nice work.</span></div>` : "";
+  const p = nx.session;
+  const lastOfThis = lastOf(p.id);
+  const subBits = [p.focus ? esc(p.focus) : "", lastOfThis ? `last done ${relDay(lastOfThis.date).toLowerCase()}` : "not done yet"].filter(Boolean);
+  return `<div class="today-card tc-next">
+    ${trainedNote}
+    <div class="tc-eyebrow">${doneToday.length ? "Next time" : "Up next"}</div>
+    <h2>${esc(p.name)}</h2>
+    <div class="tc-sub">${subBits.join(" &middot; ")}</div>
+    <div class="tc-exlist">${exLinesHtml(p.ex||[], 4)}</div>
+    <button class="${doneToday.length ? "tc-secondary" : "tc-primary"}" onclick="openSession(${jsArg(p.id)})">Start Workout</button>
+    <button class="tc-link" onclick="goTab('workouts')">Choose a different workout</button>
+  </div>`;
+}
+function todayWeekCard(){
+  const start = new Date(); const dow = start.getDay();
+  start.setDate(start.getDate() - (dow===0 ? 6 : dow-1)); start.setHours(0,0,0,0);
+  const todayKey = localDayKey(new Date());
+  const weekKeys = Array.from({length:7}, (_,i)=>{ const d = new Date(start); d.setDate(start.getDate()+i); return localDayKey(d); });
+  const inWeek = LOG.filter(e=>weekKeys.includes(localDayKey(e.date)));
+  const letters = ["M","T","W","T","F","S","S"];
+  const dayNames = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+  const dots = weekKeys.map((k,i)=>{
+    const n = inWeek.filter(e=>localDayKey(e.date)===k).length;
+    const cls = ["tc-dot", n ? "on" : "", k===todayKey ? "today" : ""].filter(Boolean).join(" ");
+    return `<div class="tc-day"><div class="tc-dl">${letters[i]}</div><div class="${cls}" aria-label="${dayNames[i]}: ${n ? `${n} workout${n>1?"s":""}` : "rest"}">${n ? svgIcon("tick", 16) : ""}</div></div>`;
+  }).join("");
+  const mins = inWeek.reduce((t,e)=>t+(e.duration||0),0);
+  const streak = weekStreakFor(LOG);
+  return `<button class="today-card tc-week" onclick="showActivity()">
+    <div class="tc-head"><h3>This week</h3><span class="tc-more">Activity<span class="ios-chev" aria-hidden="true"></span></span></div>
+    <div class="tc-days">${dots}</div>
+    <div class="tc-stats">
+      <div><b>${inWeek.length}</b><span>workout${inWeek.length!==1?"s":""}</span></div>
+      <div><b>${mins ? fmtDuration(mins) : "0m"}</b><span>training</span></div>
+      <div><b>${streak} wk</b><span>streak</span></div>
+    </div>
+  </button>`;
+}
+function todayBodyCards(){
+  const latestW = [...WEIGHTS].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const start = new Date(); const dow = start.getDay(); start.setDate(start.getDate()-(dow===0?6:dow-1));
+  const wk = localDayKey(start), tk = localDayKey(new Date());
+  const cardio = CARDIO_LOG.filter(c=>{ const k = localDayKey(c.date); return k>=wk && k<=tk; });
+  const km = cardio.reduce((t,c)=>t+(c.distance||0),0), cmins = cardio.reduce((t,c)=>t+(c.duration||0),0);
+  const cardioVal = !cardio.length ? `<div class="tc-val tc-none">None yet</div>`
+    : km>0 ? `<div class="tc-val">${km.toFixed(1)} <small>km</small></div>` : `<div class="tc-val">${fmtDuration(cmins)}</div>`;
+  return `<div class="tc-two">
+    <button class="today-card tc-mini" onclick="showWeightTracker()">
+      <div class="tc-lab"><span class="ios-tile tc-tile" style="background:${TINTS.teal}">${svgIcon("weight", 15)}</span>Weight</div>
+      ${latestW ? `<div class="tc-val">${latestW.weight} <small>kg</small></div><div class="tc-when">${relDay(latestW.date)}</div>` : `<div class="tc-val tc-none">Not logged</div><div class="tc-when">&nbsp;</div>`}
+      <span class="tc-log">Log</span>
+    </button>
+    <button class="today-card tc-mini" onclick="showCardioTracker()">
+      <div class="tc-lab"><span class="ios-tile tc-tile" style="background:${TINTS.green}">${svgIcon("cardio", 15)}</span>Cardio</div>
+      ${cardioVal}<div class="tc-when">This week</div>
+      <span class="tc-log">Log</span>
+    </button>
+  </div>`;
+}
+function todayCheckinCard(){
+  if(!CURRENT_PROFILE.weeklyCheckIn || !isCheckInDue()) return "";
+  return `<button class="today-banner" onclick="showWeeklyCheckin()">
+    <span class="ios-tile" style="background:${TINTS.brand}">${svgIcon("check")}</span>
+    <span class="tb-text"><b>Weekly check-in due</b><span>A week is ready to submit</span></span>
+    <span class="ios-chev" aria-hidden="true"></span>
+  </button>`;
 }
 
 // ── Tab bar ────────────────────────────────────────────────
@@ -2540,28 +2661,39 @@ new MutationObserver(updateTabBar).observe(app, {childList:true});
 
 function showWorkoutsHub(){
   stopTimer(); cancelRest(); cancelHiit();
+  const todayKey = localDayKey(new Date());
+  const nx = nextPlanSession();
   const sessions = PLAN.map(p=>{
     const last = lastOf(p.id);
-    const sub = DRAFTS[p.id] ? "In progress" : (last ? `Last ${fmtDate(last.date)}` : esc(p.focus||""));
-    return iosRow({icon:"play", tint:"brand", label:esc(p.name), value:sub, onclick:`hubGo('workouts','openSession',${jsArg(p.id)})`});
+    const value = DRAFTS[p.id] ? `<span class="pill pill-warn">In progress</span>`
+      : (last && localDayKey(last.date)===todayKey) ? `<span class="pill pill-good">Done today</span>`
+      : (nx && nx.session.id===p.id) ? `<span class="pill pill-next">Up next</span>`
+      : last ? `Last ${fmtDate(last.date)}` : "New";
+    const focus = p.focus ? `<span class="ios-row-sub">${esc(p.focus)}</span>` : "";
+    return iosRow({icon:"play", tint:"brand", label:`${esc(p.name)}${focus}`, value, onclick:`hubGo('workouts','openSession',${jsArg(p.id)})`});
   }).join("");
   const freestyle = iosRow({icon:"plus", tint:"gray", label: DRAFTS["adhoc"] ? "Resume freestyle session" : "Start a freestyle session", onclick:"hubGo('workouts','startBlankSession')"});
   const hiit = HIIT_CLASSES.map(c=>{
     const fmt = HIIT_FORMATS.find(f=>f.id===c.format);
-    return iosRow({icon:"bolt", tint:"orange", label:esc(c.name), value:fmt?fmt.label:"", onclick:`hubGo('workouts','openHiitRunner',${jsArg(c.id)})`});
+    const lastDone = LOG.filter(s=>s.hiit && s.sessionId===`hiit-${c.id}`).sort((a,b)=>b.date.localeCompare(a.date))[0];
+    const value = (lastDone && localDayKey(lastDone.date)===todayKey) ? `<span class="pill pill-good">Done today</span>`
+      : lastDone ? `Last ${fmtDate(lastDone.date)}` : "New";
+    const sub = `<span class="ios-row-sub">${fmt?fmt.label:esc(c.format)} &middot; ${c.ex.length} exercise${c.ex.length!==1?"s":""}</span>`;
+    return iosRow({icon:"bolt", tint:"orange", label:`${esc(c.name)}${sub}`, value, onclick:`hubGo('workouts','openHiitRunner',${jsArg(c.id)})`});
   }).join("");
+  const gymDone = LOG.filter(s=>!s.hiit).length, hiitDone = LOG.filter(s=>s.hiit).length;
   app.innerHTML = `
     ${largeHeader("Workouts")}
     <span data-tab="workouts" hidden></span>
     <div class="section-label">Gym sessions</div>
-    ${sessions || `<div class="chart-empty">No sessions yet.</div>`}
+    ${sessions || `<div class="chart-empty">No sessions yet. Build one below, or start a freestyle session.</div>`}
     ${freestyle}
     <div class="section-label">HIIT classes</div>
-    ${hiit || `<div class="chart-empty">No HIIT classes yet.</div>`}
+    ${hiit || `<div class="chart-empty">No HIIT classes yet. Build one below.</div>`}
     <div class="section-label">Plan &amp; history</div>
     ${iosRow({icon:"build", tint:"blue", label:"Build your workout", onclick:"hubGo('workouts','showBuildWorkoutChoice')"})}
-    ${iosRow({icon:"history", tint:"indigo", label:"Session history", value:`${LOG.filter(s=>!s.hiit).length}`, onclick:"hubGo('workouts','showHistory')"})}
-    ${iosRow({icon:"history", tint:"orange", label:"HIIT history", onclick:"hubGo('workouts','showHiitHistory')"})}
+    ${iosRow({icon:"history", tint:"indigo", label:"Session history", value:gymDone?`${gymDone}`:"", onclick:"hubGo('workouts','showHistory')"})}
+    ${iosRow({icon:"history", tint:"orange", label:"HIIT history", value:hiitDone?`${hiitDone}`:"", onclick:"hubGo('workouts','showHiitHistory')"})}
     ${iosRow({icon:"qr", tint:"gray", label:"Gym check-in code", onclick:"hubGo('workouts','showCheckIn')"})}
   `;
   window.scrollTo(0,0);
@@ -2607,62 +2739,32 @@ function home(){
         <button class="sync-banner-dismiss" onclick="this.closest(\'.sync-banner\').remove()" aria-label="Dismiss">&times;</button>
       </div>`;
 
-  const todayKey = localDayKey(new Date());
-  const cards = PLAN.map(p=>{
-    const last = lastOf(p.id);
-    const value = DRAFTS[p.id] ? `<span class="pill pill-warn">In progress</span>`
-      : (last && localDayKey(last.date)===todayKey) ? `<span class="pill pill-good">Done today</span>`
-      : last ? `Last ${fmtDate(last.date)}` : "New";
-    const focus = p.focus ? `<span class="ios-row-sub">${esc(p.focus)}</span>` : "";
-    return iosRow({icon:"play", tint:"brand", label:`${esc(p.name)}${focus}`, value, onclick:`openSession(${jsArg(p.id)})`});
-  }).join("");
-
-  const latestW = [...WEIGHTS].sort((a,b)=>b.date.localeCompare(a.date))[0];
-  const weightLabel = latestW ? `${latestW.weight}kg` : "Not logged";
-
-  // HIIT classes: same grouped list as the gym sessions above.
-  const hiitRows = HIIT_CLASSES.map(c=>{
-    const fmt = HIIT_FORMATS.find(f=>f.id===c.format);
-    const lastDone = LOG.filter(s=>s.hiit && s.sessionId===`hiit-${c.id}`).sort((a,b)=>b.date.localeCompare(a.date))[0];
-    const value = (lastDone && localDayKey(lastDone.date)===todayKey) ? `<span class="pill pill-good">Done today</span>`
-      : lastDone ? `Last ${fmtDate(lastDone.date)}` : "New";
-    const sub = `<span class="ios-row-sub">${fmt?fmt.label:esc(c.format)} &middot; ${c.ex.length} exercise${c.ex.length!==1?"s":""}</span>`;
-    return iosRow({icon:"bolt", tint:"orange", label:`${esc(c.name)}${sub}`, value, onclick:`openHiitRunner(${jsArg(c.id)})`});
-  }).join("");
-  const hiitDone = LOG.filter(s=>s.hiit).length;
-  const hiitSection = `
-    <div class="section-label">HIIT classes</div>
-    ${HIIT_CLASSES.length ? hiitRows : '<div class="chart-empty">No HIIT classes yet &mdash; head to Build Your Workout to create one.</div>'}
-    ${hiitDone ? iosRow({icon:"history", tint:"indigo", label:"HIIT history", value:`${hiitDone}`, onclick:"showHiitHistory()"}) : ""}
-    <div class="ios-break"></div>`;
-
-  const pendingTrainers = PEOPLE.filter(p=>p.requestedRole==="trainer" && p.role!=="trainer").length;
+  const pendingTrainers = CURRENT_PROFILE.role==="admin" ? PEOPLE.filter(p=>p.requestedRole==="trainer" && p.role!=="trainer").length : 0;
   const requestNote = (CURRENT_PROFILE.requestedRole==="trainer" && CURRENT_PROFILE.role==="client")
-    ? `<div class="last-updated" style="text-align:left">&#9203; Trainer access requested &mdash; waiting for an admin to approve it.</div>` : "";
-  const adminSection = CURRENT_PROFILE.role==="admin"
-    ? iosRow({icon:"admin", tint:"gray", label:"Admin", value: pendingTrainers ? `${pendingTrainers} trainer request${pendingTrainers>1?"s":""}` : "", onclick:"showAdminDashboard()", cls:"ios-row-solo"})
-    : "";
+    ? `<div class="last-updated" style="text-align:left">Trainer access requested. Waiting for an admin to approve it.</div>` : "";
+  const adminNote = pendingTrainers
+    ? `<button class="today-banner" onclick="showAdminDashboard()">
+        <span class="ios-tile" style="background:${TINTS.gray}">${svgIcon("admin")}</span>
+        <span class="tb-text"><b>${pendingTrainers} trainer request${pendingTrainers>1?"s":""}</b><span>Waiting for you in Admin</span></span>
+        <span class="ios-chev" aria-hidden="true"></span>
+      </button>` : "";
 
-  const _cwsd = new Date(); const _cdow = _cwsd.getDay();
-  _cwsd.setDate(_cwsd.getDate()-(_cdow===0?6:_cdow-1));
-  const _cardioWeekStartKey = localDayKey(_cwsd);
-  const _cardioTodayKey = localDayKey(new Date());
-  const cardioThisWeek = CARDIO_LOG.filter(c=>{ const dk=localDayKey(c.date); return dk>=_cardioWeekStartKey&&dk<=_cardioTodayKey; });
-  const cardioDistThisWeek = cardioThisWeek.reduce((s,c)=>s+(c.distance||0),0);
-  const cardioLabel = cardioThisWeek.length
-    ? `${cardioDistThisWeek.toFixed(1)}km this week`
-    : "Not logged";
-
-  const ctx = {cards, weightLabel, hiitSection, cardioLabel};
+  const ctx = {upNext:todayUpNextCard(), week:todayWeekCard(), body:todayBodyCards(), checkin:todayCheckinCard()};
   const layout = getHomeLayoutFor(CURRENT_PROFILE);
-  const moduleHtml = layout.filter(m=>!m.hidden).map(m=>homeModuleHtml(m.id, ctx)).join("");
+  const visible = layout.filter(m=>!m.hidden);
+  // The check-in banner always sits at the top when it's due: it's the one thing waiting on you.
+  const top = visible.some(m=>m.id==="checkin") ? ctx.checkin : "";
+  const moduleHtml = visible.filter(m=>m.id!=="checkin").map(m=>homeModuleHtml(m.id, ctx)).join("");
+  const qrBtn = KNOWN_QR[CURRENT_PROFILE.id]
+    ? `<button class="header-icon-btn" onclick="showCheckIn()" aria-label="Gym check-in code">${svgIcon("qr", 18)}</button>` : "";
 
   app.innerHTML = `
     ${banner}
-    ${largeHeader(`Hi, ${esc((CURRENT_PROFILE.name||"").split(" ")[0])}`)}
+    ${largeHeader(`Hi, ${esc((CURRENT_PROFILE.name||"").split(" ")[0])}`, qrBtn)}
     ${requestNote}
-    ${adminSection}
-    ${moduleHtml}
+    ${adminNote}
+    ${top}
+    ${moduleHtml || `<div class="chart-empty">Everything is hidden. Choose what Today shows in Settings &rarr; Today screen.</div>`}
     <span id="homeMarker" data-tab="today" hidden></span>
   `;
 }
@@ -3473,7 +3575,7 @@ async function saveSessionDraft(){
   stopTimer(); cancelRest();
   sessionState = null;
   updateWakeLock();
-  showToast(ok ? "Draft saved \u2014 resume any time \u2713" : "Couldn't save draft \u2014 check your connection");
+  showToast(ok ? "Draft saved. Resume any time \u2713" : "Couldn't save draft \u2014 check your connection");
   home();
 }
 
@@ -6248,6 +6350,8 @@ function showAccountSettings(preserveScroll){
   app.innerHTML = `
     ${topbar({title:`Settings`, sub:esc(current.name)})}
     <span data-tab="profile" hidden></span>
+    ${current.role==="admin" ? (()=>{ const n = PEOPLE.filter(p=>p.requestedRole==="trainer" && p.role!=="trainer").length;
+      return `<div style="margin-bottom:16px">${iosRow({icon:"admin", tint:"gray", label:"Admin", value: n ? `${n} trainer request${n>1?"s":""}` : "", onclick:"showAdminDashboard()"})}</div>`; })() : ""}
     <div class="photo-upload-row">
       ${avatarHtml(current, "photo-preview")}
       <div class="photo-upload-actions">
@@ -6281,10 +6385,10 @@ function showAccountSettings(preserveScroll){
     <div class="editor-field" style="margin-top:10px"><label>Confirm new password</label><input type="password" id="newPassword2" autocomplete="new-password" placeholder="********"></div>
     <button class="save-session-btn" onclick="changePassword()">Change password</button>
 
-    <div class="section-label" style="margin-top:24px">Home screen layout</div>
-    <div class="last-updated" style="text-align:left">Press and drag the &#8801; handle to reorder. Untick anything you don't want to see, including Sessions or HIIT Classes if you only use one. Changes save instantly.</div>
+    <div class="section-label" style="margin-top:24px">Today screen</div>
+    <div class="last-updated" style="text-align:left">Choose which cards Today shows, and drag the &#8801; handle to reorder them. Everything else is in Workouts and Progress. Changes save instantly.</div>
     <div class="layout-list" id="homeLayoutList" data-drag-list="homeLayout">${layoutRows}</div>
-    <button class="restore-default-btn" onclick="restoreDefaultHomeLayout()">Restore Default View</button>
+    <button class="restore-default-btn" onclick="restoreDefaultHomeLayout()">Restore Default</button>
 
     <div class="section-label" style="margin-top:24px">Weekly Check-In</div>
     <div class="sess-row">
@@ -6313,10 +6417,10 @@ async function toggleHomeModuleVisibility(idx, checked){
 }
 
 async function restoreDefaultHomeLayout(){
-  if(!(await askConfirm({title:"Reset your home screen?", message:"Everything goes back to the default order and is shown again. This only changes your own view.", ok:"Reset"}))) return;
+  if(!(await askConfirm({title:"Reset the Today screen?", message:"All the cards go back to the default order and are shown again. This only changes your own view.", ok:"Reset"}))) return;
   const defaultLayout = HOME_MODULES.map(m=>({id:m.id, hidden:false}));
   await saveHomeLayout(defaultLayout);
-  showToast("Home screen reset to default");
+  showToast("Today screen reset to default");
   showAccountSettings(true);
 }
 
