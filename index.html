@@ -133,12 +133,12 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .setrow.set-dragging{position:relative;z-index:5;transition:none;filter:drop-shadow(0 6px 14px var(--shadow))}
 .setrow.set-dragging .setn{background:var(--accent2);border-color:var(--accent);color:#fff}
 .setrow.set-settling{transition:transform .15s ease}
-.layout-grip{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background:none;border:none;padding:0;margin:0 4px 0 -10px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--mute);cursor:grab}
-.layout-row.layout-dragging{position:relative;z-index:5;transition:none;filter:drop-shadow(0 6px 14px var(--shadow))}
-.layout-row.layout-dragging .layout-grip{color:var(--accent2)}
-.layout-row.layout-settling{transition:transform .15s ease}
-.layout-grip:focus:not(:focus-visible){outline:none}
-.layout-list.layout-reordering .layout-row:not(.layout-dragging){transition:transform .12s ease}
+.drag-grip{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background:none;border:none;padding:0;margin:0 2px 0 -10px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--mute);cursor:grab}
+.drag-grip:focus:not(:focus-visible){outline:none}
+.drag-dragging{position:relative;z-index:5;transition:none !important;filter:drop-shadow(0 6px 14px var(--shadow))}
+.drag-dragging .drag-grip{color:var(--accent2);cursor:grabbing}
+.drag-settling{transition:transform .15s ease}
+.drag-reordering > [data-idx]:not(.drag-dragging){transition:transform .12s ease}
 .sets.sets-reordering .setrow:not(.set-dragging){transition:transform .12s ease}
 .setn[data-type="warmup"]{background:var(--warn-tint);border-color:var(--warn);color:var(--warn)}
 .setn[data-type="dropset"]{background:var(--purple-tint);border-color:var(--purple);color:var(--purple)}
@@ -196,9 +196,16 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .ss-ex-name{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ss-scheme{color:var(--mute);font-size:11px;font-weight:700;flex-shrink:0;margin-left:4px}
 .ss-sets-label{color:var(--mute);font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0}
-.ss-set-pair{display:grid;grid-template-columns:24px 1fr;gap:6px;margin-bottom:8px;align-items:start}
+.ss-set-pair{display:grid;grid-template-columns:28px 1fr;gap:6px;margin-bottom:8px;align-items:start}
 .ss-set-pair:last-of-type{margin-bottom:0}
-.ss-set-n{color:var(--mute);font-size:12px;font-weight:800;text-align:center;padding-top:11px}
+.ss-set-n{color:var(--mute);font-size:12px;font-weight:800;cursor:grab;width:28px;height:28px;border-radius:8px;background:var(--chip);
+  display:flex;align-items:center;justify-content:center;margin-top:6px;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ss-set-pair.set-dragging{position:relative;z-index:5;transition:none;filter:drop-shadow(0 6px 14px var(--shadow))}
+.ss-set-pair.set-dragging .ss-set-n{background:var(--accent2);color:#fff}
+.ss-sets:has(.ss-set-pair:only-child) .ss-set-n{cursor:default}
+.ss-set-pair.set-settling{transition:transform .15s ease}
+.ss-sets.sets-reordering .ss-set-pair:not(.set-dragging){transition:transform .12s ease}
 .ss-set-rows{display:flex;flex-direction:column;gap:5px}
 .ss-row{display:grid;grid-template-columns:12px 1fr 1fr 42px;gap:5px;align-items:center}
 .ss-row-letter{color:var(--accent2);font-size:9px;font-weight:900;text-align:center}
@@ -219,6 +226,12 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
 .ss-draft-ex-name{flex:1;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ss-draft-sets-row{display:flex;align-items:center;gap:6px;margin-top:8px}
 .ss-draft-sets-label{font-size:11px;color:var(--mute);font-weight:700}
+.ss-draft-ex,.ss-draft-sets-row{padding-left:36px}
+.ss-draft-sets-row .ss-draft-sets-label{flex:1}
+.ss-draft-ex input,.ss-draft-sets-row input{background:var(--chip);border:none;color:var(--text);border-radius:10px;padding:7px 3px;
+  font-size:13px;font-weight:700;text-align:center;-webkit-appearance:none;appearance:none;font-family:inherit}
+.ss-draft-sets-row input{width:42px;margin-right:91px}
+.ss-draft-ex input{margin-right:19px}
 .ss-add-btn{background:var(--accent2);border:none;color:#fff;border-radius:10px;
   padding:0 14px;font-weight:800;font-size:13px;cursor:pointer;height:36px}
 
@@ -486,6 +499,8 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   color:var(--text);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;
   display:flex;align-items:center;justify-content:space-between}
 .lb-loading{color:var(--mute);text-align:center;padding:60px 20px;font-size:14px}
+.fresh-note{color:var(--mute);font-size:13px;line-height:18px;margin:-4px 4px 12px;display:flex;align-items:center;gap:6px}
+.fresh-note::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mute);opacity:.6;flex-shrink:0}
 .lbrank-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--line);
   border-radius:14px;padding:12px 14px;margin-bottom:10px}
 .lbrank-row .lbr-avatar{width:40px;height:40px;border-radius:50%;background:var(--accent2);color:#fff;
@@ -588,12 +603,6 @@ body{padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
   border-radius:8px;padding:8px 10px;font-size:12.5px;font-weight:500;text-align:left;
   -webkit-appearance:none;appearance:none}
 .dx-note-row input::placeholder{color:var(--placeholder);font-weight:400}
-.dx-reorder{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
-.dx-reorder button{width:20px;height:16px;background:var(--chip);border:1px solid var(--line);
-  color:var(--mute);font-size:9px;line-height:1;border-radius:4px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;padding:0}
-.dx-reorder button:disabled{opacity:.25;cursor:default}
-.dx-reorder button:active:not(:disabled){border-color:var(--accent)}
 
 .add-ex-row{display:flex;gap:8px;margin:12px 0 18px}
 .custom-ex-input{width:100%;background:var(--chip);border:1.5px solid var(--line);color:var(--text);
@@ -783,7 +792,7 @@ body.has-tabbar .app-update-banner{bottom:calc(74px + var(--safe-bot))}
 .sn-edit{background:none;border:none;color:var(--accent);font-size:17px;font-family:inherit;padding:0 8px;min-height:44px;cursor:pointer}
 
 /* iOS sheet (slides up from the bottom; Cancel / title / Done) */
-.sheet-backdrop{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;animation:sheetFade .2s ease}
+.sheet-backdrop{position:fixed;inset:0;z-index:300;padding-bottom:var(--kb,0px);box-sizing:border-box;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;animation:sheetFade .2s ease}
 .ios-sheet{width:100%;max-width:620px;max-height:92vh;overflow:auto;background:var(--sheet);border-radius:12px 12px 0 0;
   padding-bottom:calc(24px + var(--safe-bot));animation:sheetUp .32s cubic-bezier(.2,.9,.25,1);box-shadow:0 -8px 30px rgba(0,0,0,.25)}
 .sheet-nav{position:sticky;top:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:6px 8px;
@@ -804,9 +813,20 @@ body.has-tabbar .app-update-banner{bottom:calc(74px + var(--safe-bot))}
   color:var(--text);font-size:17px;font-family:inherit;cursor:pointer;text-align:left}
 .sheet-row-chev{color:var(--mute);display:flex}
 body.sheet-open{overflow:hidden}
+/* iOS action sheet (askConfirm) */
+.action-sheet{width:100%;max-width:440px;padding:0 8px calc(8px + var(--safe-bot));animation:sheetUp .32s cubic-bezier(.2,.9,.25,1)}
+.as-group{background:var(--sheet-group);border-radius:14px;overflow:hidden;margin-bottom:8px}
+.as-head{padding:14px 18px 13px;text-align:center;border-bottom:.5px solid var(--line)}
+.as-title{font-size:13px;font-weight:600;color:var(--mute);line-height:18px}
+.as-msg{font-size:13px;color:var(--mute);line-height:18px;margin-top:4px}
+.as-btn{display:block;width:100%;min-height:56px;border:none;background:none;color:var(--accent);font-size:20px;font-family:inherit;cursor:pointer}
+.as-btn.destructive{color:var(--bad)}
+.as-btn.cancel{font-weight:600}
+.as-btn:active{background:var(--chip)}
+.as-btn:focus:not(:focus-visible){outline:none}
 @keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
 @keyframes sheetFade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.sheet-backdrop,.ios-sheet{animation:none}}
+@media (prefers-reduced-motion:reduce){.sheet-backdrop,.ios-sheet,.action-sheet{animation:none}}
 .session-finish-btn,.session-nav .start-session-btn{height:32px;padding:0 15px;border-radius:16px;border:none;background:var(--accent2);
   color:#fff;font-size:15px;font-weight:600;cursor:pointer;min-width:0}
 
@@ -852,8 +872,6 @@ body.sheet-open{overflow:hidden}
 .auth-tabs button{border-radius:7px;color:var(--text);font-size:15px;font-weight:500;min-height:34px}
 .auth-tabs button.active{background:var(--seg-on);color:var(--text);font-weight:600;box-shadow:0 1px 3px var(--shadow)}
 .stat-card .label{font-size:12px;letter-spacing:.02em}
-.dx-reorder{gap:4px}
-.dx-reorder button{width:30px;height:22px;border:none;border-radius:6px;background:var(--chip);color:var(--text);font-size:11px}
 .sess-row .icon-btn,.sr-actions .icon-btn{width:34px;height:34px;border-radius:17px;font-size:16px;color:var(--text)}
 .mrow label{min-width:76px;white-space:nowrap;text-transform:none;letter-spacing:0;font-size:15px}
 .exit-prompt-btn{border-radius:12px}
@@ -886,7 +904,7 @@ const TRACKER_ID = "ed-mk1-tracker";
 // Bumped on every deploy so the running page can detect when a newer version
 // has been published and prompt for a refresh, rather than silently serving
 // a stale cached copy from a home-screen icon.
-const APP_VERSION = "2026-10-21.3";
+const APP_VERSION = "2026-10-21.7";
 
 const fbApp = initializeApp(firebaseConfig);
 // Offline mode: Firestore keeps a copy of your data on the phone (IndexedDB),
@@ -944,6 +962,65 @@ async function getDocCacheFirst(ref){
   try{ const snap = await getDocFromCache(ref); if(snap.exists()) return snap; }catch(e){}
   return getDoc(ref);
 }
+// ── Other people's data, fast even offline (item 12) ──────
+// Other people's trackers and leaderboard summaries aren't kept live, and a
+// plain getDoc waits up to ~10s for the network before giving up offline.
+const isOnline = ()=>navigator.onLine !== false;
+function withTimeout(p, ms){
+  return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error("timeout"),{code:"unavailable"})), ms))]);
+}
+// One-off reads (a client's dashboard, sessions to edit): the phone's copy at
+// once when offline; online, the server (up to 6s) and then the phone's copy.
+async function getDocFast(ref){
+  if(!isOnline()){ try{ return await getDocFromCache(ref); }catch(e){} }
+  try{ return await withTimeout(getDoc(ref), 6000); }
+  catch(e){ try{ return await getDocFromCache(ref); }catch(e2){ throw e; } }
+}
+// Screens about other people (leaderboard, your clients) draw straight away
+// from the phone's copy, then redraw in place when fresh numbers arrive.
+// draw(snaps, meta) gets one snapshot (or null) per ref; its markup must
+// include <span data-screen="key" hidden> so a late refresh never draws over
+// a screen you've moved on to.
+const _freshKey = k=>"mk1_fresh_"+k;
+async function loadTwoPass(key, refs, draw){
+  const onScreen = ()=>!!document.querySelector(`[data-screen="${key}"]`);
+  const cached = await Promise.all(refs.map(r=>getDocFromCache(r).then(x=>x, ()=>null)));
+  let freshAt = null; try{ freshAt = localStorage.getItem(_freshKey(key)); }catch(e){}
+  const missing = list=>list.filter(x=>!x).length;
+  const drewCache = cached.some(x=>x && x.exists()) || !isOnline() || !refs.length;
+  if(drewCache){
+    if(!onScreen()) return;
+    draw(cached, {stale:refs.length>0, offline:!isOnline(), freshAt, missing:missing(cached)});
+    if(!isOnline() || !refs.length) return;
+  }
+  const fresh = await Promise.all(refs.map(r=>withTimeout(getDoc(r), 8000).then(x=>x, ()=>null)));
+  if(!onScreen()) return;
+  const failed = missing(fresh), allFailed = failed===refs.length;
+  if(!allFailed){ freshAt = new Date().toISOString(); try{ localStorage.setItem(_freshKey(key), freshAt); }catch(e){} }
+  const merged = fresh.map((x,i)=>x || cached[i]);
+  const same = drewCache && merged.every((x,i)=>stableJson(x && x.exists() ? x.data() : null) === stableJson(cached[i] && cached[i].exists() ? cached[i].data() : null));
+  const meta = {stale:allFailed, partial:failed>0 && !allFailed, offline:allFailed && !isOnline(), freshAt, missing:missing(merged)};
+  if(same && !meta.stale && !meta.partial){ const n = $("freshNote"); if(n) n.remove(); return; }
+  const y = window.scrollY;
+  draw(merged, meta);
+  if(drewCache) window.scrollTo(0, y);
+}
+function _fmtFresh(iso){
+  const d = new Date(iso), t = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  return localDayKey(d)===localDayKey(new Date()) ? `today at ${t}` : `${fmtDate(iso)}, ${t}`;
+}
+// The small grey line under the title saying how fresh the numbers are.
+function freshNote(meta, what){
+  if(!meta || (!meta.stale && !meta.partial)) return "";
+  const when = meta.freshAt ? ` from ${_fmtFresh(meta.freshAt)}` : "";
+  let text;
+  if(meta.partial) text = `Some ${what} couldn't be refreshed${when ? `. Older ones are${when}` : ""}.`;
+  else if(meta.offline) text = meta.missing ? `You're offline. Some ${what} haven't been saved on this phone yet.` : `You're offline. Showing ${what} ${when ? when.trim() : "this phone last saved"}.`;
+  else if(meta.missing && !when) text = `Loading ${what}\u2026`;
+  else text = `Showing ${what} ${when ? when.trim() : "this phone last saved"}. Updating\u2026`;
+  return `<div class="fresh-note" id="freshNote">${text}</div>`;
+}
+
 // When live data changes underneath us (another device, a trainer's
 // feedback), redraw the home screen, but never interrupt anything else.
 let _refreshTimer = null;
@@ -1226,10 +1303,10 @@ async function fetchPersonData(personId){
     return {log:LOG, weights:WEIGHTS, measurements:MEASUREMENTS, plan:PLAN, hiitClasses:HIIT_CLASSES, cardioLog:CARDIO_LOG};
   }
   try{
-    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${personId}`));
+    const snap = await getDocFast(doc(db, "trackers", `${TRACKER_ID}-${personId}`));
     if(snap.exists()){
       const d = snap.data();
-      return {log:d.log||[], weights:d.weights||[], measurements:d.measurements||[], plan:d.plan||[], hiitClasses:d.hiitClasses||[], cardioLog:d.cardioLog||[]};
+      return {log:d.log||[], weights:normWeights(d.weights), measurements:d.measurements||[], plan:d.plan||[], hiitClasses:d.hiitClasses||[], cardioLog:d.cardioLog||[]};
     }
   }catch(e){}
   return {log:[], weights:[], measurements:[], plan:[], hiitClasses:[], cardioLog:[]};
@@ -1362,9 +1439,18 @@ function trackerField(f){
   return {log:LOG, weights:WEIGHTS, measurements:MEASUREMENTS, plan:PLAN, hiitClasses:HIIT_CLASSES,
           cardioLog:CARDIO_LOG, checkIns:CHECKINS, drafts:DRAFTS}[f];
 }
+// Body weight entries are {date, weight}. Check-ins used to save {date, w},
+// which the Body Weight screen couldn't read; convert those on the way in.
+function normWeights(arr){
+  return (arr||[]).map(e=>{
+    if(!e || e.weight!=null || e.w==null) return e;
+    const {w, ...rest} = e;
+    return {...rest, weight:w};
+  });
+}
 function setTrackerField(f, v){
   if(f==="log") LOG = v||[];
-  else if(f==="weights") WEIGHTS = v||[];
+  else if(f==="weights") WEIGHTS = normWeights(v);
   else if(f==="measurements") MEASUREMENTS = v||[];
   else if(f==="plan") PLAN = v||[];
   else if(f==="hiitClasses") HIIT_CLASSES = v||[];
@@ -1530,7 +1616,9 @@ const ICONS = {
   history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 3"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   pin:'<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
-  home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'
+  home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  export:'<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>',
+  archive:'<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>'
 };
 function svgIcon(name, size){
   size = size || 18;
@@ -2598,7 +2686,7 @@ let sessionState = null; // {id, started, workingEx, originalEx}
 // editing a template session mid-workout. Uses a fixed "adhoc" sessionId so
 // weight/rep prefill and history naturally carry forward between freeform
 // sessions, the same way it does for template sessions.
-function startBlankSession(){
+async function startBlankSession(){
   const draft = DRAFTS["adhoc"];
   if(draft){
     sessionState = {id:"adhoc", started:true, workingEx: draft.workingEx, originalEx: draft.workingEx, adHocName: draft.adHocName||"Freestyle Session", liveSets: draft.setsData};
@@ -2610,9 +2698,9 @@ function startBlankSession(){
     showToast("Resumed your in-progress session \u2713");
     return;
   }
-  const name = prompt("Name this session:", "Freestyle Session");
+  const name = await askText({title:"Freestyle Session", label:"Name", value:"Freestyle Session", placeholder:"e.g. Arms and abs"});
   if(name===null) return; // cancelled
-  const trimmed = name.trim() || "Freestyle Session";
+  const trimmed = name || "Freestyle Session";
   sessionState = {id:"adhoc", started:false, workingEx:[], originalEx:[], adHocName: trimmed};
   renderActiveSessionScreen(null);
 }
@@ -2672,7 +2760,7 @@ function renderActiveSessionScreen(resumeSetsData){
         const pwB = resumeB ? resumeB.w : (prevB&&prevB.sets[si] ? prevB.sets[si].w : "");
         const prB = resumeB ? resumeB.r : (prevB&&prevB.sets[si] ? prevB.sets[si].r : "");
         return `<div class="ss-set-pair">
-          <div class="ss-set-n">S${si+1}</div>
+          <div class="ss-set-n" role="button" aria-label="Set ${si+1}: press and drag to reorder">S${si+1}</div>
           <div class="ss-set-rows">
             <div class="ss-row" data-pw="${pwA}" data-pr="${prA}">
               <div class="ss-row-letter">A</div>
@@ -2884,6 +2972,323 @@ async function saveSessionDetails(){
   const sub = document.querySelector(".session-nav .sn-sub:not(#sessionTimer)");
   if(sub && subText!==null) sub.textContent = subText;
 }
+
+// ── Export my data (item 17) ─────────────────────────────
+// CSV files open in Numbers, Excel or Google Sheets; the JSON file is a full
+// backup of everything in your tracker. On a phone the file goes to the share
+// sheet (Save to Files, AirDrop, email); on a computer it downloads.
+function showExportData(){
+  stopTimer();
+  const n = (count, one, many)=>`${count} ${count===1?one:many}`;
+  const workouts = LOG.length, sets = LOG.reduce((t,e)=>t+(e.ex||[]).reduce((t2,x)=>t2+(x.sets||[]).length,0),0);
+  app.innerHTML = `
+    ${topbar({back:"showAccountSettings()", title:"Export My Data", sub:esc(CURRENT_PROFILE.name)})}
+    <span data-tab="profile" hidden></span>
+    <div class="section-label">Spreadsheets (CSV)</div>
+    ${iosRow({icon:"list", tint:"brand", label:"Workouts", value:n(workouts,"workout","workouts"), onclick:"exportData('workouts')"})}
+    ${iosRow({icon:"weight", tint:"teal", label:"Body weight", value:n(WEIGHTS.length,"entry","entries"), onclick:"exportData('weights')"})}
+    ${iosRow({icon:"cardio", tint:"green", label:"Cardio", value:n(CARDIO_LOG.length,"entry","entries"), onclick:"exportData('cardio')"})}
+    ${iosRow({icon:"ruler", tint:"purple", label:"Body measurements", value:n(MEASUREMENTS.length,"entry","entries"), onclick:"exportData('measurements')"})}
+    <div class="last-updated" style="text-align:left">Workouts has one row per set (${n(sets,"set","sets")} in total), with the date, session, exercise, weight and reps. Opens in Numbers, Excel or Google Sheets.</div>
+    <div class="section-label" style="margin-top:24px">Backup</div>
+    ${iosRow({icon:"archive", tint:"gray", label:"Everything (JSON)", onclick:"exportData('backup')"})}
+    <div class="last-updated" style="text-align:left">A complete copy of your tracker: workouts, sessions you've built, HIIT classes, body weight, cardio, measurements and check-ins. Keep it somewhere safe.</div>
+  `;
+  window.scrollTo(0,0);
+}
+// One CSV cell. Text that starts with = + - @ is prefixed with ' so a
+// spreadsheet shows it as text rather than running it as a formula.
+function csvCell(v, isText){
+  if(v===null || v===undefined) return "";
+  let t = String(v);
+  if(isText && /^[=+\-@\t\r]/.test(t)) t = "'" + t;
+  return /[",\r\n]/.test(t) ? `"${t.replace(/"/g,'""')}"` : t;
+}
+function csvOf(header, rows, textCols){
+  const tc = new Set(textCols||[]);
+  const line = r=>r.map((v,i)=>csvCell(v, tc.has(i))).join(",");
+  return "\uFEFF" + [header.map(h=>csvCell(h,true)).join(","), ...rows.map(line)].join("\r\n") + "\r\n";
+}
+function _hhmm(iso){ const d = new Date(iso); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
+const SET_TYPE_NAMES = {warmup:"Warm-up", dropset:"Drop set", failure:"Failure"};
+function buildExport(kind){
+  const byDate = (a,b)=>String(a.date).localeCompare(String(b.date));
+  if(kind==="workouts"){
+    const rows = [];
+    [...LOG].sort(byDate).forEach(e=>{
+      const name = sessionLabelForLog([e]) || "Session";
+      const type = e.hiit ? "HIIT" : (e.adHocName || e.sessionId==="adhoc") ? "Freestyle" : "Gym";
+      const base = [localDayKey(e.date), _hhmm(e.date), name, type, e.duration||""];
+      const tail = [e.rpe ?? "", e.comment || ""];
+      const ex = (e.ex||[]).filter(x=>(x.sets||[]).length);
+      if(!ex.length){ rows.push([...base, "", "", "", "", "", "", ...tail]); return; }
+      const groups = {}; let g = 0;
+      ex.forEach(x=>{ if(x.supersetGroup!=null && groups[x.supersetGroup]==null) groups[x.supersetGroup] = String.fromCharCode(65 + g++); });
+      ex.forEach(x=>x.sets.forEach((st,si)=>{
+        rows.push([...base, x.n, si+1, SET_TYPE_NAMES[st.type]||"", st.w===""?"":st.w, st.r===""?"":st.r,
+          x.supersetGroup!=null ? `Superset ${groups[x.supersetGroup]}` : "", ...tail]);
+      }));
+    });
+    return {name:"workouts", type:"text/csv", body:csvOf(
+      ["Date","Time","Session","Type","Duration (min)","Exercise","Set","Set type","Weight (kg)","Reps","Superset","Effort (1-10)","Comment"],
+      rows, [2,3,5,7,10,12])};
+  }
+  if(kind==="weights"){
+    return {name:"body-weight", type:"text/csv", body:csvOf(["Date","Weight (kg)"],
+      [...WEIGHTS].sort(byDate).map(w=>[localDayKey(w.date), w.weight ?? w.w ?? ""]))};
+  }
+  if(kind==="cardio"){
+    return {name:"cardio", type:"text/csv", body:csvOf(["Date","Activity","Distance (km)","Duration (min)"],
+      [...CARDIO_LOG].sort(byDate).map(c=>[localDayKey(c.date), c.activity||"", c.distance||"", c.duration||""]), [1])};
+  }
+  if(kind==="measurements"){
+    return {name:"measurements", type:"text/csv", body:csvOf(["Date", ...MEASURE_METRICS.map(m=>`${m.label} (cm)`)],
+      [...MEASUREMENTS].sort(byDate).map(m=>[localDayKey(m.date), ...MEASURE_METRICS.map(mm=>m[mm.id] ?? "")]))};
+  }
+  const me = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
+  const backup = {
+    app:"MK1 Gym Tracker", appVersion:APP_VERSION, exportedAt:new Date().toISOString(),
+    profile:{id:me.id, name:me.name, username:me.username||"", email:me.email||"", locations:me.locations||[]},
+    log:LOG, plan:PLAN, hiitClasses:HIIT_CLASSES, weights:WEIGHTS, cardioLog:CARDIO_LOG,
+    measurements:MEASUREMENTS, checkIns:CHECKINS
+  };
+  return {name:"backup", type:"application/json", body:JSON.stringify(plainCopy(backup), null, 2)};
+}
+async function exportData(kind){
+  let out;
+  try{ out = buildExport(kind); }catch(e){ showToast("Couldn't build the file", false); return; }
+  const ext = out.type==="application/json" ? "json" : "csv";
+  const filename = `mk1-${out.name}-${localDayKey(new Date())}.${ext}`;
+  const file = new File([out.body], filename, {type:out.type});
+  // Phones: the share sheet (iOS home-screen apps can't download files directly).
+  const touch = window.matchMedia && window.matchMedia("(pointer:coarse)").matches;
+  if(touch && navigator.canShare && navigator.share){
+    let ok = false;
+    try{ ok = navigator.canShare({files:[file]}); }catch(e){}
+    if(ok){
+      try{ await navigator.share({files:[file], title:filename}); return; }
+      catch(e){ if(e && e.name==="AbortError") return; } // closed the share sheet
+    }
+  }
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  showToast(`Saved ${filename}`);
+}
+
+// ── In-app pop-ups (replace the browser's confirm() and prompt()) ──────
+// askConfirm: an iOS action sheet from the bottom with the action and a
+// separate Cancel, the action in red when it deletes something. Resolves true
+// or false. askText: a sheet with Cancel and Done around one text field.
+// Resolves the trimmed text, or null if cancelled.
+// Keep bottom sheets above the on-screen keyboard (iOS doesn't shrink the
+// page for it, so a sheet pinned to the bottom would sit behind it).
+if(window.visualViewport){
+  const kb = ()=>{
+    const v = window.visualViewport;
+    const hidden = Math.max(0, Math.round(window.innerHeight - v.height - v.offsetTop));
+    document.documentElement.style.setProperty("--kb", hidden + "px");
+  };
+  window.visualViewport.addEventListener("resize", kb);
+  window.visualViewport.addEventListener("scroll", kb);
+}
+let _ask = null;
+function _closeAsk(result){
+  const a = _ask;
+  if(!a) return;
+  _ask = null;
+  a.el.remove();
+  if(!$("sessionDetailsSheet")) document.body.classList.remove("sheet-open");
+  if(a.returnFocus && a.returnFocus.focus && document.contains(a.returnFocus)) a.returnFocus.focus();
+  a.resolve(result);
+}
+function _openAsk(html, onKey){
+  if(_ask) _closeAsk(_ask.cancelValue);
+  return new Promise(resolve=>{
+    const el = document.createElement("div");
+    el.className = "sheet-backdrop";
+    el.id = "askSheet";
+    el.innerHTML = html;
+    document.body.appendChild(el);
+    document.body.classList.add("sheet-open");
+    _ask = {el, resolve, cancelValue:null, returnFocus:document.activeElement};
+    el.addEventListener("click", e=>{ if(e.target===el) _closeAsk(_ask.cancelValue); });
+    el.addEventListener("keydown", e=>{
+      if(e.key==="Escape"){ e.preventDefault(); _closeAsk(_ask.cancelValue); }
+      else if(onKey) onKey(e);
+    });
+  });
+}
+function askConfirm({title, message="", ok="OK", destructive=false}){
+  const msg = message ? `<div class="as-msg" id="askMsg">${esc(message).replace(/\n/g,"<br>")}</div>` : "";
+  const p = _openAsk(`<div class="action-sheet" role="alertdialog" aria-modal="true" aria-labelledby="askTitle"${message?' aria-describedby="askMsg"':""}>
+      <div class="as-group">
+        <div class="as-head"><div class="as-title" id="askTitle">${esc(title)}</div>${msg}</div>
+        <button type="button" class="as-btn${destructive?" destructive":""}" id="askOk">${esc(ok)}</button>
+      </div>
+      <div class="as-group"><button type="button" class="as-btn cancel" id="askCancel">Cancel</button></div>
+    </div>`);
+  _ask.cancelValue = false;
+  $("askOk").onclick = ()=>_closeAsk(true);
+  $("askCancel").onclick = ()=>_closeAsk(false);
+  // Apple's rule: when the action destroys something, the safe choice has focus.
+  (destructive ? $("askCancel") : $("askOk")).focus();
+  return p;
+}
+function askText({title, label="", value="", placeholder="", ok="Done", maxlength=60}){
+  const p = _openAsk(`<div class="ios-sheet" role="dialog" aria-modal="true" aria-labelledby="askTitle">
+      <div class="sheet-nav">
+        <button type="button" class="sheet-btn" id="askCancel">Cancel</button>
+        <div class="sheet-title" id="askTitle">${esc(title)}</div>
+        <button type="button" class="sheet-btn done" id="askOk">${esc(ok)}</button>
+      </div>
+      <div class="sheet-body">
+        ${label ? `<div class="sheet-label">${esc(label)}</div>` : ""}
+        <div class="sheet-group"><input id="askInput" class="sheet-input" type="text" maxlength="${maxlength}" value="${esc(value)}" placeholder="${esc(placeholder)}" aria-label="${esc(label||title)}"></div>
+      </div>
+    </div>`, e=>{
+      if(e.key==="Enter" && e.target.id==="askInput"){ e.preventDefault(); if(!$("askOk").disabled) $("askOk").click(); }
+    });
+  const input = $("askInput"), okBtn = $("askOk");
+  const sync = ()=>{ okBtn.disabled = !input.value.trim(); };
+  input.addEventListener("input", sync); sync();
+  okBtn.onclick = ()=>_closeAsk(input.value.trim());
+  $("askCancel").onclick = ()=>_closeAsk(null);
+  input.focus(); input.select();
+  return p;
+}
+
+// ── Drag to reorder a list (builders, session list, home layout) ───────
+// Markup: a container with data-drag-list="name" whose rows carry
+// data-idx="0..n" and contain gripHtml(). Press the grip and drag (finger
+// or mouse); rows swap as you pass their middle and the list scrolls when
+// you hold near the top or bottom edge. On release DRAG_LISTS[name] gets the
+// old indexes in their new order. The grip also takes the up and down
+// arrow keys, for keyboards and screen readers.
+const DRAG_LISTS = {};
+function gripHtml(label){
+  return `<button type="button" class="drag-grip" aria-label="Reorder ${esc(label)}: drag, or use the up and down arrow keys"><svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><path d="M1 1h16M1 6h16M1 11h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>`;
+}
+function _dragRows(list){ return [...list.children].filter(r=>r.dataset && r.dataset.idx!==undefined); }
+function _runDragList(name, order, focusPos){
+  const fn = DRAG_LISTS[name];
+  if(!fn) return;
+  const y = window.scrollY;
+  Promise.resolve(fn(order)).then(()=>{
+    window.scrollTo(0, y);
+    if(focusPos!=null){
+      const g = document.querySelector(`[data-drag-list="${name}"] > [data-idx="${focusPos}"] .drag-grip`);
+      if(g) g.focus();
+    }
+  });
+}
+document.addEventListener("keydown", e=>{
+  if(e.key!=="ArrowUp" && e.key!=="ArrowDown") return;
+  const g = e.target && e.target.closest && e.target.closest(".drag-grip");
+  if(!g) return;
+  const row = g.closest("[data-idx]"), list = row && row.parentElement;
+  if(!list || !list.dataset.dragList) return;
+  e.preventDefault();
+  const rows = _dragRows(list), i = rows.indexOf(row), j = i + (e.key==="ArrowUp" ? -1 : 1);
+  if(j<0 || j>=rows.length) return;
+  const order = rows.map(r=>+r.dataset.idx);
+  [order[i], order[j]] = [order[j], order[i]];
+  _runDragList(list.dataset.dragList, order, j);
+});
+let _listDrag = null;
+document.addEventListener("pointerdown", e=>{
+  if(e.button !== undefined && e.button !== 0) return;
+  const grip = e.target.closest(".drag-grip");
+  const row = grip && grip.closest("[data-idx]");
+  const list = row && row.parentElement;
+  if(!list || !list.dataset.dragList) return;
+  _listDrag = {row, list, grip, startY:e.clientY, lastY:e.clientY, scrollStart:window.scrollY, pointerId:e.pointerId, active:false, shift:0};
+});
+document.addEventListener("pointermove", e=>{
+  const d = _listDrag;
+  if(!d || e.pointerId !== d.pointerId) return;
+  d.lastY = e.clientY;
+  if(!d.active){
+    if(Math.abs(e.clientY - d.startY) < 8) return;
+    if(_dragRows(d.list).length < 2){ _listDrag = null; return; }
+    d.active = true;
+    try{ d.grip.setPointerCapture(e.pointerId); }catch(err){}
+    if(document.activeElement && document.activeElement.blur && document.activeElement !== d.grip) document.activeElement.blur();
+    d.row.classList.add("drag-dragging");
+    d.list.classList.add("drag-reordering");
+    _listDragAutoScroll();
+  }
+  e.preventDefault();
+  _listDragStep();
+}, {passive:false});
+function _listDragStep(){
+  const d = _listDrag;
+  if(!d || !d.active) return;
+  const dy = (d.lastY - d.startY) + (window.scrollY - d.scrollStart);
+  d.row.style.transform = `translateY(${dy - d.shift}px)`;
+  const rect = d.row.getBoundingClientRect();
+  const centre = rect.top + rect.height/2;
+  const isRow = el => el && el.dataset && el.dataset.idx!==undefined;
+  const prev = d.row.previousElementSibling, next = d.row.nextElementSibling;
+  const before = d.row.offsetTop;
+  if(isRow(next) && centre > next.getBoundingClientRect().top + next.offsetHeight/2) d.list.insertBefore(next, d.row);
+  else if(isRow(prev) && centre < prev.getBoundingClientRect().top + prev.offsetHeight/2) d.list.insertBefore(d.row, prev);
+  d.shift += d.row.offsetTop - before;
+  d.row.style.transform = `translateY(${dy - d.shift}px)`;
+}
+function _listDragAutoScroll(){
+  const d = _listDrag;
+  if(!d || !d.active) return;
+  const edge = 70, vh = window.innerHeight;
+  let v = 0;
+  if(d.lastY < edge) v = -Math.ceil((edge - d.lastY)/6);
+  else if(d.lastY > vh - edge) v = Math.ceil((d.lastY - (vh - edge))/6);
+  if(v){ const y = window.scrollY; window.scrollBy(0, v); if(window.scrollY !== y) _listDragStep(); }
+  requestAnimationFrame(_listDragAutoScroll);
+}
+function _endListDrag(e){
+  const d = _listDrag;
+  if(!d || (e && e.pointerId !== d.pointerId)) return;
+  _listDrag = null;
+  if(!d.active) return;
+  d.row.classList.remove("drag-dragging");
+  d.row.classList.add("drag-settling");
+  d.row.style.transform = "";
+  d.list.classList.remove("drag-reordering");
+  const swallow = ev=>{ ev.stopPropagation(); ev.preventDefault(); };
+  window.addEventListener("click", swallow, {capture:true, once:true});
+  setTimeout(()=>window.removeEventListener("click", swallow, {capture:true}), 100);
+  const order = _dragRows(d.list).map(r=>+r.dataset.idx);
+  setTimeout(()=>{
+    d.row.classList.remove("drag-settling");
+    if(order.some((oldIdx,newIdx)=>oldIdx!==newIdx)) _runDragList(d.list.dataset.dragList, order, null);
+  }, 150);
+}
+document.addEventListener("pointerup", _endListDrag);
+document.addEventListener("pointercancel", _endListDrag);
+
+DRAG_LISTS.homeLayout = async order=>{
+  const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
+  const layout = getHomeLayoutFor(current);
+  await saveHomeLayout(order.map(i=>layout[i]));
+  showAccountSettings(true);
+};
+DRAG_LISTS.gymSessions = async order=>{
+  const reordered = order.map(i=>PLAN[i]);
+  PLAN.splice(0, PLAN.length, ...reordered);
+  showSettings();
+  await saveLog();
+};
+DRAG_LISTS.sessionBuilder = order=>{
+  draftSession.ex = order.map(i=>draftSession.ex[i]);
+  renderSessionEditor();
+};
+DRAG_LISTS.hiitBuilder = order=>{
+  draftHiit.ex = order.map(i=>draftHiit.ex[i]);
+  renderHiitEditor();
+};
 
 function startActiveSession(){
   if(!sessionState) return;
@@ -3315,10 +3720,12 @@ document.addEventListener("pointercancel", _endExDrag);
 let _setDrag = null;
 function _setDragTarget(e){
   if(e.target.closest(".set-type-popup")) return null;
-  const handle = e.target.closest(".setn");
+  const handle = e.target.closest(".setn, .ss-set-n");
   if(!handle) return null;
-  const row = handle.closest(".setrow");
-  if(!row || !row.parentElement || !row.parentElement.classList.contains("sets")) return null;
+  const row = handle.closest(".setrow, .ss-set-pair");
+  if(!row || !row.parentElement) return null;
+  const list = row.parentElement;
+  if(!list.classList.contains("sets") && !list.classList.contains("ss-sets")) return null;
   return {handle, row};
 }
 document.addEventListener("pointerdown", e=>{
@@ -3343,6 +3750,7 @@ document.addEventListener("pointermove", e=>{
   }
   e.preventDefault();
   // Follow the pointer, and swap with a neighbour once we pass its middle.
+  d.row.style.transform = `translateY(${dy - d.shift}px)`;
   const rowRect = d.row.getBoundingClientRect();
   const centre = rowRect.top + rowRect.height/2;
   const prev = d.row.previousElementSibling, next = d.row.nextElementSibling;
@@ -3367,6 +3775,7 @@ function _endSetDrag(e){
   d.list.classList.remove("sets-reordering");
   renumber(d.list);
   checkDone(d.row.closest(".ex"));
+  if(d.list.classList.contains("ss-sets")) [...d.list.children].forEach((pair,idx)=>{ const n = pair.querySelector(".ss-set-n"); if(n){ n.textContent = "S"+(idx+1); n.setAttribute("aria-label", `Set ${idx+1}: press and drag to reorder`); } });
   // The click that follows a drag must not open the set-type menu.
   const swallow = ev=>{ ev.stopPropagation(); ev.preventDefault(); };
   window.addEventListener("click", swallow, {capture:true, once:true});
@@ -3593,7 +4002,7 @@ function showHistory(){
   window.scrollTo(0,0);
 }
 async function delEntry(i){
-  if(!confirm("Remove this session? This can't be undone.")) return;
+  if(!(await askConfirm({title:"Delete this workout?", message:"It's removed from your history. This can't be undone.", ok:"Delete Workout", destructive:true}))) return;
   LOG.splice(i,1);
   await saveLog();
   showHistory();
@@ -3836,7 +4245,7 @@ async function saveWeightEntry(){
 }
 
 async function deleteWeightEntry(idx){
-  if(!confirm("Remove this weight entry?")) return;
+  if(!(await askConfirm({title:"Delete this weight entry?", ok:"Delete Entry", destructive:true}))) return;
   WEIGHTS.splice(idx,1);
   await saveLog();
   showWeightTracker();
@@ -3949,7 +4358,7 @@ async function updateCardioEntry(idx){
 }
 
 async function deleteCardioEntry(idx){
-  if(!confirm("Remove this cardio entry?")) return;
+  if(!(await askConfirm({title:"Delete this cardio entry?", ok:"Delete Entry", destructive:true}))) return;
   CARDIO_LOG.splice(idx,1);
   await saveLog();
   showCardioTracker();
@@ -4169,8 +4578,8 @@ function compileWeekMetrics(log, weights, cardioLog, weekKey){
   const muscleVols = computeMuscleVolume(wLog);
   const topMuscle = Object.entries(muscleVols).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0];
   const topMuscleLabel = topMuscle ? (MUSCLE_GROUP_LABELS[topMuscle[0]]||topMuscle[0]) : null;
-  const wWeights = weights.filter(w=>{ const d=new Date(w.date); return d>=monDate && d<=sunEnd; });
-  const lastWeight = wWeights.length ? wWeights[wWeights.length-1].w : null;
+  const wWeights = weights.filter(w=>{ const d=new Date(w.date); return d>=monDate && d<=sunEnd; }).sort((a,b)=>a.date.localeCompare(b.date));
+  const lastWeight = wWeights.length ? wWeights[wWeights.length-1].weight : null;
   const wCardio = cardioLog.filter(c=>{ const d=new Date(c.date); return d>=monDate && d<=sunEnd; });
   const cardioDist = wCardio.reduce((s,c)=>s+(c.distance||0), 0);
   const cardioDur = wCardio.reduce((s,c)=>s+(c.duration||0), 0);
@@ -4251,7 +4660,7 @@ function showWeeklyCheckin(weekKey){
   const existing = CHECKINS.find(c=>c.weekKey===weekKey);
   const m = compileWeekMetrics(LOG, WEIGHTS, CARDIO_LOG, weekKey);
   const lastWeightSuggestion = WEIGHTS.length
-    ? [...WEIGHTS].sort((a,b)=>a.date.localeCompare(b.date)).slice(-1)[0].w
+    ? [...WEIGHTS].sort((a,b)=>a.date.localeCompare(b.date)).slice(-1)[0].weight
     : "";
 
   const pickerHtml = `<div class="editor-field" style="margin-bottom:16px">
@@ -4394,7 +4803,7 @@ async function submitWeeklyCheckin(weekKey){
   };
   if(existing>=0) CHECKINS[existing] = {...CHECKINS[existing], ...ci};
   else CHECKINS.push(ci);
-  if(weight) WEIGHTS.push({date: new Date().toISOString(), w: weight});
+  if(weight) WEIGHTS.push({date: new Date().toISOString(), weight});
   const ok = await saveLog();
   showToast(ok ? "Check-in submitted \u2713" : "Couldn't save \u2014 check your connection");
   if(ok) showCheckinHistory();
@@ -4436,21 +4845,13 @@ function viewCheckinEntry(weekKey){
 async function showClientCheckins(clientId){
   stopTimer();
   pendingFeedbackEmoji = ""; pendingFeedbackPhrase = "";
-  app.innerHTML = `${topbar({back:`showClientDetail('${clientId}')`, title:`Check-Ins`})}<div class="lb-loading">Loading&hellip;</div>`;
+  app.innerHTML = `${topbar({back:`showClientDetail('${clientId}')`, title:`Check-Ins`})}<span data-screen="checkins-${esc(clientId)}" hidden></span><div class="lb-loading">Loading&hellip;</div>`;
   window.scrollTo(0,0);
 
   const person = PEOPLE.find(p=>p.id===clientId)||{id:clientId,name:clientId};
-  let clientLog=[], clientWeights=[], clientCardio=[], clientCheckins=[];
-  try{
-    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
-    if(snap.exists()){
-      clientLog = snap.data().log||[];
-      clientWeights = snap.data().weights||[];
-      clientCardio = snap.data().cardioLog||[];
-      clientCheckins = snap.data().checkIns||[];
-    }
-  }catch(e){}
-
+  await loadTwoPass("checkins-"+clientId, [doc(db, "trackers", `${TRACKER_ID}-${clientId}`)], (snaps, meta)=>{
+  const d = (snaps[0] && snaps[0].exists()) ? snaps[0].data() : {};
+  const clientLog = d.log||[], clientWeights = normWeights(d.weights), clientCardio = d.cardioLog||[], clientCheckins = d.checkIns||[];
   const sorted = clientCheckins.filter(c=>c.submitted).sort((a,b)=>b.weekKey.localeCompare(a.weekKey));
   const rows = sorted.map(ci=>{
     const m = compileWeekMetrics(clientLog, clientWeights, clientCardio, ci.weekKey);
@@ -4472,18 +4873,21 @@ async function showClientCheckins(clientId){
 
   app.innerHTML = `
     ${topbar({back:`showClientDetail('${clientId}')`, title:`${esc(person.name)}'s Check-Ins`, sub:`Tap any week to leave feedback`})}
+    <span data-screen="checkins-${esc(clientId)}" hidden></span>
+    ${freshNote(meta, "check-ins")}
     ${rows || `<div class="chart-empty">${esc(person.name)} hasn't submitted any check-ins yet.</div>`}
   `;
   window.scrollTo(0,0);
+  });
 }
 
 async function viewClientCheckinEntry(clientId, weekKey){
   let clientLog=[], clientWeights=[], clientCardio=[], clientCheckins=[];
   try{
-    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
+    const snap = await getDocFast(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
     if(snap.exists()){
       clientLog = snap.data().log||[];
-      clientWeights = snap.data().weights||[];
+      clientWeights = normWeights(snap.data().weights);
       clientCardio = snap.data().cardioLog||[];
       clientCheckins = snap.data().checkIns||[];
     }
@@ -4601,7 +5005,7 @@ async function saveMeasurementEntry(){
 }
 
 async function deleteMeasurementEntry(idx){
-  if(!confirm("Remove this measurement entry?")) return;
+  if(!(await askConfirm({title:"Delete this measurement entry?", ok:"Delete Entry", destructive:true}))) return;
   MEASUREMENTS.splice(idx,1);
   await saveLog();
   renderMeasurementsScreen();
@@ -4650,11 +5054,8 @@ function showSettings(){
   stopTimer();
   builderClientId = null; // building your own sessions
   const rows = PLAN.map((p,i)=>`
-    <div class="sess-row">
-      <div class="dx-reorder">
-        <button onclick="moveSessionInPlan('${p.id}',-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
-        <button onclick="moveSessionInPlan('${p.id}',1)" ${i===PLAN.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
-      </div>
+    <div class="sess-row" data-idx="${i}">
+      ${gripHtml(p.name)}
       <div class="sr-info"><b>${esc(p.name)}</b><span>${esc(p.focus)} &middot; ${p.ex.length} exercise${p.ex.length!==1?"s":""}</span></div>
       <div class="sr-actions">
         <button class="icon-btn" onclick="openSessionEditor('${p.id}')" aria-label="Edit">&#9998;</button>
@@ -4663,21 +5064,12 @@ function showSettings(){
     </div>`).join("");
   app.innerHTML = `
     ${topbar({back:`showBuildWorkoutChoice()`, title:`Gym Sessions`, sub:esc(CURRENT_PROFILE.name)})}
-    ${rows || '<div class="chart-empty">No sessions yet.</div>'}
+    ${rows ? `${PLAN.length>1?'<div class="last-updated" style="text-align:left">Press and drag the &#8801; handle to reorder.</div>':""}<div data-drag-list="gymSessions">${rows}</div>` : '<div class="chart-empty">No sessions yet.</div>'}
     <button class="addsessbtn" onclick="openSessionEditor(null)">+ Create New Session</button>
   `;
   window.scrollTo(0,0);
 }
 
-async function moveSessionInPlan(id, dir){
-  const idx = PLAN.findIndex(p=>p.id===id);
-  if(idx<0) return;
-  const newIdx = idx + dir;
-  if(newIdx<0 || newIdx>=PLAN.length) return;
-  [PLAN[idx], PLAN[newIdx]] = [PLAN[newIdx], PLAN[idx]];
-  await saveLog();
-  showSettings();
-}
 
 function exercisePickerOptions(){
   const grouped = EXERCISE_LIBRARY.map(cat=>
@@ -4710,16 +5102,12 @@ function openSessionEditor(id, clientId){
 }
 
 function renderSessionEditor(){
-  const last = draftSession.ex.length-1;
-  const reorder = i=>`<div class="dx-reorder">
-          <button onclick="moveDraftExercise(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
-          <button onclick="moveDraftExercise(${i},1)" ${i===last?"disabled":""} aria-label="Move down">&#9660;</button>
-        </div>`;
+  const reorder = (i, label)=>gripHtml(label);
   const exRows = draftSession.ex.map((e,i)=>{
     if(e.superset){
-      return `<div class="ss-draft">
+      return `<div class="ss-draft" data-idx="${i}">
         <div class="ss-draft-header">
-          ${reorder(i)}
+          ${reorder(i, `superset ${e.exA.n} and ${e.exB.n}`)}
           <span class="ss-badge">SS</span>
           <span style="flex:1;font-size:11px;color:var(--mute);font-weight:700">Superset</span>
           <button class="dx-remove" onclick="removeDraftExercise(${i})" aria-label="Remove superset">&times;</button>
@@ -4741,9 +5129,9 @@ function renderSessionEditor(){
       </div>`;
     }
     return `
-    <div class="draft-ex">
+    <div class="draft-ex" data-idx="${i}">
       <div class="dx-main-row">
-        ${reorder(i)}
+        ${reorder(i, e.n)}
         <div class="dx-name">${esc(e.n)}</div>
         <input class="dx-sets" type="text" inputmode="numeric" value="${esc(e.s)}" oninput="setDraftExSets(${i},this.value)">
         <input class="dx-reps" type="text" value="${esc(e.r)}" oninput="setDraftExReps(${i},this.value)">
@@ -4770,7 +5158,7 @@ function renderSessionEditor(){
       <input type="text" value="${esc(draftSession.focus)}" placeholder="e.g. Chest &amp; triceps" oninput="setDraftFocus(this.value)">
     </div>
     <div class="section-label">Exercises</div>
-    ${exRows || '<div class="chart-empty">No exercises added yet.</div>'}
+    ${exRows ? `<div data-drag-list="sessionBuilder">${exRows}</div>` : '<div class="chart-empty">No exercises added yet.</div>'}
     <div class="add-ex-row">
       <select id="exercisePicker" onchange="toggleCustomExerciseInput('exercisePicker','customExerciseName')">${exercisePickerOptions()}</select>
       <button onclick="addDraftExercise()">Add</button>
@@ -4833,13 +5221,6 @@ function removeDraftExercise(idx){
   draftSession.ex.splice(idx,1);
   renderSessionEditor();
 }
-function moveDraftExercise(idx, dir){
-  const newIdx = idx + dir;
-  if(newIdx<0 || newIdx>=draftSession.ex.length) return;
-  const arr = draftSession.ex;
-  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
-  renderSessionEditor();
-}
 
 async function saveDraftSession(){
   const name = (draftSession.name||"").trim();
@@ -4863,9 +5244,9 @@ async function saveDraftSession(){
 async function deleteSessionFromPlan(id, clientId){
   builderClientId = clientId || null;
   const msg = builderClientId
-    ? "Delete this session? The client's past history logged under it stays in their records."
-    : "Delete this session? Past history logged under it stays in your records, but it won't appear as an active session anymore.";
-  if(!confirm(msg)) return;
+    ? "Workouts your client has already logged with it stay in their history."
+    : "Workouts you've already logged with it stay in your history.";
+  if(!(await askConfirm({title:"Delete this session?", message:msg, ok:"Delete Session", destructive:true}))) return;
   setBuilderPlan(builderPlan().filter(p=>p.id!==id));
   await saveBuilderPlan();
   showBuilderList();
@@ -4953,11 +5334,8 @@ function renderHiitEditor(){
   }
 
   const exRows = draftHiit.ex.map((e,i)=>`
-    <div class="hiit-ex-row">
-      <div class="dx-reorder">
-        <button onclick="moveHiitExercise(${i},-1)" ${i===0?"disabled":""} aria-label="Move up">&#9650;</button>
-        <button onclick="moveHiitExercise(${i},1)" ${i===draftHiit.ex.length-1?"disabled":""} aria-label="Move down">&#9660;</button>
-      </div>
+    <div class="hiit-ex-row" data-idx="${i}">
+      ${gripHtml(e.n)}
       <div class="hx-name">${esc(e.n)}</div>
       <button class="dx-remove" onclick="removeHiitExercise(${i})" aria-label="Remove">&times;</button>
     </div>`).join("");
@@ -4984,7 +5362,7 @@ function renderHiitEditor(){
       ${fieldsHtml}
     </div>
     <div class="section-label">Exercises</div>
-    ${exRows || '<div class="chart-empty">No exercises added yet.</div>'}
+    ${exRows ? `<div data-drag-list="hiitBuilder">${exRows}</div>` : '<div class="chart-empty">No exercises added yet.</div>'}
     <div class="add-ex-row">
       <select id="hiitExercisePicker">${hiitPickerOptions()}</select>
       <button onclick="addHiitExercise()">Add</button>
@@ -5018,13 +5396,6 @@ function removeHiitExercise(idx){
   draftHiit.ex.splice(idx,1);
   renderHiitEditor();
 }
-function moveHiitExercise(idx, dir){
-  const newIdx = idx + dir;
-  if(newIdx<0 || newIdx>=draftHiit.ex.length) return;
-  const arr = draftHiit.ex;
-  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
-  renderHiitEditor();
-}
 
 async function saveDraftHiit(){
   const name = (draftHiit.name||"").trim();
@@ -5052,7 +5423,7 @@ async function saveDraftHiit(){
 }
 
 async function deleteHiitClass(id){
-  if(!confirm("Delete this HIIT class? Past completions stay in your activity history.")) return;
+  if(!(await askConfirm({title:"Delete this HIIT class?", message:"Classes you've already done stay in your activity history.", ok:"Delete Class", destructive:true}))) return;
   HIIT_CLASSES = HIIT_CLASSES.filter(c=>c.id!==id);
   await saveLog();
   showHiitSettings();
@@ -5260,8 +5631,9 @@ function skipHiitPhase(){
   }
   renderHiitRunner();
 }
-function finishHiitEarly(){
-  if(!confirm("Finish this class now? It'll be logged with the time you've done so far.")) return;
+async function finishHiitEarly(){
+  if(!(await askConfirm({title:"Finish this class now?", message:"It's logged with the time you've done so far.", ok:"Finish Class"}))) return;
+  if(!hiitState || hiitState.done) return; // ended on its own while the sheet was open
   finishHiit();
   renderHiitRunner();
 }
@@ -5367,7 +5739,7 @@ function startOfMonthISO(){
 
 async function showLeaderboard(){
   stopTimer();
-  app.innerHTML = `${topbar({back:`home()`, title:`Leaderboard`})}
+  app.innerHTML = `${topbar({back:`home()`, title:`Leaderboard`})}<span data-screen="leaderboard" hidden></span>
     <div class="lb-loading">Loading the leaderboard&hellip;</div>`;
   window.scrollTo(0,0);
 
@@ -5379,52 +5751,41 @@ async function showLeaderboard(){
     p.role !== "trainer" &&
     p.locations && p.locations.some(loc=>myLocations.includes(loc))
   );
+  const others = candidates.filter(p=>p.id!==CURRENT_PROFILE.id);
   const locationLabel = myLocations.length ? esc(myLocations.join(" & ")) : "your gym";
 
-  const results = await Promise.all(candidates.map(async p=>{
-    // Your own numbers come straight from your log; everyone else's from
-    // their public summary (session dates only).
-    if(p.id===CURRENT_PROFILE.id) return {profile:p, log:LOG, ok:true};
-    try{
-      const snap = await getDoc(leaderboardRef(p.id));
-      const log = snap.exists() ? (snap.data().dates || []).map(d=>({date:d})) : [];
-      return {profile:p, log, ok:true};
-    }catch(e){
-      return {profile:p, log:[], ok:false};
-    }
-  }));
-
-  const weekStart = startOfWeekISO(), monthStart = startOfMonthISO(), now = new Date().toISOString();
-  const stats = results.map(r=>({
-    profile:r.profile, ok:r.ok,
-    week: sessionsInRange(r.log, weekStart, now),
-    month: sessionsInRange(r.log, monthStart, now),
-    streak: weekStreakFor(r.log),
-    total: r.log.length
-  }));
-  stats.sort((a,b)=> b.week-a.week || b.streak-a.streak || b.total-a.total);
-
-  const offlineNote = stats.some(s=>!s.ok)
-    ? `<div class="sync-banner">Couldn't load everyone's numbers \u2014 the list below may be incomplete.</div>`
-    : "";
-
-  const rows = stats.map((s,i)=>`
-    <div class="lbrank-row ${i===0?"top":""}">
-      <div class="lbr-rank">${i+1}</div>
-      ${avatarHtml(s.profile, "lbr-avatar")}
-      <div class="lbr-info">
-        <div class="lbr-name">${esc(s.profile.name)}</div>
-        <div class="lbr-stats">${s.week} this week &middot; ${s.streak} week streak &middot; ${s.total} all-time</div>
-      </div>
-    </div>`).join("");
-
-  app.innerHTML = `
-    ${topbar({back:`home()`, title:`Leaderboard`, sub:locationLabel})}
-    ${offlineNote}
-    ${rows || `<div class="chart-empty">No one else at ${locationLabel} yet.</div>`}
-    <div class="last-updated">Ranked by sessions this week, then streak, then all-time total &mdash; not weight lifted.</div>
-  `;
-  window.scrollTo(0,0);
+  // Your own numbers come straight from your log; everyone else's from their
+  // public summary (session dates only), phone copy first.
+  await loadTwoPass("leaderboard", others.map(p=>leaderboardRef(p.id)), (snaps, meta)=>{
+    const weekStart = startOfWeekISO(), monthStart = startOfMonthISO(), now = new Date().toISOString();
+    const stats = candidates.map(p=>{
+      let log = LOG;
+      if(p.id!==CURRENT_PROFILE.id){
+        const snap = snaps[others.indexOf(p)];
+        log = (snap && snap.exists()) ? (snap.data().dates || []).map(d=>({date:d})) : [];
+      }
+      return {profile:p, week:sessionsInRange(log, weekStart, now), month:sessionsInRange(log, monthStart, now),
+              streak:weekStreakFor(log), total:log.length};
+    });
+    stats.sort((a,b)=> b.week-a.week || b.streak-a.streak || b.total-a.total);
+    const rows = stats.map((s,i)=>`
+      <div class="lbrank-row ${i===0?"top":""}">
+        <div class="lbr-rank">${i+1}</div>
+        ${avatarHtml(s.profile, "lbr-avatar")}
+        <div class="lbr-info">
+          <div class="lbr-name">${esc(s.profile.name)}</div>
+          <div class="lbr-stats">${s.week} this week &middot; streak ${s.streak} &middot; ${s.total} total</div>
+        </div>
+      </div>`).join("");
+    app.innerHTML = `
+      ${topbar({back:`home()`, title:`Leaderboard`, sub:locationLabel})}
+      <span data-screen="leaderboard" hidden></span>
+      ${freshNote(meta, "numbers")}
+      ${rows || `<div class="chart-empty">No one else at ${locationLabel} yet.</div>`}
+      <div class="last-updated">Ranked by sessions this week, then weekly streak, then total sessions. Not weight lifted.</div>
+    `;
+    window.scrollTo(0,0);
+  });
 }
 
 // ── Gym check-in QR ──────────────────────────────────────
@@ -5445,7 +5806,7 @@ function showCheckIn(){
 // ── Trainer dashboard & client linking ────────────────────
 async function renderTrainerHome(){
   detailBackTarget = "home";
-  app.innerHTML = `<div class="loading">Loading your clients&hellip;</div>`;
+  app.innerHTML = `<span data-screen="trainerHome" hidden></span><div class="loading">Loading your clients&hellip;</div>`;
   window.scrollTo(0,0);
 
   await loadPeople();
@@ -5453,40 +5814,35 @@ async function renderTrainerHome(){
   const clientIds = CURRENT_PROFILE.clientIds || [];
   const clientPeople = clientIds.map(id=>PEOPLE.find(p=>p.id===id)).filter(Boolean);
 
-  const results = await Promise.all(clientPeople.map(async p=>{
-    try{
-      const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${p.id}`));
-      const log = snap.exists() ? (snap.data().log || []) : [];
-      return {profile:p, log, ok:true};
-    }catch(e){
-      return {profile:p, log:[], ok:false};
-    }
-  }));
-
-  const weekStart = startOfWeekISO(), now = new Date().toISOString();
-  const rows = results.map(r=>{
-    const week = sessionsInRange(r.log, weekStart, now);
-    const streak = weekStreakFor(r.log);
-    const lastSession = [...r.log].sort((a,b)=>b.date.localeCompare(a.date))[0];
-    const lastLabel = lastSession ? fmtDate(lastSession.date) : "No sessions yet";
-    return `<div class="lbrank-row" style="cursor:pointer" onclick="showClientDetail('${r.profile.id}')">
-      ${avatarHtml(r.profile, "lbr-avatar")}
-      <div class="lbr-info">
-        <div class="lbr-name">${esc(r.profile.name)}</div>
-        <div class="lbr-stats">${week} this week &middot; ${streak} week streak &middot; last: ${lastLabel}</div>
-      </div>
-      <div style="color:var(--mute);font-size:18px">&rsaquo;</div>
-    </div>`;
-  }).join("");
-
-  app.innerHTML = `
-    ${largeHeader("Your clients")}
-    <span data-tab="today" hidden></span>
-    <button class="addsessbtn" onclick="showManageClients()">&#9881; Manage Linked Clients</button>
-    <div class="section-label" style="margin-top:16px">Your clients</div>
-    ${rows || '<div class="chart-empty">No clients linked yet \u2014 ask an admin to link some to you.</div>'}
-  `;
-  window.scrollTo(0,0);
+  const trackerRef = id=>doc(db, "trackers", `${TRACKER_ID}-${id}`);
+  await loadTwoPass("trainerHome", clientPeople.map(p=>trackerRef(p.id)), (snaps, meta)=>{
+    const weekStart = startOfWeekISO(), now = new Date().toISOString();
+    const rows = clientPeople.map((p,idx)=>{
+      const snap = snaps[idx];
+      const log = (snap && snap.exists()) ? (snap.data().log || []) : [];
+      const week = sessionsInRange(log, weekStart, now);
+      const streak = weekStreakFor(log);
+      const lastSession = [...log].sort((x,y)=>y.date.localeCompare(x.date))[0];
+      const lastLabel = lastSession ? fmtDate(lastSession.date) : (snap ? "No sessions yet" : "Not loaded yet");
+      return `<div class="lbrank-row" style="cursor:pointer" onclick="showClientDetail(${jsArg(p.id)})">
+        ${avatarHtml(p, "lbr-avatar")}
+        <div class="lbr-info">
+          <div class="lbr-name">${esc(p.name)}</div>
+          <div class="lbr-stats">${week} this week &middot; streak ${streak} &middot; ${lastSession ? "last " : ""}${lastLabel}</div>
+        </div>
+        <div style="color:var(--mute);font-size:18px">&rsaquo;</div>
+      </div>`;
+    }).join("");
+    app.innerHTML = `
+      ${largeHeader("Your clients")}
+      <span data-tab="today" hidden></span><span data-screen="trainerHome" hidden></span>
+      ${freshNote(meta, "client numbers")}
+      <button class="addsessbtn" onclick="showManageClients()">&#9881; Manage Linked Clients</button>
+      <div class="section-label" style="margin-top:16px">Your clients</div>
+      ${rows || '<div class="chart-empty">No clients linked yet. Ask an admin to link some to you.</div>'}
+    `;
+    window.scrollTo(0,0);
+  });
 }
 
 function showManageClients(){
@@ -5529,16 +5885,14 @@ let detailBackTarget = "home";
 
 async function showClientDetail(clientId){
   stopTimer();
-  app.innerHTML = `${topbar({back:`${detailBackTarget}()`, title:`Client`})}<div class="lb-loading">Loading&hellip;</div>`;
+  app.innerHTML = `${topbar({back:`${detailBackTarget}()`, title:`Client`})}<span data-screen="client-${esc(clientId)}" hidden></span><div class="lb-loading">Loading&hellip;</div>`;
   window.scrollTo(0,0);
 
   const person = PEOPLE.find(p=>p.id===clientId) || {id:clientId, name:clientId};
-  let log = [], weights = [];
-  try{
-    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
-    if(snap.exists()){ log = snap.data().log || []; weights = snap.data().weights || []; }
-  }catch(e){}
-
+  await loadTwoPass("client-"+clientId, [doc(db, "trackers", `${TRACKER_ID}-${clientId}`)], (snaps, meta)=>{
+  const snap = snaps[0];
+  const log = (snap && snap.exists()) ? (snap.data().log || []) : [];
+  const weights = (snap && snap.exists()) ? normWeights(snap.data().weights) : [];
   const weekStart = startOfWeekISO(), monthStart = startOfMonthISO(), now = new Date().toISOString();
   const week = sessionsInRange(log, weekStart, now);
   const month = sessionsInRange(log, monthStart, now);
@@ -5559,6 +5913,8 @@ async function showClientDetail(clientId){
 
   app.innerHTML = `
     ${topbar({back:`${detailBackTarget}()`, title:esc(person.name), sub:`Client overview`})}
+    <span data-screen="client-${esc(clientId)}" hidden></span>
+    ${freshNote(meta, "numbers")}
     <div class="stat-row">
       <div class="stat-card"><div class="label">This week</div><div class="value">${week}</div></div>
       <div class="stat-card"><div class="label">This month</div><div class="value">${month}</div></div>
@@ -5579,6 +5935,7 @@ async function showClientDetail(clientId){
     ${recent || '<div class="chart-empty">No sessions logged yet.</div>'}
   `;
   window.scrollTo(0,0);
+  });
 }
 
 // ── Admin dashboard (view everyone, manage roles & trainer links) ──
@@ -5648,7 +6005,7 @@ function showManageLocations(){
 
 async function renameLocation(idx){
   const oldName = GYM_LOCATIONS[idx];
-  const input = prompt(`Rename "${oldName}" to:`, oldName);
+  const input = await askText({title:"Rename Gym", label:"Name", value:oldName});
   if(input===null) return; // cancelled
   const newName = input.trim();
   if(!newName){ showToast("Location name can't be empty", false); return; }
@@ -5690,9 +6047,9 @@ async function deleteLocation(idx){
   const loc = GYM_LOCATIONS[idx];
   const inUseCount = PEOPLE.filter(p=>p.locations && p.locations.includes(loc)).length;
   const msg = inUseCount
-    ? `${inUseCount} ${inUseCount===1?"person is":"people are"} currently set to "${loc}". Remove it anyway? They'll keep showing it on their profile until you edit them individually, but it won't be selectable for anyone new.`
-    : `Remove "${loc}"?`;
-  if(!confirm(msg)) return;
+    ? `${inUseCount} ${inUseCount===1?"person is":"people are"} set to this gym. They keep it on their profile until you edit them, but nobody new can choose it.`
+    : "";
+  if(!(await askConfirm({title:`Remove ${loc}?`, message:msg, ok:"Remove Gym", destructive:true}))) return;
   GYM_LOCATIONS.splice(idx,1);
   await saveLocations();
   showToast("Location removed");
@@ -5793,7 +6150,7 @@ async function restoreRemovedPeople(){
   try{ const snap = await getDoc(doc(db,"meta","people")); backup = (snap.exists() && snap.data().list) || []; }catch(e){}
   const missing = backup.filter(b=>b && b.id && !PEOPLE.some(p=>p.id===b.id));
   if(!missing.length){ showToast("Nobody to restore \u2014 everyone in the backup is already here"); return; }
-  if(!confirm(`Restore ${missing.map(m=>m.name).join(", ")}?\n\nTheir profile comes back as it was in the backup, with their sign-in reset so they can sign in again with Google (matching email) or their username.`)) return;
+  if(!(await askConfirm({title:`Restore ${missing.map(m=>m.name).join(", ")}?`, message:"Their profile comes back as it was in the backup, with their sign-in reset so they can sign in again with Google (matching email) or their username.", ok:"Restore"}))) return;
   missing.forEach(m=>{ const r = Object.assign({}, m); r.uid = ""; delete r.uids; PEOPLE.push(r); });
   const ok = await savePeople();
   showToast(ok ? `Restored ${missing.length} \u2713` : "Couldn't restore \u2014 check your connection");
@@ -5805,7 +6162,7 @@ async function restoreRemovedPeople(){
 async function resetPersonSignIn(){
   const p = PEOPLE.find(x=>x.id===editPersonId);
   if(!p) return;
-  if(!confirm(`Reset sign-in for ${p.name}?\n\nTheir profile and workout history stay as they are. Their next sign-in with Google (using ${p.email || "the email on their profile"}) will link to this profile.`)) return;
+  if(!(await askConfirm({title:`Reset sign-in for ${p.name}?`, message:`Their profile and workout history stay as they are. Their next sign-in with Google (using ${p.email || "the email on their profile"}) links to this profile.`, ok:"Reset Sign-in"}))) return;
   const uids = [p.uid, ...(p.uids||[])].filter(Boolean);
   for(const u of uids){ try{ await deleteDoc(doc(db,"users",u)); }catch(e){} }
   p.uid = ""; delete p.uids;
@@ -5827,7 +6184,7 @@ async function approveTrainerRequest(id){
 async function declineTrainerRequest(id){
   const p = PEOPLE.find(x=>x.id===id);
   if(!p) return;
-  if(!confirm(`Decline ${p.name}'s trainer request? They'll stay a client.`)) return;
+  if(!(await askConfirm({title:`Decline ${p.name}'s trainer request?`, message:"They stay a client.", ok:"Decline", destructive:true}))) return;
   delete p.requestedRole;
   if(p.locations && p.locations.length>1) p.locations = p.locations.slice(0,1);
   const ok = await savePeople();
@@ -5859,7 +6216,7 @@ async function toggleAdminClientLink(clientId, checked){
 async function deletePersonFromAdmin(){
   const p = PEOPLE.find(x=>x.id===editPersonId);
   if(!p) return;
-  if(!confirm(`Remove ${p.name} from the people directory?\n\nThey will no longer be able to open their workouts until restored (Admin \u2192 Restore removed people). If they just can't sign in, use Reset sign-in instead.\n\nTheir workout history is not deleted.`)) return;
+  if(!(await askConfirm({title:`Remove ${p.name}?`, message:"They can't open their workouts until restored (Admin \u2192 Restore removed people). Their workout history isn't deleted.\n\nIf they just can't sign in, use Reset sign-in instead.", ok:`Remove ${p.name}`, destructive:true}))) return;
   PEOPLE = PEOPLE.filter(x=>x.id!==p.id);
   await savePeople();
   await removeFromLoginLookup(p.email);
@@ -5882,9 +6239,7 @@ function showAccountSettings(preserveScroll){
   const layoutRows = layout.map((m,i)=>{
     const mod = HOME_MODULES.find(h=>h.id===m.id);
     return `<div class="sess-row layout-row" data-idx="${i}">
-      <button class="layout-grip" aria-label="Move ${esc(mod?mod.label:m.id)}: drag, or use the up and down arrow keys" onkeydown="layoutGripKey(event, ${i})">
-        <svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><path d="M1 1h16M1 6h16M1 11h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </button>
+      ${gripHtml(mod?mod.label:m.id)}
       <div class="sr-info"><b>${mod?mod.label:m.id}</b></div>
       <input type="checkbox" ${m.hidden?"":"checked"} onchange="toggleHomeModuleVisibility(${i}, this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
     </div>`;
@@ -5928,15 +6283,17 @@ function showAccountSettings(preserveScroll){
 
     <div class="section-label" style="margin-top:24px">Home screen layout</div>
     <div class="last-updated" style="text-align:left">Press and drag the &#8801; handle to reorder. Untick anything you don't want to see, including Sessions or HIIT Classes if you only use one. Changes save instantly.</div>
-    <div class="layout-list" id="homeLayoutList">${layoutRows}</div>
+    <div class="layout-list" id="homeLayoutList" data-drag-list="homeLayout">${layoutRows}</div>
     <button class="restore-default-btn" onclick="restoreDefaultHomeLayout()">Restore Default View</button>
 
     <div class="section-label" style="margin-top:24px">Weekly Check-In</div>
     <div class="sess-row">
-      <div class="sr-info"><b>Enable weekly check-in</b><span>Adds a Check-In tile to your home screen. It pulses orange when you have an unsubmitted week — you can complete past weeks any time, not just on Sunday.</span></div>
+      <div class="sr-info"><b>Enable weekly check-in</b><span>Adds a Check-In tile to your home screen. It pulses orange when a week is waiting. You can complete past weeks any time, not just on Sunday.</span></div>
       <input type="checkbox" ${current.weeklyCheckIn?"checked":""} onchange="toggleWeeklyCheckinOptIn(this.checked)" style="width:22px;height:22px;accent-color:var(--accent2)">
     </div>
     ${current.weeklyCheckIn ? `<button class="restore-default-btn" style="margin-top:8px" onclick="showCheckinHistory()">View Check-In History</button>` : ""}
+    <div class="section-label" style="margin-top:24px">Your data</div>
+    ${iosRow({icon:"export", tint:"blue", label:"Export my data", onclick:"showExportData()"})}
     <button class="ios-danger-row" onclick="logOut()">Log out</button>
   `;
   if(!preserveScroll) window.scrollTo(0,0);
@@ -5947,81 +6304,6 @@ async function saveHomeLayout(layout){
   if(p){ p.homeLayout = layout; CURRENT_PROFILE.homeLayout = layout; }
   await savePeople();
 }
-async function moveHomeModule(idx, dir){
-  const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
-  const layout = getHomeLayoutFor(current);
-  const newIdx = idx + dir;
-  if(newIdx<0 || newIdx>=layout.length) return;
-  [layout[idx], layout[newIdx]] = [layout[newIdx], layout[idx]];
-  await saveHomeLayout(layout);
-  showAccountSettings(true);
-}
-function layoutGripKey(e, idx){
-  if(e.key==="ArrowUp" || e.key==="ArrowDown"){
-    e.preventDefault();
-    moveHomeModule(idx, e.key==="ArrowUp" ? -1 : 1).then(()=>{
-      const g = document.querySelector(`.layout-row[data-idx="${idx + (e.key==="ArrowUp"?-1:1)}"] .layout-grip`);
-      if(g) g.focus();
-    });
-  }
-}
-
-// ── Reorder home screen sections by dragging ──────────────
-// Press the grip (three lines) on a row and drag, with a finger or a mouse. Same feel as reordering sets: dragging starts once the pointer has
-// moved a few pixels, rows swap as you pass their middle, and the new order
-// saves when you let go.
-let _layoutDrag = null;
-document.addEventListener("pointerdown", e=>{
-  if(e.button !== undefined && e.button !== 0) return;
-  const grip = e.target.closest(".layout-grip");
-  const row = grip && grip.closest(".layout-row");
-  if(!row || !row.parentElement || row.parentElement.id !== "homeLayoutList") return;
-  _layoutDrag = {row, list:row.parentElement, startY:e.clientY, pointerId:e.pointerId, active:false, shift:0};
-});
-document.addEventListener("pointermove", e=>{
-  const d = _layoutDrag;
-  if(!d || e.pointerId !== d.pointerId) return;
-  const dy = e.clientY - d.startY;
-  if(!d.active){
-    if(Math.abs(dy) < 8) return;
-    d.active = true;
-    try{ d.row.setPointerCapture(e.pointerId); }catch(err){}
-    d.row.classList.add("layout-dragging");
-    d.list.classList.add("layout-reordering");
-  }
-  e.preventDefault();
-  d.row.style.transform = `translateY(${dy - d.shift}px)`;
-  const rect = d.row.getBoundingClientRect();
-  const centre = rect.top + rect.height/2;
-  const prev = d.row.previousElementSibling, next = d.row.nextElementSibling;
-  const before = d.row.offsetTop;
-  if(next && centre > next.getBoundingClientRect().top + next.offsetHeight/2) d.list.insertBefore(next, d.row);
-  else if(prev && centre < prev.getBoundingClientRect().top + prev.offsetHeight/2) d.list.insertBefore(d.row, prev);
-  d.shift += d.row.offsetTop - before;
-  d.row.style.transform = `translateY(${dy - d.shift}px)`;
-}, {passive:false});
-async function _endLayoutDrag(e){
-  const d = _layoutDrag;
-  if(!d || (e && e.pointerId !== d.pointerId)) return;
-  _layoutDrag = null;
-  if(!d.active) return;
-  d.row.classList.remove("layout-dragging");
-  d.row.classList.add("layout-settling");
-  d.row.style.transform = "";
-  d.list.classList.remove("layout-reordering");
-  const swallow = ev=>{ ev.stopPropagation(); ev.preventDefault(); };
-  window.addEventListener("click", swallow, {capture:true, once:true});
-  setTimeout(()=>window.removeEventListener("click", swallow, {capture:true}), 100);
-  const order = [...d.list.children].map(r=>parseInt(r.dataset.idx,10));
-  if(!order.some((oldIdx,newIdx)=>oldIdx!==newIdx)){ setTimeout(()=>d.row.classList.remove("layout-settling"), 160); return; }
-  const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
-  const layout = getHomeLayoutFor(current);
-  await saveHomeLayout(order.map(i=>layout[i]));
-  setTimeout(()=>showAccountSettings(true), 160);
-}
-document.addEventListener("pointerup", _endLayoutDrag);
-document.addEventListener("pointercancel", _endLayoutDrag);
-
 async function toggleHomeModuleVisibility(idx, checked){
   const current = PEOPLE.find(p=>p.id===CURRENT_PROFILE.id) || CURRENT_PROFILE;
   const layout = getHomeLayoutFor(current);
@@ -6031,7 +6313,7 @@ async function toggleHomeModuleVisibility(idx, checked){
 }
 
 async function restoreDefaultHomeLayout(){
-  if(!confirm("Reset your home screen back to the default order, with everything visible? This only affects your own view, not anyone else's.")) return;
+  if(!(await askConfirm({title:"Reset your home screen?", message:"Everything goes back to the default order and is shown again. This only changes your own view.", ok:"Reset"}))) return;
   const defaultLayout = HOME_MODULES.map(m=>({id:m.id, hidden:false}));
   await saveHomeLayout(defaultLayout);
   showToast("Home screen reset to default");
@@ -6206,7 +6488,7 @@ async function handlePhotoFileSelected(event){
 }
 
 async function removeProfilePhoto(){
-  if(!confirm("Remove your profile photo?")) return;
+  if(!(await askConfirm({title:"Remove your profile photo?", ok:"Remove Photo", destructive:true}))) return;
   const p = PEOPLE.find(x=>x.id===CURRENT_PROFILE.id);
   if(p){ delete p.photo; delete CURRENT_PROFILE.photo; }
   const ok = await savePeople();
@@ -6223,7 +6505,7 @@ async function manageClientSessions(clientId){
   app.innerHTML = `<div class="loading">Loading sessions&hellip;</div>`;
   window.scrollTo(0,0);
   try{
-    const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
+    const snap = await getDocFast(doc(db, "trackers", `${TRACKER_ID}-${clientId}`));
     trainerClientPlan = (snap.exists() && snap.data().plan) ? snap.data().plan : [];
   }catch(e){
     trainerClientPlan = [];
@@ -6641,7 +6923,7 @@ async function renderDashboard(){
     log = LOG;
   } else {
     try{
-      const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${dashboardTargetId}`));
+      const snap = await getDocFast(doc(db, "trackers", `${TRACKER_ID}-${dashboardTargetId}`));
       log = snap.exists() ? (snap.data().log || []) : [];
     }catch(e){ log = []; }
   }
@@ -6768,7 +7050,7 @@ async function openExercisePicker(personId){
     exerciseMetricsLog = LOG;
   } else {
     try{
-      const snap = await getDoc(doc(db, "trackers", `${TRACKER_ID}-${exerciseMetricsTargetId}`));
+      const snap = await getDocFast(doc(db, "trackers", `${TRACKER_ID}-${exerciseMetricsTargetId}`));
       exerciseMetricsLog = snap.exists() ? (snap.data().log || []) : [];
     }catch(e){ exerciseMetricsLog = []; }
   }
@@ -6898,6 +7180,8 @@ window.startBlankSession = startBlankSession;
 window.openSession = openSession;
 window.startActiveSession = startActiveSession;
 window.openSessionDetails = openSessionDetails;
+window.showExportData = showExportData;
+window.exportData = exportData;
 window.closeSessionDetails = closeSessionDetails;
 window.saveSessionDetails = saveSessionDetails;
 window.sessionDetailsInput = sessionDetailsInput;
@@ -6960,8 +7244,6 @@ window.changePassword = changePassword;
 window.triggerPhotoUpload = triggerPhotoUpload;
 window.handlePhotoFileSelected = handlePhotoFileSelected;
 window.removeProfilePhoto = removeProfilePhoto;
-window.moveHomeModule = moveHomeModule;
-window.layoutGripKey = layoutGripKey;
 window.toggleHomeModuleVisibility = toggleHomeModuleVisibility;
 window.restoreDefaultHomeLayout = restoreDefaultHomeLayout;
 window.manageClientSessions = manageClientSessions;
@@ -7019,7 +7301,6 @@ window.setHiitRoundRestEnabled = setHiitRoundRestEnabled;
 window.setHiitRoundRestSec = setHiitRoundRestSec;
 window.addHiitExercise = addHiitExercise;
 window.removeHiitExercise = removeHiitExercise;
-window.moveHiitExercise = moveHiitExercise;
 window.saveDraftHiit = saveDraftHiit;
 window.deleteHiitClass = deleteHiitClass;
 window.openHiitRunner = openHiitRunner;
@@ -7034,7 +7315,6 @@ window.finishHiitEarly = finishHiitEarly;
 window.incrementAmrapRound = incrementAmrapRound;
 window.showBuildWorkoutChoice = showBuildWorkoutChoice;
 window.showSettings = showSettings;
-window.moveSessionInPlan = moveSessionInPlan;
 window.openSessionEditor = openSessionEditor;
 window.setDraftName = setDraftName;
 window.setDraftFocus = setDraftFocus;
@@ -7046,7 +7326,6 @@ window.addDraftSuperset = addDraftSuperset;
 window.setDraftSupersetReps = setDraftSupersetReps;
 window.toggleCustomExerciseInput = toggleCustomExerciseInput;
 window.removeDraftExercise = removeDraftExercise;
-window.moveDraftExercise = moveDraftExercise;
 window.saveDraftSession = saveDraftSession;
 window.deleteSessionFromPlan = deleteSessionFromPlan;
 
